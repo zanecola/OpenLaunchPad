@@ -26,6 +26,17 @@ This is preferred over extending the existing separate `AppItem` and `FolderItem
 
 ## Architecture
 
+### Extension Boundaries
+
+Keep the feature split into four reusable layers instead of growing a single drag-and-drop implementation:
+
+- `LaunchpadLayout` is a pure value type that owns item lookup, reordering, folder membership, normalization, and invariants. It has no SwiftUI, AppKit, persistence, or icon-loading dependencies.
+- `LaunchpadDropIntent` and `DropZone` translate pointer position plus source/target kinds into semantic operations. Their classification is deterministic and unit-testable.
+- `LaunchpadViewModel` coordinates a domain mutation, publishes the resulting pages, persists once, and maintains selected-page and expanded-folder state.
+- SwiftUI drag/drop views render feedback and forward payloads and intents. They do not directly edit arrays or encode folder rules.
+
+New destinations, such as page-edge navigation or a dedicated organizer window, can reuse the same payload, intent, and layout operations without rewriting folder behavior. New persistence formats can map through stored DTOs without leaking storage concerns into the domain model.
+
 ### Drag Payload
 
 Add a `LaunchpadDragPayload` transferable containing the item UUID and kind (`app` or `folder`). It carries identity, not a full app or folder snapshot. The view model determines whether an app currently lives on a page or inside a folder, which prevents stale drag data from overwriting newer state.
