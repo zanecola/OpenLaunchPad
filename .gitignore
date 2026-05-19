@@ -1,0 +1,5 @@
+.build/
+.claude/
+.codex/
+dist/
+.DS_Store
