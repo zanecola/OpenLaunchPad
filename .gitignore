@@ -2,4 +2,5 @@
 .claude/
 .codex/
 dist/
+.worktrees/
 .DS_Store
