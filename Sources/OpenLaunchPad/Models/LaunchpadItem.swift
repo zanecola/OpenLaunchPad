@@ -1,6 +1,4 @@
 import Foundation
-import CoreTransferable
-import UniformTypeIdentifiers
 
 // MARK: - Core models
 
@@ -32,24 +30,5 @@ enum LaunchpadItem: Identifiable, Hashable, Codable, Sendable {
         case .app(let a): return a.title
         case .folder(let f): return f.title
         }
-    }
-}
-
-// MARK: - Transferable (drag-and-drop)
-
-extension UTType {
-    static let launchpadApp = UTType(exportedAs: "com.openlaunchpad.appitem")
-    static let launchpadFolder = UTType(exportedAs: "com.openlaunchpad.folderitem")
-}
-
-extension AppItem: Transferable {
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .launchpadApp)
-    }
-}
-
-extension FolderItem: Transferable {
-    static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .launchpadFolder)
     }
 }
