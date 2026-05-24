@@ -18,6 +18,7 @@ struct LaunchpadDropIntentTests {
     @Test
     func nonPositiveWidthFallsBackToCenter() {
         #expect(DropZone.classify(x: 10, width: 0) == .center)
+        #expect(DropZone.classify(x: 10, width: -100) == .center)
     }
 
     @Test
