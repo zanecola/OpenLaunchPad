@@ -21,10 +21,21 @@ struct LaunchpadDropIntentTests {
         #expect(DropZone.classify(x: 10, width: -100) == .center)
     }
 
+    @Test(arguments: [LaunchpadDragKind.app, .folder], [LaunchpadDragKind.app, .folder])
+    func leadingAlwaysReordersBefore(source: LaunchpadDragKind, target: LaunchpadDragKind) {
+        #expect(LaunchpadDropIntent.resolve(source: source, target: target, zone: .leading) == .reorder(.before))
+    }
+
+    @Test(arguments: [LaunchpadDragKind.app, .folder], [LaunchpadDragKind.app, .folder])
+    func trailingAlwaysReordersAfter(source: LaunchpadDragKind, target: LaunchpadDragKind) {
+        #expect(LaunchpadDropIntent.resolve(source: source, target: target, zone: .trailing) == .reorder(.after))
+    }
+
     @Test
     func centerOnlyGroupsApps() {
         #expect(LaunchpadDropIntent.resolve(source: .app, target: .app, zone: .center) == .combineApps)
         #expect(LaunchpadDropIntent.resolve(source: .app, target: .folder, zone: .center) == .addToFolder)
         #expect(LaunchpadDropIntent.resolve(source: .folder, target: .app, zone: .center) == .reorder(.after))
+        #expect(LaunchpadDropIntent.resolve(source: .folder, target: .folder, zone: .center) == .reorder(.after))
     }
 }
