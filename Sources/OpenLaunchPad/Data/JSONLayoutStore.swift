@@ -18,11 +18,15 @@ final class JSONLayoutStore: LayoutStoring {
 
     func loadCustomLayout() -> StoredLayout? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        if let layout = try? JSONDecoder().decode(StoredLayout.self, from: data) {
+        let decoder = JSONDecoder()
+        if let layout = try? decoder.decode(StoredLayout.self, from: data) {
             return layout
         }
-        if let legacyPageIDs = try? JSONDecoder().decode([[UUID]].self, from: data) {
-            return StoredLayout(pageIDs: legacyPageIDs, folderNames: [:])
+        if let legacyLayout = try? decoder.decode(LegacyNamedLayout.self, from: data) {
+            return legacyLayout.migrated()
+        }
+        if let legacyPageIDs = try? decoder.decode([[UUID]].self, from: data) {
+            return StoredLayout(pageIDs: legacyPageIDs)
         }
         return nil
     }
@@ -37,5 +41,30 @@ final class JSONLayoutStore: LayoutStoring {
 
     func clearCustomLayout() {
         try? FileManager.default.removeItem(at: fileURL)
+    }
+}
+
+private struct LegacyNamedLayout: Decodable {
+    var pageIDs: [[UUID]]
+    var folderNames: [UUID: String]
+
+    func migrated() -> StoredLayout {
+        var orderedFolderIDs: [UUID] = []
+        var seenFolderIDs = Set<UUID>()
+
+        for id in pageIDs.joined() where folderNames[id] != nil {
+            if seenFolderIDs.insert(id).inserted {
+                orderedFolderIDs.append(id)
+            }
+        }
+
+        orderedFolderIDs.append(contentsOf: folderNames.keys
+            .filter { !seenFolderIDs.contains($0) }
+            .sorted { $0.uuidString < $1.uuidString })
+
+        let folders = orderedFolderIDs.map { id in
+            StoredFolder(id: id, title: folderNames[id]!, appIDs: [])
+        }
+        return StoredLayout(pageIDs: pageIDs, folders: folders)
     }
 }

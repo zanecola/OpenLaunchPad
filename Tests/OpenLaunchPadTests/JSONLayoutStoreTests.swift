@@ -4,25 +4,107 @@ import Testing
 
 struct JSONLayoutStoreTests {
     @Test
-    func storeLoadsLegacyLayoutAndRoundTripsFolderNames() throws {
+    func newSchemaRoundTripsPagesAndOrderedFolders() throws {
+        try withStore { store, _ in
+            let appA = UUID()
+            let appB = UUID()
+            let firstFolder = StoredFolder(id: UUID(), title: "Developer Tools", appIDs: [appB, appA])
+            let secondFolder = StoredFolder(id: UUID(), title: "Writing", appIDs: [appA])
+            let layout = StoredLayout(
+                pageIDs: [[firstFolder.id, appA], [secondFolder.id]],
+                folders: [firstFolder, secondFolder]
+            )
+
+            store.saveCustomLayout(layout)
+
+            #expect(store.loadCustomLayout() == layout)
+        }
+    }
+
+    @Test
+    func legacyNamedLayoutMigratesEveryFolderWithEmptyMembership() throws {
+        try withStore { store, fileURL in
+            let appID = UUID()
+            let folderID = UUID()
+            let absentFolderID = UUID()
+            let legacy = LegacyNamedLayout(
+                pageIDs: [[folderID, appID]],
+                folderNames: [folderID: "Developer Tools", absentFolderID: "Writing"]
+            )
+            try JSONEncoder().encode(legacy).write(to: fileURL)
+
+            let migrated = store.loadCustomLayout()
+
+            #expect(migrated?.pageIDs == legacy.pageIDs)
+            #expect(Set(migrated?.folders.map(\.id) ?? []) == Set(legacy.folderNames.keys))
+            #expect(migrated?.folders.allSatisfy { $0.appIDs.isEmpty } == true)
+            #expect(migrated?.folders.first { $0.id == folderID }?.title == "Developer Tools")
+            #expect(migrated?.folders.first { $0.id == absentFolderID }?.title == "Writing")
+        }
+    }
+
+    @Test
+    func legacyNamedLayoutUsesPageAppearanceThenUUIDOrder() throws {
+        try withStore { store, fileURL in
+            let firstAbsentID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+            let secondAbsentID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+            let firstPageFolderID = UUID(uuidString: "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")!
+            let secondPageFolderID = UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!
+            let legacy = LegacyNamedLayout(
+                pageIDs: [[firstPageFolderID, secondPageFolderID, firstPageFolderID]],
+                folderNames: [
+                    secondPageFolderID: "Second on page",
+                    firstAbsentID: "First absent",
+                    firstPageFolderID: "First on page",
+                    secondAbsentID: "Second absent",
+                ]
+            )
+            try JSONEncoder().encode(legacy).write(to: fileURL)
+
+            let migrated = store.loadCustomLayout()
+
+            #expect(migrated?.folders.map(\.id) == [
+                firstPageFolderID,
+                secondPageFolderID,
+                firstAbsentID,
+                secondAbsentID,
+            ])
+        }
+    }
+
+    @Test
+    func oldestRawPageIDsMigrateWithoutFolders() throws {
+        try withStore { store, fileURL in
+            let pageIDs = [[UUID(), UUID()], [UUID()]]
+            try JSONEncoder().encode(pageIDs).write(to: fileURL)
+
+            #expect(store.loadCustomLayout() == StoredLayout(pageIDs: pageIDs))
+        }
+    }
+
+    @Test
+    func malformedLayoutReturnsNil() throws {
+        try withStore { store, fileURL in
+            try Data("not json".utf8).write(to: fileURL)
+
+            #expect(store.loadCustomLayout() == nil)
+        }
+    }
+
+    private func withStore(
+        _ operation: (JSONLayoutStore, URL) throws -> Void
+    ) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenLaunchPadLayoutTests-\(UUID().uuidString)", isDirectory: true)
         let fileURL = directory.appendingPathComponent("layout.json")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let itemID = UUID()
-        let folderID = UUID()
-        try JSONEncoder().encode([[itemID]]).write(to: fileURL)
-        let store = JSONLayoutStore(fileURL: fileURL)
 
-        #expect(store.loadCustomLayout() == StoredLayout(pageIDs: [[itemID]], folderNames: [:]))
-
-        let updated = StoredLayout(
-            pageIDs: [[folderID, itemID]],
-            folderNames: [folderID: "Developer Tools"]
-        )
-        store.saveCustomLayout(updated)
-
-        #expect(store.loadCustomLayout() == updated)
+        try operation(JSONLayoutStore(fileURL: fileURL), fileURL)
     }
+}
+
+private struct LegacyNamedLayout: Codable {
+    var pageIDs: [[UUID]]
+    var folderNames: [UUID: String]
 }
