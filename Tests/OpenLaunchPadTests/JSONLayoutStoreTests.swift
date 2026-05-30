@@ -4,20 +4,56 @@ import Testing
 
 struct JSONLayoutStoreTests {
     @Test
-    func newSchemaRoundTripsPagesAndOrderedFolders() throws {
-        try withStore { store, _ in
+    func currentSchemaEncodesVersionAndRoundTripsRealisticFolderGraph() throws {
+        try withStore { store, fileURL in
             let appA = UUID()
             let appB = UUID()
+            let appC = UUID()
+            let appD = UUID()
             let firstFolder = StoredFolder(id: UUID(), title: "Developer Tools", appIDs: [appB, appA])
-            let secondFolder = StoredFolder(id: UUID(), title: "Writing", appIDs: [appA])
+            let secondFolder = StoredFolder(id: UUID(), title: "Writing", appIDs: [appD])
             let layout = StoredLayout(
-                pageIDs: [[firstFolder.id, appA], [secondFolder.id]],
+                pageIDs: [[firstFolder.id, appC], [secondFolder.id]],
                 folders: [firstFolder, secondFolder]
             )
 
             store.saveCustomLayout(layout)
 
+            let object = try #require(
+                JSONSerialization.jsonObject(with: Data(contentsOf: fileURL)) as? [String: Any]
+            )
+            #expect(object["version"] as? Int == 1)
             #expect(store.loadCustomLayout() == layout)
+        }
+    }
+
+    @Test
+    func unsupportedFutureVersionReturnsNil() throws {
+        try withStore { store, fileURL in
+            let fixture = VersionedLayoutFixture(
+                version: 2,
+                pageIDs: [[UUID()]],
+                folders: [StoredFolder(id: UUID(), title: "Future", appIDs: [UUID()])]
+            )
+            try JSONEncoder().encode(fixture).write(to: fileURL)
+
+            #expect(store.loadCustomLayout() == nil)
+        }
+    }
+
+    @Test
+    func futureHybridPayloadDoesNotFallThroughToLegacyMigration() throws {
+        try withStore { store, fileURL in
+            let folderID = UUID()
+            let fixture = HybridFutureLayoutFixture(
+                version: 2,
+                pageIDs: [[folderID]],
+                folders: [StoredFolder(id: folderID, title: "Future", appIDs: [UUID()])],
+                folderNames: [folderID: "Legacy trap"]
+            )
+            try JSONEncoder().encode(fixture).write(to: fileURL)
+
+            #expect(store.loadCustomLayout() == nil)
         }
     }
 
@@ -106,5 +142,18 @@ struct JSONLayoutStoreTests {
 
 private struct LegacyNamedLayout: Codable {
     var pageIDs: [[UUID]]
+    var folderNames: [UUID: String]
+}
+
+private struct VersionedLayoutFixture: Codable {
+    var version: Int
+    var pageIDs: [[UUID]]
+    var folders: [StoredFolder]
+}
+
+private struct HybridFutureLayoutFixture: Codable {
+    var version: Int
+    var pageIDs: [[UUID]]
+    var folders: [StoredFolder]
     var folderNames: [UUID: String]
 }

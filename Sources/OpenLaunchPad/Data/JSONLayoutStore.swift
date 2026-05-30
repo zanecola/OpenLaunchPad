@@ -19,8 +19,12 @@ final class JSONLayoutStore: LayoutStoring {
     func loadCustomLayout() -> StoredLayout? {
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
         let decoder = JSONDecoder()
-        if let layout = try? decoder.decode(StoredLayout.self, from: data) {
-            return layout
+        if let marker = try? decoder.decode(LayoutVersionMarker.self, from: data), marker.isVersioned {
+            guard let envelope = try? decoder.decode(VersionedStoredLayout.self, from: data),
+                  envelope.version == VersionedStoredLayout.currentVersion else {
+                return nil
+            }
+            return envelope.layout
         }
         if let legacyLayout = try? decoder.decode(LegacyNamedLayout.self, from: data) {
             return legacyLayout.migrated()
@@ -34,13 +38,44 @@ final class JSONLayoutStore: LayoutStoring {
     func saveCustomLayout(_ layout: StoredLayout) {
         let dir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        if let data = try? JSONEncoder().encode(layout) {
+        if let data = try? JSONEncoder().encode(VersionedStoredLayout(layout: layout)) {
             try? data.write(to: fileURL, options: .atomic)
         }
     }
 
     func clearCustomLayout() {
         try? FileManager.default.removeItem(at: fileURL)
+    }
+}
+
+private struct LayoutVersionMarker: Decodable {
+    let isVersioned: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isVersioned = container.contains(.version)
+    }
+}
+
+private struct VersionedStoredLayout: Codable {
+    static let currentVersion = 1
+
+    var version: Int
+    var pageIDs: [[UUID]]
+    var folders: [StoredFolder]
+
+    init(layout: StoredLayout) {
+        version = Self.currentVersion
+        pageIDs = layout.pageIDs
+        folders = layout.folders
+    }
+
+    var layout: StoredLayout {
+        StoredLayout(pageIDs: pageIDs, folders: folders)
     }
 }
 
