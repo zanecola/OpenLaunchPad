@@ -26,6 +26,9 @@ final class JSONLayoutStore: LayoutStoring {
             }
             return envelope.layout
         }
+        if let layout = try? decoder.decode(StoredLayout.self, from: data) {
+            return layout
+        }
         if let legacyLayout = try? decoder.decode(LegacyNamedLayout.self, from: data) {
             return legacyLayout.migrated()
         }

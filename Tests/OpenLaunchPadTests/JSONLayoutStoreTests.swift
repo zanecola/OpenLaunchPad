@@ -28,6 +28,23 @@ struct JSONLayoutStoreTests {
     }
 
     @Test
+    func unversionedNewSchemaMigratesFolderGraph() throws {
+        try withStore { store, fileURL in
+            let folder = StoredFolder(id: UUID(), title: "Utilities", appIDs: [UUID(), UUID()])
+            let fixture = UnversionedLayoutFixture(
+                pageIDs: [[folder.id, UUID()]],
+                folders: [folder]
+            )
+            try JSONEncoder().encode(fixture).write(to: fileURL)
+
+            #expect(store.loadCustomLayout() == StoredLayout(
+                pageIDs: fixture.pageIDs,
+                folders: fixture.folders
+            ))
+        }
+    }
+
+    @Test
     func unsupportedFutureVersionReturnsNil() throws {
         try withStore { store, fileURL in
             let fixture = VersionedLayoutFixture(
@@ -147,6 +164,11 @@ private struct LegacyNamedLayout: Codable {
 
 private struct VersionedLayoutFixture: Codable {
     var version: Int
+    var pageIDs: [[UUID]]
+    var folders: [StoredFolder]
+}
+
+private struct UnversionedLayoutFixture: Codable {
     var pageIDs: [[UUID]]
     var folders: [StoredFolder]
 }
