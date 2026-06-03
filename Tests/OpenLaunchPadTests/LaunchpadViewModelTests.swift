@@ -22,6 +22,21 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func loadClosesExpandedFolderWhenReloadRemovesIt() async {
+        let folderID = UUID()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: [[.app(Self.app("Mail"))]]),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider()
+        )
+        viewModel.expandedFolderID = folderID
+
+        await viewModel.load()
+
+        #expect(viewModel.expandedFolderID == nil)
+    }
+
+    @Test
     func moveClampsCurrentPageWhenSourcePageIsRemoved() {
         let sourceApp = Self.app("Mail")
         let targetApp = Self.app("Calendar")
@@ -83,9 +98,9 @@ struct LaunchpadViewModelTests {
 
         viewModel.move(itemID: mail.id, toPage: 0, at: 2)
 
-        #expect(layoutStore.savedLayouts == [[
-            [calendar.id, mail.id]
-        ]])
+        #expect(layoutStore.savedLayouts == [StoredLayout(
+            pageIDs: [[calendar.id, mail.id]]
+        )])
     }
 
     @Test
@@ -178,15 +193,24 @@ struct LaunchpadViewModelTests {
         viewModel.renameFolder(folder.id, to: "Developer Tools")
 
         #expect(viewModel.expandedFolder?.title == "Developer Tools")
-        #expect(layoutStore.savedFolderNames[folder.id] == "Developer Tools")
+        #expect(layoutStore.savedLayouts == [StoredLayout(
+            pageIDs: [[folder.id]],
+            folders: [StoredFolder(
+                id: folder.id,
+                title: "Developer Tools",
+                appIDs: folder.apps.map(\.id)
+            )]
+        )])
     }
 
     @Test
     func loadAppliesPersistedFolderName() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
         let folder = FolderItem(
             id: UUID(),
             title: "Utilities",
-            apps: [Self.app("Terminal")]
+            apps: [terminal, console]
         )
         let layoutStore = StubLayoutStore(
             customLayout: [[folder.id]],
@@ -201,6 +225,210 @@ struct LaunchpadViewModelTests {
         await viewModel.load()
 
         #expect(viewModel.pages.first?.first?.title == "Developer Tools")
+    }
+
+    @Test
+    func loadReconstructsUserFolderFromStoredAppIDs() async {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let folderID = UUID()
+        let stored = StoredLayout(
+            pageIDs: [[folderID]],
+            folders: [StoredFolder(id: folderID, title: "Work", appIDs: [calendar.id, mail.id])]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.app(mail), .app(calendar)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.folder(FolderItem(
+            id: folderID,
+            title: "Work",
+            apps: [calendar, mail]
+        ))]])
+    }
+
+    @Test
+    func loadMigratedFolderUsesSourceMembershipAndStoredTitle() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let folderID = UUID()
+        let sourceFolder = FolderItem(id: folderID, title: "Utilities", apps: [terminal, console])
+        let stored = StoredLayout(
+            pageIDs: [[folderID]],
+            folders: [StoredFolder(id: folderID, title: "Developer Tools", appIDs: [])]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.folder(sourceFolder)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.folder(FolderItem(
+            id: folderID,
+            title: "Developer Tools",
+            apps: [terminal, console]
+        ))]])
+    }
+
+    @Test
+    func loadResolvesStoredMembershipAcrossTopLevelAndSourceFolders() async {
+        let mail = Self.app("Mail")
+        let terminal = Self.app("Terminal")
+        let missing = Self.app("Missing")
+        let sourceFolder = FolderItem(id: UUID(), title: "Utilities", apps: [terminal])
+        let folderID = UUID()
+        let stored = StoredLayout(
+            pageIDs: [[folderID]],
+            folders: [StoredFolder(
+                id: folderID,
+                title: "Mixed",
+                appIDs: [terminal.id, missing.id, mail.id]
+            )]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.app(mail), .folder(sourceFolder)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.folder(FolderItem(
+            id: folderID,
+            title: "Mixed",
+            apps: [terminal, mail]
+        ))]])
+    }
+
+    @Test
+    func loadNormalizesSparseStoredFoldersAndAppendsUnplacedItemsWithoutDuplicates() async {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let notes = Self.app("Notes")
+        let missingID = UUID()
+        let survivingFolderID = UUID()
+        let emptyFolderID = UUID()
+        let stored = StoredLayout(
+            pageIDs: [[emptyFolderID, survivingFolderID], []],
+            folders: [
+                StoredFolder(id: emptyFolderID, title: "Gone", appIDs: [missingID]),
+                StoredFolder(id: survivingFolderID, title: "Solo", appIDs: [calendar.id, missingID])
+            ]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.app(mail), .app(calendar)], [.app(notes)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [
+            [.app(calendar)],
+            [.app(mail), .app(notes)]
+        ])
+    }
+
+    @Test
+    func successfulMutationsPersistExactlyOnceAndUseInjectedFolderID() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let notes = Self.app("Notes")
+        let folderID = UUID()
+        let store = StubLayoutStore()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: store,
+            iconProvider: StubIconProvider(),
+            makeUUID: { folderID }
+        )
+        viewModel.pages = [[.app(mail), .app(calendar), .app(notes)]]
+
+        #expect(viewModel.combineApps(draggedID: mail.id, targetID: calendar.id))
+        #expect(viewModel.pages[0][0].id == folderID)
+        #expect(store.savedLayouts.count == 1)
+        #expect(viewModel.addApp(notes.id, toFolder: folderID))
+        #expect(store.savedLayouts.count == 2)
+        #expect(viewModel.reorderApp(mail.id, inFolder: folderID, relativeTo: notes.id, placement: .after))
+        #expect(store.savedLayouts.count == 3)
+        #expect(viewModel.removeApp(mail.id, fromFolder: folderID))
+        #expect(store.savedLayouts.count == 4)
+        #expect(store.savedLayouts.last == StoredLayout(
+            pageIDs: [[folderID, mail.id]],
+            folders: [StoredFolder(id: folderID, title: "Folder", appIDs: [calendar.id, notes.id])]
+        ))
+    }
+
+    @Test
+    func reorderTopLevelPersistsOnce() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.app(mail), .app(calendar)]]
+
+        #expect(viewModel.reorderTopLevel(
+            itemID: calendar.id,
+            relativeTo: mail.id,
+            placement: .before
+        ))
+        #expect(store.savedLayouts.count == 1)
+    }
+
+    @Test
+    func invalidMutationsPersistZeroTimes() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [calendar])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.app(mail), .folder(folder)]]
+        let missingID = UUID()
+
+        #expect(!viewModel.reorderTopLevel(
+            itemID: missingID,
+            relativeTo: mail.id,
+            placement: .before
+        ))
+        #expect(!viewModel.combineApps(draggedID: missingID, targetID: mail.id))
+        #expect(!viewModel.addApp(missingID, toFolder: folder.id))
+        #expect(!viewModel.reorderApp(
+            missingID,
+            inFolder: folder.id,
+            relativeTo: calendar.id,
+            placement: .after
+        ))
+        #expect(!viewModel.removeApp(missingID, fromFolder: folder.id))
+        #expect(store.savedLayouts.isEmpty)
+    }
+
+    @Test
+    func removingAppThatDissolvesExpandedFolderClosesIt() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [mail, calendar])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.toggleFolder(folder.id)
+
+        #expect(viewModel.removeApp(mail.id, fromFolder: folder.id))
+
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(store.savedLayouts.count == 1)
+    }
+
+    private static func viewModel(
+        pages: [[LaunchpadItem]],
+        store: StubLayoutStore
+    ) -> LaunchpadViewModel {
+        LaunchpadViewModel(
+            dataSource: StubDataSource(pages: pages),
+            layoutStore: store,
+            iconProvider: StubIconProvider()
+        )
     }
 
     private static func app(_ title: String) -> AppItem {
@@ -222,14 +450,20 @@ private final class StubDataSource: AppDataSource {
 
 private final class StubLayoutStore: LayoutStoring {
     var customLayout: StoredLayout?
-    var savedLayouts: [[[UUID]]] = []
-    var savedFolderNames: [UUID: String] = [:]
+    var savedLayouts: [StoredLayout] = []
     var didClear = false
 
     init(customLayout: [[UUID]]? = nil, folderNames: [UUID: String] = [:]) {
         if let customLayout {
-            self.customLayout = StoredLayout(pageIDs: customLayout, folderNames: folderNames)
+            self.customLayout = StoredLayout(
+                pageIDs: customLayout,
+                folders: folderNames.map { StoredFolder(id: $0.key, title: $0.value, appIDs: []) }
+            )
         }
+    }
+
+    init(layout: StoredLayout) {
+        customLayout = layout
     }
 
     func loadCustomLayout() -> StoredLayout? {
@@ -238,8 +472,7 @@ private final class StubLayoutStore: LayoutStoring {
 
     func saveCustomLayout(_ layout: StoredLayout) {
         customLayout = layout
-        savedLayouts.append(layout.pageIDs)
-        savedFolderNames = layout.folderNames
+        savedLayouts.append(layout)
     }
 
     func clearCustomLayout() {

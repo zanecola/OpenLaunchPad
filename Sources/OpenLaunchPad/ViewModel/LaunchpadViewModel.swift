@@ -50,6 +50,7 @@ final class LaunchpadViewModel {
     private let dataSource: any AppDataSource
     private let layoutStore: any LayoutStoring
     private let iconProvider: any AppIconProviding
+    private let makeUUID: () -> UUID
 
     // MARK: - Icon cache (bundleID → NSImage)
 
@@ -60,11 +61,13 @@ final class LaunchpadViewModel {
     init(
         dataSource: any AppDataSource,
         layoutStore: any LayoutStoring,
-        iconProvider: any AppIconProviding
+        iconProvider: any AppIconProviding,
+        makeUUID: @escaping () -> UUID = UUID.init
     ) {
         self.dataSource = dataSource
         self.layoutStore = layoutStore
         self.iconProvider = iconProvider
+        self.makeUUID = makeUUID
     }
 
     // MARK: - Loading
@@ -77,6 +80,9 @@ final class LaunchpadViewModel {
         do {
             let sourcedPages = try dataSource.loadPages()
             pages = applyCustomLayout(to: sourcedPages)
+            if expandedFolderID != nil, expandedFolder == nil {
+                closeFolder()
+            }
             clampCurrentPage()
         } catch {
             loadError = error.localizedDescription
@@ -90,28 +96,114 @@ final class LaunchpadViewModel {
             return sourcedPages
         }
 
-        let allItems = Dictionary(
-            uniqueKeysWithValues: sourcedPages.flatMap { $0 }.map { item in
-                guard case .folder(var folder) = item,
-                      let storedName = storedLayout.folderNames[folder.id] else {
-                    return (item.id, item)
-                }
-                folder.title = storedName
-                return (item.id, .folder(folder))
-            }
-        )
-        var placed = Set<UUID>()
+        let sourceItems = sourcedPages.flatMap { $0 }
+        var sourceItemsByID: [UUID: LaunchpadItem] = [:]
+        var sourceFoldersByID: [UUID: FolderItem] = [:]
+        var appsByID: [UUID: AppItem] = [:]
 
-        var result: [[LaunchpadItem]] = storedLayout.pageIDs.map { ids in
-            ids.compactMap { id -> LaunchpadItem? in
-                guard let item = allItems[id] else { return nil }
-                placed.insert(id)
-                return item
+        for item in sourceItems {
+            if sourceItemsByID[item.id] == nil {
+                sourceItemsByID[item.id] = item
+            }
+            switch item {
+            case .app(let app):
+                if appsByID[app.id] == nil { appsByID[app.id] = app }
+            case .folder(let folder):
+                if sourceFoldersByID[folder.id] == nil { sourceFoldersByID[folder.id] = folder }
+                for app in folder.apps where appsByID[app.id] == nil {
+                    appsByID[app.id] = app
+                }
             }
         }
 
-        // Append any new items (added to the system since last save) to the last page
-        let unplaced = sourcedPages.flatMap { $0 }.filter { !placed.contains($0.id) }
+        var consumedAppIDs = Set<UUID>()
+        var reconstructedFolders: [UUID: FolderItem] = [:]
+        for storedFolder in storedLayout.folders where reconstructedFolders[storedFolder.id] == nil {
+            let requestedIDs: [UUID]
+            if storedFolder.appIDs.isEmpty, let sourceFolder = sourceFoldersByID[storedFolder.id] {
+                requestedIDs = sourceFolder.apps.map(\.id)
+            } else {
+                requestedIDs = storedFolder.appIDs
+            }
+
+            var folderApps: [AppItem] = []
+            for appID in requestedIDs where !consumedAppIDs.contains(appID) {
+                guard let app = appsByID[appID] else { continue }
+                consumedAppIDs.insert(appID)
+                folderApps.append(app)
+            }
+            reconstructedFolders[storedFolder.id] = FolderItem(
+                id: storedFolder.id,
+                title: storedFolder.title,
+                apps: folderApps
+            )
+        }
+
+        var placedItemIDs = Set<UUID>()
+        var placedAppIDs = Set<UUID>()
+
+        func normalized(_ folder: FolderItem) -> LaunchpadItem? {
+            switch folder.apps.count {
+            case 0: return nil
+            case 1: return .app(folder.apps[0])
+            default: return .folder(folder)
+            }
+        }
+
+        func sourceItem(for id: UUID) -> LaunchpadItem? {
+            guard let item = sourceItemsByID[id] else { return nil }
+            switch item {
+            case .app(let app):
+                return consumedAppIDs.contains(app.id) ? nil : item
+            case .folder(var folder):
+                folder.apps.removeAll { consumedAppIDs.contains($0.id) }
+                return normalized(folder)
+            }
+        }
+
+        func recordPlacement(of item: LaunchpadItem) {
+            placedItemIDs.insert(item.id)
+            switch item {
+            case .app(let app):
+                placedAppIDs.insert(app.id)
+            case .folder(let folder):
+                placedAppIDs.formUnion(folder.apps.map(\.id))
+            }
+        }
+
+        func resolve(_ id: UUID) -> LaunchpadItem? {
+            let item: LaunchpadItem?
+            if let reconstructedFolder = reconstructedFolders[id] {
+                item = normalized(reconstructedFolder)
+            } else {
+                item = sourceItem(for: id)
+            }
+            guard let item,
+                  !placedItemIDs.contains(item.id) else { return nil }
+
+            switch item {
+            case .app(let app):
+                guard !placedAppIDs.contains(app.id) else { return nil }
+            case .folder(var folder):
+                folder.apps.removeAll { placedAppIDs.contains($0.id) }
+                guard let deduplicated = normalized(folder),
+                      !placedItemIDs.contains(deduplicated.id) else { return nil }
+                recordPlacement(of: deduplicated)
+                return deduplicated
+            }
+
+            recordPlacement(of: item)
+            return item
+        }
+
+        var result: [[LaunchpadItem]] = storedLayout.pageIDs.map { ids in
+            ids.compactMap(resolve)
+        }
+
+        let unplaced: [LaunchpadItem] = sourceItems.compactMap { item -> LaunchpadItem? in
+            guard !placedItemIDs.contains(item.id) else { return nil }
+            return resolve(item.id)
+        }
         if !unplaced.isEmpty {
             if result.isEmpty { result.append([]) }
             result[result.count - 1].append(contentsOf: unplaced)
@@ -168,9 +260,73 @@ final class LaunchpadViewModel {
 
     // MARK: - Rearranging
 
+    @discardableResult
+    func reorderTopLevel(
+        itemID: UUID,
+        relativeTo targetID: UUID,
+        placement: ItemPlacement
+    ) -> Bool {
+        mutateLayout {
+            $0.reorderTopLevel(itemID: itemID, relativeTo: targetID, placement: placement)
+        }
+    }
+
+    @discardableResult
+    func combineApps(draggedID: UUID, targetID: UUID) -> Bool {
+        let folderID = makeUUID()
+        return mutateLayout {
+            $0.combineApps(
+                draggedAppID: draggedID,
+                targetAppID: targetID,
+                folderID: folderID
+            )
+        }
+    }
+
+    @discardableResult
+    func addApp(_ appID: UUID, toFolder folderID: UUID) -> Bool {
+        mutateLayout { $0.addApp(appID, toFolder: folderID) }
+    }
+
+    @discardableResult
+    func reorderApp(
+        _ appID: UUID,
+        inFolder folderID: UUID,
+        relativeTo targetAppID: UUID,
+        placement: ItemPlacement
+    ) -> Bool {
+        mutateLayout {
+            $0.reorderApp(
+                appID,
+                inFolder: folderID,
+                relativeTo: targetAppID,
+                placement: placement
+            )
+        }
+    }
+
+    @discardableResult
+    func removeApp(_ appID: UUID, fromFolder folderID: UUID) -> Bool {
+        mutateLayout { $0.removeApp(appID, fromFolder: folderID) }
+    }
+
+    private func mutateLayout(_ mutation: (inout LaunchpadLayout) -> Bool) -> Bool {
+        var layout = LaunchpadLayout(pages: pages)
+        guard mutation(&layout) else { return false }
+
+        pages = layout.pages
+        if expandedFolderID != nil, expandedFolder == nil {
+            closeFolder()
+        }
+        persistLayout()
+        clampCurrentPage()
+        return true
+    }
+
     /// Moves an item from its current position to `targetPageIndex` at `targetIndex`.
     func move(itemID: UUID, toPage targetPageIndex: Int, at targetIndex: Int) {
-        guard let (srcPage, srcIndex) = location(of: itemID) else { return }
+        guard pages.indices.contains(targetPageIndex),
+              let (srcPage, srcIndex) = location(of: itemID) else { return }
 
         var item: LaunchpadItem
         // Remove from source
@@ -212,15 +368,19 @@ final class LaunchpadViewModel {
     // MARK: - Layout persistence
 
     private func persistLayout() {
-        let folderNames = Dictionary(uniqueKeysWithValues: pages
+        let folders = pages
             .flatMap { $0 }
-            .compactMap { item -> (UUID, String)? in
+            .compactMap { item -> StoredFolder? in
                 guard case .folder(let folder) = item else { return nil }
-                return (folder.id, folder.title)
-            })
+                return StoredFolder(
+                    id: folder.id,
+                    title: folder.title,
+                    appIDs: folder.apps.map(\.id)
+                )
+            }
         layoutStore.saveCustomLayout(StoredLayout(
             pageIDs: pages.map { $0.map { $0.id } },
-            folderNames: folderNames
+            folders: folders
         ))
     }
 
