@@ -7,6 +7,7 @@ struct FolderView: View {
     let showLabel: Bool
     let isEditMode: Bool
     let iconProvider: (String) -> NSImage
+    var dragPayload: LaunchpadDragPayload?
     var onOpen: () -> Void = {}
     var onLaunch: (AppItem) -> Void = { _ in }
 
@@ -17,6 +18,15 @@ struct FolderView: View {
     }
 
     var body: some View {
+        if let dragPayload {
+            content
+                .draggable(dragPayload)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 6) {
             folderIcon
                 .scaleEffect(isHovered ? 1.08 : 1.0)
@@ -73,6 +83,7 @@ struct FolderExpandedView: View {
     let iconProvider: (String) -> NSImage
     var onLaunch: (AppItem) -> Void = { _ in }
     var onRename: (String) -> Void = { _ in }
+    var onAppDrop: (LaunchpadDragPayload, AppItem, DropZone) -> Bool = { _, _, _ in false }
     var onClose: () -> Void = {}
 
     private let columns = 5
@@ -111,7 +122,15 @@ struct FolderExpandedView: View {
                             iconSize: iconSize * 0.7,
                             showLabel: showLabel,
                             isEditMode: false,
+                            dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
                             onTap: { onLaunch(app) }
+                        )
+                        .launchpadItemDropTarget(
+                            target: .app(app),
+                            targetWidth: iconSize * 0.7 + 20,
+                            onDrop: { payload, _, zone in
+                                onAppDrop(payload, app, zone)
+                            }
                         )
                     }
                 }

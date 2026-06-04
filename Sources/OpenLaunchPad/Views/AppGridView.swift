@@ -103,11 +103,6 @@ struct AppGridView: View {
                 .id(currentPageIndex)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 .simultaneousGesture(pageSwipeGesture)
-                .dropDestination(for: AppItem.self) { dropped, _ in
-                    guard let app = dropped.first else { return false }
-                    vm.move(itemID: app.id, toPage: currentPageIndex, at: currentPageItems.count)
-                    return true
-                }
 
             HorizontalPageScrollMonitor(
                 onPrevious: vm.showPreviousPage,
@@ -134,6 +129,11 @@ struct AppGridView: View {
         return LazyVGrid(columns: gridColumns, spacing: layout.rowSpacing) {
             ForEach(items) { item in
                 itemView(item: item)
+                    .launchpadItemDropTarget(
+                        target: item,
+                        targetWidth: layout.cellWidth,
+                        onDrop: handleDrop
+                    )
             }
         }
         .frame(width: layout.contentWidth)
@@ -149,6 +149,7 @@ struct AppGridView: View {
                 iconSize: config.iconSize,
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
+                dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
                 onTap: {
                     if vm.isEditMode { return }
                     if let onLaunch {
@@ -166,8 +167,29 @@ struct AppGridView: View {
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
                 iconProvider: { vm.icon(for: $0) },
+                dragPayload: LaunchpadDragPayload(itemID: folder.id, kind: .folder),
                 onOpen: { vm.toggleFolder(folder.id) }
             )
+        }
+    }
+
+    private func handleDrop(
+        payload: LaunchpadDragPayload,
+        target: LaunchpadItem,
+        zone: DropZone
+    ) -> Bool {
+        let targetKind: LaunchpadDragKind = switch target {
+        case .app: .app
+        case .folder: .folder
+        }
+
+        switch LaunchpadDropIntent.resolve(source: payload.kind, target: targetKind, zone: zone) {
+        case .reorder(let placement):
+            return vm.reorderTopLevel(itemID: payload.itemID, relativeTo: target.id, placement: placement)
+        case .combineApps:
+            return vm.combineApps(draggedID: payload.itemID, targetID: target.id)
+        case .addToFolder:
+            return vm.addApp(payload.itemID, toFolder: target.id)
         }
     }
 

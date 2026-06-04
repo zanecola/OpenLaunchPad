@@ -7,12 +7,22 @@ struct AppIconView: View {
     let iconSize: Double
     let showLabel: Bool
     let isEditMode: Bool
+    var dragPayload: LaunchpadDragPayload?
     var onTap: () -> Void = {}
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
 
     var body: some View {
+        if let dragPayload {
+            content
+                .draggable(dragPayload)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 6) {
             Image(nsImage: icon)
                 .resizable()
@@ -36,7 +46,6 @@ struct AppIconView: View {
         .onTapGesture(perform: onTap)
         .onHover { isHovered = $0 }
         .animation(.spring(duration: 0.15), value: isHovered)
-        .draggable(app)
         .onChange(of: isEditMode) { _, editing in
             if editing { startWiggle() } else { wiggleAngle = 0 }
         }

@@ -116,29 +116,10 @@ final class LaunchpadViewModel {
             }
         }
 
-        var consumedAppIDs = Set<UUID>()
-        var reconstructedFolders: [UUID: FolderItem] = [:]
-        for storedFolder in storedLayout.folders where reconstructedFolders[storedFolder.id] == nil {
-            let requestedIDs: [UUID]
-            if storedFolder.appIDs.isEmpty, let sourceFolder = sourceFoldersByID[storedFolder.id] {
-                requestedIDs = sourceFolder.apps.map(\.id)
-            } else {
-                requestedIDs = storedFolder.appIDs
-            }
-
-            var folderApps: [AppItem] = []
-            for appID in requestedIDs where !consumedAppIDs.contains(appID) {
-                guard let app = appsByID[appID] else { continue }
-                consumedAppIDs.insert(appID)
-                folderApps.append(app)
-            }
-            reconstructedFolders[storedFolder.id] = FolderItem(
-                id: storedFolder.id,
-                title: storedFolder.title,
-                apps: folderApps
-            )
-        }
-
+        let storedFoldersByID = Dictionary(
+            storedLayout.folders.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
         var placedItemIDs = Set<UUID>()
         var placedAppIDs = Set<UUID>()
 
@@ -154,11 +135,41 @@ final class LaunchpadViewModel {
             guard let item = sourceItemsByID[id] else { return nil }
             switch item {
             case .app(let app):
-                return consumedAppIDs.contains(app.id) ? nil : item
+                return placedAppIDs.contains(app.id) ? nil : item
             case .folder(var folder):
-                folder.apps.removeAll { consumedAppIDs.contains($0.id) }
+                folder.apps.removeAll { placedAppIDs.contains($0.id) }
                 return normalized(folder)
             }
+        }
+
+        func storedFolderItem(for id: UUID) -> LaunchpadItem? {
+            guard let storedFolder = storedFoldersByID[id] else { return nil }
+
+            let requestedIDs: [UUID]
+            if storedFolder.appIDs.isEmpty, let sourceFolder = sourceFoldersByID[id] {
+                requestedIDs = sourceFolder.apps.map(\.id)
+            } else {
+                requestedIDs = storedFolder.appIDs
+            }
+
+            var seenAppIDs = Set<UUID>()
+            var folderApps: [AppItem] = []
+            for appID in requestedIDs where !placedAppIDs.contains(appID) && seenAppIDs.insert(appID).inserted {
+                guard let app = appsByID[appID] else { continue }
+                folderApps.append(app)
+            }
+
+            if !storedFolder.appIDs.isEmpty, let sourceFolder = sourceFoldersByID[id] {
+                for app in sourceFolder.apps where !placedAppIDs.contains(app.id) && seenAppIDs.insert(app.id).inserted {
+                    folderApps.append(app)
+                }
+            }
+
+            return normalized(FolderItem(
+                id: storedFolder.id,
+                title: storedFolder.title,
+                apps: folderApps
+            ))
         }
 
         func recordPlacement(of item: LaunchpadItem) {
@@ -173,8 +184,8 @@ final class LaunchpadViewModel {
 
         func resolve(_ id: UUID) -> LaunchpadItem? {
             let item: LaunchpadItem?
-            if let reconstructedFolder = reconstructedFolders[id] {
-                item = normalized(reconstructedFolder)
+            if let storedFolder = storedFolderItem(for: id) {
+                item = storedFolder
             } else {
                 item = sourceItem(for: id)
             }

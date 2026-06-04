@@ -31,6 +31,10 @@ struct MenuBarPanelView: View {
                 Color.black.opacity(0.35)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: vm.closeFolder)
+                    .dropDestination(for: LaunchpadDragPayload.self) { payloads, _ in
+                        guard let payload = payloads.first, payload.kind == .app else { return false }
+                        return vm.removeApp(payload.itemID, fromFolder: folder.id)
+                    }
 
                 FolderExpandedView(
                     folder: folder,
@@ -39,6 +43,9 @@ struct MenuBarPanelView: View {
                     iconProvider: { vm.icon(for: $0) },
                     onLaunch: launchAndDismiss,
                     onRename: { vm.renameFolder(folder.id, to: $0) },
+                    onAppDrop: { payload, targetApp, zone in
+                        handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
+                    },
                     onClose: vm.closeFolder
                 )
                 .padding(28)
@@ -82,5 +89,20 @@ struct MenuBarPanelView: View {
         vm.closeFolder()
         onDismissRequested()
         dismiss()
+    }
+
+    private func handleFolderAppDrop(
+        payload: LaunchpadDragPayload,
+        targetApp: AppItem,
+        zone: DropZone,
+        folderID: UUID
+    ) -> Bool {
+        guard payload.kind == .app, payload.itemID != targetApp.id else { return false }
+
+        let placement: ItemPlacement = switch zone {
+        case .leading: .before
+        case .center, .trailing: .after
+        }
+        return vm.reorderApp(payload.itemID, inFolder: folderID, relativeTo: targetApp.id, placement: placement)
     }
 }

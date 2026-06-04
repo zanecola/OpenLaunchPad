@@ -8,6 +8,7 @@ let package = Package(
         .executableTarget(
             name: "OpenLaunchPad",
             path: "Sources/OpenLaunchPad",
+            exclude: ["Resources"],
             linkerSettings: [
                 .linkedFramework("Carbon")  // for RegisterEventHotKey global shortcut
             ]

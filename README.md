@@ -34,6 +34,7 @@ Build a local `.app` bundle and launch it:
 ```
 
 The script stages `dist/OpenLaunchPad.app`, stops an existing instance, and launches the fresh build. The Codex project Run action uses this same script.
+The generated bundle includes `Sources/OpenLaunchPad/Resources/AppIcon.icns` as the Dock icon.
 
 To launch and confirm that the process remains alive:
 
@@ -126,6 +127,19 @@ Custom layout is stored separately from the Dock database:
 Deleting `layout.json` resets icon order back to the data source order. The Settings window also exposes a reset action.
 Folder names are edited directly in the expanded folder header and are persisted in the same file. Legacy layout files containing only page IDs are migrated automatically when next saved.
 
+## Organizing Apps
+
+OpenLaunchPad stores organization changes in its own layout file and never writes back to Apple's Dock Launchpad database.
+
+- Drag an app or folder near the left or right edge of another top-level icon to reorder it.
+- Drop one app on the center of another app to create a folder.
+- Drop an app on the center of an existing folder to append it to that folder.
+- Open a folder and drag its apps before or after another app in the folder to reorder the folder contents.
+- Drag an app from an open folder onto the dimmed background around the folder to move it back out beside the folder.
+- If dragging an app out leaves only one app in the folder, the folder dissolves automatically.
+- Rename a folder from the text field in the expanded folder header.
+- Search results are launch-only, so organization drops are ignored while filtering.
+
 ## Features
 
 - Full-screen Launchpad-style overlay
@@ -139,7 +153,7 @@ Folder names are edited directly in the expanded folder header and are persisted
 - App launch automatically dismisses the active launcher surface
 - Scrollable folder overlays in both full-screen and popup modes
 - Configurable icon size, labels, grid columns, popup dimensions, blur, animation speed, and menu bar visibility
-- Drag-to-rearrange support with layout persistence
+- Drag-to-rearrange, drag-to-folder, folder-internal reorder, and drag-out support with layout persistence
 - Read-only Launchpad database access with `/Applications` fallback
 - Automatic reload when the Dock Launchpad database changes
 - Filesystem-folder preservation and app deduplication when using the applications fallback

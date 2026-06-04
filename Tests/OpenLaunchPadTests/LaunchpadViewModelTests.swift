@@ -332,6 +332,81 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func orphanStoredFolderDoesNotConsumeAppsFromSourceOrder() async {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let orphanFolderID = UUID()
+        let stored = StoredLayout(
+            pageIDs: [[mail.id]],
+            folders: [StoredFolder(id: orphanFolderID, title: "Orphan", appIDs: [calendar.id])]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.app(mail), .app(calendar)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.app(mail), .app(calendar)]])
+    }
+
+    @Test
+    func duplicateStoredFolderMembershipOnlyConsumesWhenPlaced() async {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let placedFolderID = UUID()
+        let orphanFolderID = UUID()
+        let stored = StoredLayout(
+            pageIDs: [[placedFolderID]],
+            folders: [
+                StoredFolder(id: orphanFolderID, title: "Orphan", appIDs: [mail.id]),
+                StoredFolder(id: placedFolderID, title: "Work", appIDs: [calendar.id, mail.id])
+            ]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.app(mail), .app(calendar)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.folder(FolderItem(
+            id: placedFolderID,
+            title: "Work",
+            apps: [calendar, mail]
+        ))]])
+    }
+
+    @Test
+    func restoredSourceFolderKeepsNewlyDiscoveredChildren() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let activityMonitor = Self.app("Activity Monitor")
+        let folderID = UUID()
+        let sourceFolder = FolderItem(id: folderID, title: "Utilities", apps: [
+            terminal,
+            console,
+            activityMonitor
+        ])
+        let stored = StoredLayout(
+            pageIDs: [[folderID]],
+            folders: [StoredFolder(id: folderID, title: "Developer Tools", appIDs: [console.id, terminal.id])]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.folder(sourceFolder)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[.folder(FolderItem(
+            id: folderID,
+            title: "Developer Tools",
+            apps: [console, terminal, activityMonitor]
+        ))]])
+    }
+
+    @Test
     func successfulMutationsPersistExactlyOnceAndUseInjectedFolderID() {
         let mail = Self.app("Mail")
         let calendar = Self.app("Calendar")
