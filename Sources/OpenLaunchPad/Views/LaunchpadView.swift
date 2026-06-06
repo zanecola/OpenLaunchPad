@@ -72,7 +72,6 @@ struct LaunchpadView: View {
                     },
                     onClose: vm.closeFolder
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .animation(.spring(duration: 0.3 * config.animationSpeed), value: folder.id)
             }
         }

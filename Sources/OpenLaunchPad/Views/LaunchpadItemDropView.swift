@@ -1,6 +1,9 @@
 import SwiftUI
+import os
 
 struct LaunchpadItemDropModifier: ViewModifier {
+    private static let logger = Logger(subsystem: "com.openlaunchpad", category: "DragDrop")
+
     let target: LaunchpadItem
     let targetWidth: CGFloat
     var isEnabled = true
@@ -21,7 +24,9 @@ struct LaunchpadItemDropModifier: ViewModifier {
                 }
 
                 let zone = DropZone.classify(x: location.x, width: targetWidth)
-                return onDrop(payload, target, zone)
+                let accepted = onDrop(payload, target, zone)
+                Self.logger.debug("Drop target=\(target.id.uuidString, privacy: .public) source=\(payload.itemID.uuidString, privacy: .public) zone=\(String(describing: zone), privacy: .public) accepted=\(accepted, privacy: .public)")
+                return accepted
             } isTargeted: { isTargeted in
                 activeZone = isTargeted ? .center : nil
             }

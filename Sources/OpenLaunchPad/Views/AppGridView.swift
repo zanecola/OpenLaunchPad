@@ -64,7 +64,6 @@ struct AppGridView: View {
             ZStack {
                 Color.clear
                     .contentShape(Rectangle())
-                    .gesture(pageSwipeGesture)
 
                 if vm.isLoading {
                     ProgressView()
@@ -102,7 +101,6 @@ struct AppGridView: View {
                 )
                 .id(currentPageIndex)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                .simultaneousGesture(pageSwipeGesture)
 
             HorizontalPageScrollMonitor(
                 onPrevious: vm.showPreviousPage,
@@ -129,6 +127,9 @@ struct AppGridView: View {
         return LazyVGrid(columns: gridColumns, spacing: layout.rowSpacing) {
             ForEach(items) { item in
                 itemView(item: item)
+                    .frame(width: layout.cellWidth)
+                    .frame(minHeight: layout.cellWidth)
+                    .contentShape(Rectangle())
                     .launchpadItemDropTarget(
                         target: item,
                         targetWidth: layout.cellWidth,
@@ -202,15 +203,4 @@ struct AppGridView: View {
         return vm.pages[currentPageIndex]
     }
 
-    private var pageSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 80)
-            .onEnded { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                if value.translation.width < -80 {
-                    vm.showNextPage()
-                } else if value.translation.width > 80 {
-                    vm.showPreviousPage()
-                }
-            }
-    }
 }
