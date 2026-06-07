@@ -47,6 +47,7 @@ struct AppGridView: View {
     @Environment(ConfigStore.self) private var config
     let mode: AppGridMode
     private let onLaunch: ((AppItem) -> Void)?
+    @State private var itemFrames: [UUID: CGRect] = [:]
 
     init(mode: AppGridMode = .paged, onLaunch: ((AppItem) -> Void)? = nil) {
         self.mode = mode
@@ -130,14 +131,13 @@ struct AppGridView: View {
                     .frame(width: layout.cellWidth)
                     .frame(minHeight: layout.cellWidth)
                     .contentShape(Rectangle())
-                    .launchpadItemDropTarget(
-                        target: item,
-                        targetWidth: layout.cellWidth,
-                        onDrop: handleDrop
-                    )
+                    .launchpadItemFrame(id: item.id)
             }
         }
         .frame(width: layout.contentWidth)
+        .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
+            itemFrames = frames
+        }
     }
 
     @ViewBuilder
@@ -151,6 +151,7 @@ struct AppGridView: View {
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
                 dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
+                onDragEnded: handleDragEnded,
                 onTap: {
                     if vm.isEditMode { return }
                     if let onLaunch {
@@ -169,9 +170,21 @@ struct AppGridView: View {
                 isEditMode: vm.isEditMode,
                 iconProvider: { vm.icon(for: $0) },
                 dragPayload: LaunchpadDragPayload(itemID: folder.id, kind: .folder),
+                onDragEnded: handleDragEnded,
                 onOpen: { vm.toggleFolder(folder.id) }
             )
         }
+    }
+
+    private func handleDragEnded(payload: LaunchpadDragPayload, location: CGPoint) {
+        guard let target = currentVisibleItems.first(where: { item in
+            item.id != payload.itemID && itemFrames[item.id]?.contains(location) == true
+        }) else {
+            return
+        }
+        guard let frame = itemFrames[target.id] else { return }
+        let zone = DropZone.classify(x: location.x - frame.minX, width: frame.width)
+        _ = handleDrop(payload: payload, target: target, zone: zone)
     }
 
     private func handleDrop(
@@ -201,6 +214,15 @@ struct AppGridView: View {
     private var currentPageItems: [LaunchpadItem] {
         guard !vm.pages.isEmpty else { return [] }
         return vm.pages[currentPageIndex]
+    }
+
+    private var currentVisibleItems: [LaunchpadItem] {
+        switch mode {
+        case .paged:
+            return currentPageItems
+        case .scrolling:
+            return vm.pages.flatMap { $0 }
+        }
     }
 
 }

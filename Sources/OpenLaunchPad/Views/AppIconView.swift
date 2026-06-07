@@ -8,18 +8,14 @@ struct AppIconView: View {
     let showLabel: Bool
     let isEditMode: Bool
     var dragPayload: LaunchpadDragPayload?
+    var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onTap: () -> Void = {}
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
 
     var body: some View {
-        if let dragPayload {
-            content
-                .draggable(dragPayload)
-        } else {
-            content
-        }
+        content.launchpadGestureDrag(payload: dragPayload, onDragEnded: onDragEnded)
     }
 
     private var content: some View {

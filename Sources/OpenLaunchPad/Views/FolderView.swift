@@ -8,6 +8,7 @@ struct FolderView: View {
     let isEditMode: Bool
     let iconProvider: (String) -> NSImage
     var dragPayload: LaunchpadDragPayload?
+    var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onOpen: () -> Void = {}
     var onLaunch: (AppItem) -> Void = { _ in }
 
@@ -18,12 +19,7 @@ struct FolderView: View {
     }
 
     var body: some View {
-        if let dragPayload {
-            content
-                .draggable(dragPayload)
-        } else {
-            content
-        }
+        content.launchpadGestureDrag(payload: dragPayload, onDragEnded: onDragEnded)
     }
 
     private var content: some View {
@@ -84,10 +80,13 @@ struct FolderExpandedView: View {
     var onLaunch: (AppItem) -> Void = { _ in }
     var onRename: (String) -> Void = { _ in }
     var onAppDrop: (LaunchpadDragPayload, AppItem, DropZone) -> Bool = { _, _, _ in false }
+    var onAppDraggedOut: (LaunchpadDragPayload) -> Bool = { _ in false }
     var onClose: () -> Void = {}
 
     private let columns = 5
     @State private var draftTitle = ""
+    @State private var appFrames: [UUID: CGRect] = [:]
+    @State private var panelFrame: CGRect = .zero
     @FocusState private var isRenaming: Bool
 
     var body: some View {
@@ -123,15 +122,10 @@ struct FolderExpandedView: View {
                             showLabel: showLabel,
                             isEditMode: false,
                             dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
+                            onDragEnded: handleDragEnded,
                             onTap: { onLaunch(app) }
                         )
-                        .launchpadItemDropTarget(
-                            target: .app(app),
-                            targetWidth: iconSize * 0.7 + 20,
-                            onDrop: { payload, _, zone in
-                                onAppDrop(payload, app, zone)
-                            }
-                        )
+                        .launchpadItemFrame(id: app.id)
                     }
                 }
             }
@@ -148,6 +142,18 @@ struct FolderExpandedView: View {
         .onChange(of: isRenaming) { wasRenaming, isRenaming in
             if wasRenaming && !isRenaming { commitRename() }
         }
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { panelFrame = proxy.frame(in: .global) }
+                    .onChange(of: proxy.frame(in: .global)) { _, frame in
+                        panelFrame = frame
+                    }
+            }
+        }
+        .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
+            appFrames = frames
+        }
     }
 
     private func commitRename() {
@@ -158,5 +164,21 @@ struct FolderExpandedView: View {
         }
         draftTitle = name
         onRename(name)
+    }
+
+    private func handleDragEnded(payload: LaunchpadDragPayload, location: CGPoint) {
+        guard payload.kind == .app else { return }
+
+        if let targetApp = folder.apps.first(where: { app in
+            app.id != payload.itemID && appFrames[app.id]?.contains(location) == true
+        }), let frame = appFrames[targetApp.id] {
+            let zone = DropZone.classify(x: location.x - frame.minX, width: frame.width)
+            _ = onAppDrop(payload, targetApp, zone)
+            return
+        }
+
+        if !panelFrame.contains(location) {
+            _ = onAppDraggedOut(payload)
+        }
     }
 }

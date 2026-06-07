@@ -55,10 +55,6 @@ struct LaunchpadView: View {
                 Color.black.opacity(0.001)  // captures taps to close folder
                     .ignoresSafeArea()
                     .onTapGesture { vm.closeFolder() }
-                    .dropDestination(for: LaunchpadDragPayload.self) { payloads, _ in
-                        guard let payload = payloads.first, payload.kind == .app else { return false }
-                        return vm.removeApp(payload.itemID, fromFolder: folder.id)
-                    }
 
                 FolderExpandedView(
                     folder: folder,
@@ -69,6 +65,9 @@ struct LaunchpadView: View {
                     onRename: { vm.renameFolder(folder.id, to: $0) },
                     onAppDrop: { payload, targetApp, zone in
                         handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
+                    },
+                    onAppDraggedOut: { payload in
+                        vm.removeApp(payload.itemID, fromFolder: folder.id)
                     },
                     onClose: vm.closeFolder
                 )
