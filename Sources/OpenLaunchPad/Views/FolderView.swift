@@ -8,18 +8,27 @@ struct FolderView: View {
     let isEditMode: Bool
     let iconProvider: (String) -> NSImage
     var dragPayload: LaunchpadDragPayload?
+    var onDragChanged: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onOpen: () -> Void = {}
     var onLaunch: (AppItem) -> Void = { _ in }
 
     @State private var isHovered = false
+    @Environment(LaunchpadDragState.self) private var dragState
 
     private var previewIcons: [NSImage] {
         folder.apps.prefix(9).map { iconProvider($0.bundleID) }
     }
 
     var body: some View {
-        content.launchpadGestureDrag(payload: dragPayload, onDragEnded: onDragEnded)
+        content
+            .opacity(dragState.active?.payload.itemID == folder.id ? 0.35 : 1)
+            .launchpadGestureDrag(
+                payload: dragPayload,
+                item: .folder(folder),
+                onDragChanged: onDragChanged,
+                onDragEnded: onDragEnded
+            )
     }
 
     private var content: some View {
@@ -87,6 +96,8 @@ struct FolderExpandedView: View {
     @State private var draftTitle = ""
     @State private var appFrames: [UUID: CGRect] = [:]
     @State private var panelFrame: CGRect = .zero
+    @State private var activeTarget: FolderDragHoverTarget?
+    @State private var isDraggingOutside = false
     @FocusState private var isRenaming: Bool
 
     var body: some View {
@@ -122,9 +133,13 @@ struct FolderExpandedView: View {
                             showLabel: showLabel,
                             isEditMode: false,
                             dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
+                            onDragChanged: handleDragChanged,
                             onDragEnded: handleDragEnded,
                             onTap: { onLaunch(app) }
                         )
+                        .overlay(alignment: activeTarget?.alignment(for: app.id) ?? .center) {
+                            folderDragTargetIndicator(for: app.id)
+                        }
                         .launchpadItemFrame(id: app.id)
                     }
                 }
@@ -133,6 +148,12 @@ struct FolderExpandedView: View {
         }
         .padding(24)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay {
+            if isDraggingOutside {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(.white.opacity(0.58), style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+            }
+        }
         .onTapGesture {}  // absorb taps so background tap closes
         .transition(.scale(scale: 0.85).combined(with: .opacity))
         .onAppear { draftTitle = folder.title }
@@ -166,19 +187,71 @@ struct FolderExpandedView: View {
         onRename(name)
     }
 
+    @ViewBuilder
+    private func folderDragTargetIndicator(for appID: UUID) -> some View {
+        if activeTarget?.appID == appID {
+            switch activeTarget?.zone {
+            case .leading, .trailing:
+                Capsule()
+                    .fill(.white.opacity(0.82))
+                    .frame(width: 4, height: iconSize * 0.62)
+            case .center:
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(.white.opacity(0.52), lineWidth: 2)
+                    .frame(width: iconSize * 0.7 + 20, height: iconSize * 0.7 + 20)
+            case nil:
+                EmptyView()
+            }
+        }
+    }
+
+    private func handleDragChanged(payload: LaunchpadDragPayload, location: CGPoint) {
+        guard payload.kind == .app else { return }
+        activeTarget = hoverTarget(for: payload, at: location)
+        isDraggingOutside = activeTarget == nil && !panelFrame.contains(location)
+    }
+
     private func handleDragEnded(payload: LaunchpadDragPayload, location: CGPoint) {
         guard payload.kind == .app else { return }
+        defer {
+            activeTarget = nil
+            isDraggingOutside = false
+        }
 
-        if let targetApp = folder.apps.first(where: { app in
-            app.id != payload.itemID && appFrames[app.id]?.contains(location) == true
-        }), let frame = appFrames[targetApp.id] {
-            let zone = DropZone.classify(x: location.x - frame.minX, width: frame.width)
-            _ = onAppDrop(payload, targetApp, zone)
+        if let activeTarget,
+           let targetApp = folder.apps.first(where: { $0.id == activeTarget.appID }) {
+            _ = onAppDrop(payload, targetApp, activeTarget.zone)
             return
         }
 
         if !panelFrame.contains(location) {
             _ = onAppDraggedOut(payload)
+        }
+    }
+
+    private func hoverTarget(for payload: LaunchpadDragPayload, at location: CGPoint) -> FolderDragHoverTarget? {
+        guard let targetApp = folder.apps.first(where: { app in
+            app.id != payload.itemID && appFrames[app.id]?.contains(location) == true
+        }), let frame = appFrames[targetApp.id] else {
+            return nil
+        }
+        return FolderDragHoverTarget(
+            appID: targetApp.id,
+            zone: DropZone.classify(x: location.x - frame.minX, width: frame.width)
+        )
+    }
+}
+
+private struct FolderDragHoverTarget: Equatable {
+    let appID: UUID
+    let zone: DropZone
+
+    func alignment(for id: UUID) -> Alignment {
+        guard appID == id else { return .center }
+        switch zone {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
         }
     }
 }

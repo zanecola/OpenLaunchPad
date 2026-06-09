@@ -5,6 +5,7 @@ struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
     var onDismiss: () -> Void = {}
+    @State private var dragState = LaunchpadDragState()
 
     var body: some View {
         @Bindable var vm = vm
@@ -73,8 +74,11 @@ struct LaunchpadView: View {
                 )
                 .animation(.spring(duration: 0.3 * config.animationSpeed), value: folder.id)
             }
+
+            LaunchpadDragPreviewView()
         }
         .background(backdrop)
+        .environment(dragState)
         .ignoresSafeArea()
         .onKeyPress(.escape) {
             if vm.expandedFolderID != nil {

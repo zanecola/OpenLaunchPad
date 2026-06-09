@@ -8,14 +8,23 @@ struct AppIconView: View {
     let showLabel: Bool
     let isEditMode: Bool
     var dragPayload: LaunchpadDragPayload?
+    var onDragChanged: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onTap: () -> Void = {}
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
+    @Environment(LaunchpadDragState.self) private var dragState
 
     var body: some View {
-        content.launchpadGestureDrag(payload: dragPayload, onDragEnded: onDragEnded)
+        content
+            .opacity(dragState.active?.payload.itemID == app.id ? 0.35 : 1)
+            .launchpadGestureDrag(
+                payload: dragPayload,
+                item: .app(app),
+                onDragChanged: onDragChanged,
+                onDragEnded: onDragEnded
+            )
     }
 
     private var content: some View {

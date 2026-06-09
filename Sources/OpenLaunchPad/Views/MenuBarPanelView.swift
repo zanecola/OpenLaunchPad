@@ -7,6 +7,7 @@ struct MenuBarPanelView: View {
     @Environment(ConfigStore.self) private var config
     @Environment(\.dismiss) private var dismiss
     var onDismissRequested: () -> Void = {}
+    @State private var dragState = LaunchpadDragState()
 
     var body: some View {
         @Bindable var vm = vm
@@ -50,6 +51,8 @@ struct MenuBarPanelView: View {
                 .padding(28)
                 .transition(.scale(scale: 0.94).combined(with: .opacity))
             }
+
+            LaunchpadDragPreviewView()
         }
         .frame(width: config.paneWidth, height: config.paneHeight)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -58,6 +61,7 @@ struct MenuBarPanelView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
+        .environment(dragState)
         .task { await vm.load() }
     }
 

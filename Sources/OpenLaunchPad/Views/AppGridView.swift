@@ -48,6 +48,7 @@ struct AppGridView: View {
     let mode: AppGridMode
     private let onLaunch: ((AppItem) -> Void)?
     @State private var itemFrames: [UUID: CGRect] = [:]
+    @State private var activeTarget: DragHoverTarget?
 
     init(mode: AppGridMode = .paged, onLaunch: ((AppItem) -> Void)? = nil) {
         self.mode = mode
@@ -131,6 +132,9 @@ struct AppGridView: View {
                     .frame(width: layout.cellWidth)
                     .frame(minHeight: layout.cellWidth)
                     .contentShape(Rectangle())
+                    .overlay(alignment: activeTarget?.alignment(for: item.id) ?? .center) {
+                        dragTargetIndicator(for: item.id, width: layout.cellWidth)
+                    }
                     .launchpadItemFrame(id: item.id)
             }
         }
@@ -151,6 +155,7 @@ struct AppGridView: View {
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
                 dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
+                onDragChanged: handleDragChanged,
                 onDragEnded: handleDragEnded,
                 onTap: {
                     if vm.isEditMode { return }
@@ -170,21 +175,58 @@ struct AppGridView: View {
                 isEditMode: vm.isEditMode,
                 iconProvider: { vm.icon(for: $0) },
                 dragPayload: LaunchpadDragPayload(itemID: folder.id, kind: .folder),
+                onDragChanged: handleDragChanged,
                 onDragEnded: handleDragEnded,
                 onOpen: { vm.toggleFolder(folder.id) }
             )
         }
     }
 
+    @ViewBuilder
+    private func dragTargetIndicator(for itemID: UUID, width: CGFloat) -> some View {
+        if activeTarget?.itemID == itemID {
+            switch activeTarget?.zone {
+            case .leading, .trailing:
+                Capsule()
+                    .fill(.white.opacity(0.82))
+                    .frame(width: 4, height: width * 0.78)
+            case .center:
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.58), lineWidth: 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(.white.opacity(0.08))
+                    )
+                    .frame(width: width, height: width)
+            case nil:
+                EmptyView()
+            }
+        }
+    }
+
+    private func handleDragChanged(payload: LaunchpadDragPayload, location: CGPoint) {
+        activeTarget = hoverTarget(for: payload, at: location)
+    }
+
     private func handleDragEnded(payload: LaunchpadDragPayload, location: CGPoint) {
-        guard let target = currentVisibleItems.first(where: { item in
-            item.id != payload.itemID && itemFrames[item.id]?.contains(location) == true
-        }) else {
+        defer { activeTarget = nil }
+        guard let hoverTarget = hoverTarget(for: payload, at: location),
+              let target = currentVisibleItems.first(where: { $0.id == hoverTarget.itemID }) else {
             return
         }
-        guard let frame = itemFrames[target.id] else { return }
-        let zone = DropZone.classify(x: location.x - frame.minX, width: frame.width)
-        _ = handleDrop(payload: payload, target: target, zone: zone)
+        _ = handleDrop(payload: payload, target: target, zone: hoverTarget.zone)
+    }
+
+    private func hoverTarget(for payload: LaunchpadDragPayload, at location: CGPoint) -> DragHoverTarget? {
+        guard let target = currentVisibleItems.first(where: { item in
+            item.id != payload.itemID && itemFrames[item.id]?.contains(location) == true
+        }), let frame = itemFrames[target.id] else {
+            return nil
+        }
+        return DragHoverTarget(
+            itemID: target.id,
+            zone: DropZone.classify(x: location.x - frame.minX, width: frame.width)
+        )
     }
 
     private func handleDrop(
@@ -225,4 +267,18 @@ struct AppGridView: View {
         }
     }
 
+}
+
+private struct DragHoverTarget: Equatable {
+    let itemID: UUID
+    let zone: DropZone
+
+    func alignment(for id: UUID) -> Alignment {
+        guard itemID == id else { return .center }
+        switch zone {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        }
+    }
 }
