@@ -143,8 +143,19 @@ struct FolderExpandedView: View {
                         .launchpadItemFrame(id: app.id)
                     }
                 }
+                .padding(.bottom, 18)
             }
             .frame(maxHeight: 420)
+            .scrollIndicators(.hidden)
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.16)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 26)
+                .allowsHitTesting(false)
+            }
         }
         .padding(24)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))

@@ -84,6 +84,7 @@ struct MenuBarPanelView: View {
             }
             .padding(12)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func launchAndDismiss(_ app: AppItem) {

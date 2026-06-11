@@ -115,9 +115,19 @@ struct AppGridView: View {
     private func scrollingGrid(layout: AppGridLayout) -> some View {
         ScrollView(.vertical) {
             itemGrid(items: vm.pages.flatMap { $0 }, layout: layout)
-                .padding(.vertical, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 34)
         }
-        .scrollIndicators(.visible)
+        .scrollIndicators(.hidden)
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [.clear, Color(nsColor: .windowBackgroundColor).opacity(0.78)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 38)
+            .allowsHitTesting(false)
+        }
     }
 
     private func itemGrid(items: [LaunchpadItem], layout: AppGridLayout) -> some View {
