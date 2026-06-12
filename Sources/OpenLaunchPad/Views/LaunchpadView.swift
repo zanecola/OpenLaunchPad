@@ -147,6 +147,8 @@ struct LaunchpadView: View {
             }
             .padding(.horizontal, 24)
         }
+        .scrollIndicators(.hidden)
+        .launchpadScrollAppearance()
     }
 
     // MARK: - Backdrop

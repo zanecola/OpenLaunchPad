@@ -147,6 +147,7 @@ struct FolderExpandedView: View {
             }
             .frame(maxHeight: 420)
             .scrollIndicators(.hidden)
+            .launchpadScrollAppearance()
             .overlay(alignment: .bottom) {
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.16)],

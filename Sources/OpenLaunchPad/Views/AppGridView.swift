@@ -119,6 +119,7 @@ struct AppGridView: View {
                 .padding(.bottom, 34)
         }
         .scrollIndicators(.hidden)
+        .launchpadScrollAppearance()
         .overlay(alignment: .bottom) {
             LinearGradient(
                 colors: [.clear, Color(nsColor: .windowBackgroundColor).opacity(0.78)],
