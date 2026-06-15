@@ -9,6 +9,7 @@ final class ConfigStore {
 
     private let defaults: UserDefaults
     @ObservationIgnored var onGlobalShortcutChange: (() -> Void)?
+    @ObservationIgnored var onMenuBarVisibilityChange: (() -> Void)?
 
     init(defaults: UserDefaults = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
         self.defaults = defaults
@@ -36,7 +37,10 @@ final class ConfigStore {
         didSet { save(backgroundBlur, forKey: Keys.backgroundBlur) }
     }
     var showMenuBarIcon: Bool = true {
-        didSet { save(showMenuBarIcon, forKey: Keys.showMenuBarIcon) }
+        didSet {
+            save(showMenuBarIcon, forKey: Keys.showMenuBarIcon)
+            onMenuBarVisibilityChange?()
+        }
     }
     var dockClickMode: DockClickMode = .fullScreen {
         didSet { defaults.set(dockClickMode.rawValue, forKey: Keys.dockClickMode) }

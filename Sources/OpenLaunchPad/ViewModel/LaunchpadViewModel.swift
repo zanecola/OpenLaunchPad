@@ -367,6 +367,26 @@ final class LaunchpadViewModel {
         currentPage = max(currentPage - 1, 0)
     }
 
+    func sortByName(_ order: LaunchpadSortOrder) {
+        let pageSizes = pages.map(\.count)
+        var sortedItems = pages.flatMap { $0 }.map { item -> LaunchpadItem in
+            guard case .folder(var folder) = item else { return item }
+            folder.apps.sort { compareTitles($0.title, $1.title, order: order) }
+            return .folder(folder)
+        }
+        sortedItems.sort { compareTitles($0.title, $1.title, order: order) }
+
+        var nextItemIndex = 0
+        pages = pageSizes.compactMap { pageSize in
+            let endIndex = min(nextItemIndex + pageSize, sortedItems.count)
+            guard nextItemIndex < endIndex else { return nil }
+            defer { nextItemIndex = endIndex }
+            return Array(sortedItems[nextItemIndex..<endIndex])
+        }
+        persistLayout()
+        clampCurrentPage()
+    }
+
     private func location(of itemID: UUID) -> (page: Int, index: Int)? {
         for (p, page) in pages.enumerated() {
             if let i = page.firstIndex(where: { $0.id == itemID }) {
@@ -374,6 +394,18 @@ final class LaunchpadViewModel {
             }
         }
         return nil
+    }
+
+    private func compareTitles(
+        _ lhs: String,
+        _ rhs: String,
+        order: LaunchpadSortOrder
+    ) -> Bool {
+        let comparison = lhs.localizedStandardCompare(rhs)
+        if comparison == .orderedSame {
+            return order == .ascending ? lhs < rhs : lhs > rhs
+        }
+        return order == .ascending ? comparison == .orderedAscending : comparison == .orderedDescending
     }
 
     // MARK: - Layout persistence

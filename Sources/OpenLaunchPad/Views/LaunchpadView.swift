@@ -5,6 +5,7 @@ struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
     var onDismiss: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
 
     var body: some View {
@@ -39,7 +40,8 @@ struct LaunchpadView: View {
                         onLaunch: { app in
                             vm.launch(app)
                             onDismiss()
-                        }
+                        },
+                        onOpenSettings: onOpenSettings
                     )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -98,7 +100,6 @@ struct LaunchpadView: View {
             vm.showNextPage()
             return .handled
         }
-        .task { await vm.load() }
     }
 
     private func handleFolderAppDrop(

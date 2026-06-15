@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let fullScreenWindow = FullScreenWindow()
     private var popupPanel: PopupPanel?
+    private var statusItem: NSStatusItem?
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
     private lazy var databaseWatcher = LaunchpadDatabaseWatcher { [weak self] in
@@ -40,14 +41,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         config.onGlobalShortcutChange = { [weak self] in
             self?.reregisterHotkey()
         }
+        config.onMenuBarVisibilityChange = { [weak self] in
+            self?.updateStatusItemVisibility()
+        }
         registerHotkey()
+        updateStatusItemVisibility()
         databaseWatcher.start()
+        Task { await viewModel.load() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         databaseWatcher.stop()
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
+        config.onMenuBarVisibilityChange = nil
     }
 
     func applicationDidResignActive(_ notification: Notification) {
@@ -99,7 +106,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Full-screen mode
 
     private func showFullScreen() {
-        let root = LaunchpadView(onDismiss: hideLaunchpad)
+        let root = LaunchpadView(
+            onDismiss: hideLaunchpad,
+            onOpenSettings: openSettings
+        )
             .environment(viewModel)
             .environment(config)
 
@@ -115,6 +125,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let root = MenuBarPanelView(onDismissRequested: { [weak self] in
             self?.hideLaunchpad()
+        }, onOpenSettings: { [weak self] in
+            self?.openSettings()
         })
             .environment(viewModel)
             .environment(config)
@@ -127,6 +139,119 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             height: config.paneHeight
         )
         isLaunchpadVisible = true
+    }
+
+    // MARK: - Menu bar
+
+    private func updateStatusItemVisibility() {
+        if config.showMenuBarIcon {
+            installStatusItemIfNeeded()
+        } else if let statusItem {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            self.statusItem = nil
+        }
+    }
+
+    private func installStatusItemIfNeeded() {
+        guard statusItem == nil else { return }
+
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        guard let button = item.button else {
+            NSStatusBar.system.removeStatusItem(item)
+            return
+        }
+
+        let image = NSImage(systemSymbolName: "square.grid.3x3.fill", accessibilityDescription: "OpenLaunchPad")
+        image?.isTemplate = true
+        button.image = image
+        button.toolTip = "OpenLaunchPad"
+        button.target = self
+        button.action = #selector(statusItemClicked(_:))
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        statusItem = item
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            hideLaunchpad()
+            showStatusMenu(relativeTo: sender)
+            return
+        }
+
+        if isLaunchpadVisible {
+            hideLaunchpad()
+        } else {
+            showPopup(anchorPoint: statusItemAnchor(for: sender))
+        }
+    }
+
+    private func showStatusMenu(relativeTo button: NSStatusBarButton) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
+
+        let sortItem = NSMenuItem(title: "Sort By", action: nil, keyEquivalent: "")
+        let sortMenu = NSMenu(title: "Sort By")
+        let sortAscendingItem = sortMenu.addItem(
+            withTitle: "Name A–Z",
+            action: #selector(sortAscending),
+            keyEquivalent: ""
+        )
+        let sortDescendingItem = sortMenu.addItem(
+            withTitle: "Name Z–A",
+            action: #selector(sortDescending),
+            keyEquivalent: ""
+        )
+        let canSort = !viewModel.isLoading && !viewModel.pages.isEmpty
+        sortAscendingItem.isEnabled = canSort
+        sortDescendingItem.isEnabled = canSort
+        sortItem.submenu = sortMenu
+        menu.addItem(sortItem)
+
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "About OpenLaunchPad", action: #selector(showAboutPanel), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Quit OpenLaunchPad", action: #selector(quitApplication), keyEquivalent: "q")
+
+        menu.items.forEach { item in
+            item.target = self
+            item.submenu?.items.forEach { $0.target = self }
+        }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.minY), in: button)
+    }
+
+    private func statusItemAnchor(for button: NSStatusBarButton) -> NSPoint {
+        guard let window = button.window else { return NSEvent.mouseLocation }
+        let buttonRect = button.convert(button.bounds, to: nil)
+        let screenRect = window.convertToScreen(buttonRect)
+        return NSPoint(x: screenRect.midX, y: screenRect.minY)
+    }
+
+    func openSettings() {
+        hideLaunchpad()
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+
+    @objc private func openSettingsFromMenu() {
+        openSettings()
+    }
+
+    @objc private func sortAscending() {
+        viewModel.sortByName(.ascending)
+    }
+
+    @objc private func sortDescending() {
+        viewModel.sortByName(.descending)
+    }
+
+    @objc private func showAboutPanel() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc private func quitApplication() {
+        NSApp.terminate(nil)
     }
 
     // MARK: - Global hotkey (Carbon, ADR-5)

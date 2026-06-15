@@ -12,6 +12,8 @@ enum PopupPlacement {
         let edge: NSRectEdge
         if anchor.y < visibleFrame.minY {
             edge = .minY
+        } else if anchor.y > visibleFrame.maxY {
+            edge = .maxY
         } else if anchor.x < visibleFrame.minX {
             edge = .minX
         } else if anchor.x > visibleFrame.maxX {
@@ -19,6 +21,7 @@ enum PopupPlacement {
         } else {
             let distances: [(NSRectEdge, CGFloat)] = [
                 (.minY, anchor.y - screenFrame.minY),
+                (.maxY, screenFrame.maxY - anchor.y),
                 (.minX, anchor.x - screenFrame.minX),
                 (.maxX, screenFrame.maxX - anchor.x)
             ]
@@ -40,6 +43,11 @@ enum PopupPlacement {
             return NSPoint(
                 x: maximumX,
                 y: min(max(anchor.y - panelSize.height / 2, minimumY), maximumY)
+            )
+        case .maxY:
+            return NSPoint(
+                x: min(max(anchor.x - panelSize.width / 2, minimumX), maximumX),
+                y: maximumY
             )
         default:
             return NSPoint(

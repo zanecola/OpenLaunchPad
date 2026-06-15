@@ -6,6 +6,11 @@ enum DockClickMode: String, Codable, CaseIterable, Sendable {
     case popup = "Popup"
 }
 
+enum LaunchpadSortOrder: Sendable {
+    case ascending
+    case descending
+}
+
 struct KeyCombo: Codable, Hashable, Sendable {
     let keyCode: UInt32
     let modifiers: UInt32  // Carbon modifier flags

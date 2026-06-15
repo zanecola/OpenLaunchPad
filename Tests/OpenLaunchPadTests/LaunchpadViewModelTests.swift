@@ -154,6 +154,50 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func sortByNamePreservesPageSizesSortsFolderAppsAndPersists() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let terminal = Self.app("Terminal")
+        let activityMonitor = Self.app("Activity Monitor")
+        let folder = FolderItem(
+            id: UUID(),
+            title: "Utilities",
+            apps: [terminal, activityMonitor]
+        )
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [
+            [.app(mail), .folder(folder)],
+            [.app(calendar)]
+        ]
+
+        viewModel.sortByName(.ascending)
+
+        #expect(viewModel.pages.map(\.count) == [2, 1])
+        #expect(viewModel.pages.flatMap { $0 }.map(\.title) == ["Calendar", "Mail", "Utilities"])
+        guard case .folder(let sortedFolder) = viewModel.pages[1][0] else {
+            Issue.record("Expected sorted folder")
+            return
+        }
+        #expect(sortedFolder.apps.map(\.title) == ["Activity Monitor", "Terminal"])
+        #expect(store.savedLayouts.count == 1)
+    }
+
+    @Test
+    func sortByNameDescendingUsesReverseOrder() {
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[
+            .app(Self.app("Calendar")),
+            .app(Self.app("Mail")),
+            .app(Self.app("App Store"))
+        ]]
+
+        viewModel.sortByName(.descending)
+
+        #expect(viewModel.pages[0].map(\.title) == ["Mail", "Calendar", "App Store"])
+    }
+
+    @Test
     func expandedFolderResolvesFromPagesAndCloses() {
         let folder = FolderItem(
             id: UUID(),

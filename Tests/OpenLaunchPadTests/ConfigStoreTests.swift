@@ -5,6 +5,23 @@ import Testing
 
 struct ConfigStoreTests {
     @Test
+    func menuBarVisibilityChangesPersistAndNotify() throws {
+        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let config = ConfigStore(defaults: defaults)
+        var notificationCount = 0
+        config.onMenuBarVisibilityChange = {
+            notificationCount += 1
+        }
+
+        config.showMenuBarIcon = false
+
+        #expect(defaults.bool(forKey: "showMenuBarIcon") == false)
+        #expect(notificationCount == 1)
+    }
+
+    @Test
     func shortcutChangesPersistAndNotify() throws {
         let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))

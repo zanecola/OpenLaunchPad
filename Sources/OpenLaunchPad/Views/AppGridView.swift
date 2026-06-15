@@ -47,12 +47,18 @@ struct AppGridView: View {
     @Environment(ConfigStore.self) private var config
     let mode: AppGridMode
     private let onLaunch: ((AppItem) -> Void)?
+    private let onOpenSettings: (() -> Void)?
     @State private var itemFrames: [UUID: CGRect] = [:]
     @State private var activeTarget: DragHoverTarget?
 
-    init(mode: AppGridMode = .paged, onLaunch: ((AppItem) -> Void)? = nil) {
+    init(
+        mode: AppGridMode = .paged,
+        onLaunch: ((AppItem) -> Void)? = nil,
+        onOpenSettings: (() -> Void)? = nil
+    ) {
         self.mode = mode
         self.onLaunch = onLaunch
+        self.onOpenSettings = onOpenSettings
     }
 
     var body: some View {
@@ -147,6 +153,18 @@ struct AppGridView: View {
                         dragTargetIndicator(for: item.id, width: layout.cellWidth)
                     }
                     .launchpadItemFrame(id: item.id)
+            }
+
+            if showsSettingsItem, let onOpenSettings {
+                LaunchpadActionIconView(
+                    title: "Settings",
+                    systemImage: "gearshape.fill",
+                    iconSize: config.iconSize,
+                    showLabel: config.iconLabelVisible,
+                    action: onOpenSettings
+                )
+                .frame(width: layout.cellWidth)
+                .frame(minHeight: layout.cellWidth)
             }
         }
         .frame(width: layout.contentWidth)
@@ -276,6 +294,10 @@ struct AppGridView: View {
         case .scrolling:
             return vm.pages.flatMap { $0 }
         }
+    }
+
+    private var showsSettingsItem: Bool {
+        mode == .scrolling || currentPageIndex == 0
     }
 
 }

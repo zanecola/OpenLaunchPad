@@ -24,18 +24,5 @@ struct OpenLaunchPadApp: App {
             }
         }
 
-        MenuBarExtra(
-            isInserted: Binding(
-                get: { appDelegate.config.showMenuBarIcon },
-                set: { appDelegate.config.showMenuBarIcon = $0 }
-            )
-        ) {
-            MenuBarPanelView()
-                .environment(appDelegate.viewModel)
-                .environment(appDelegate.config)
-        } label: {
-            Image(systemName: "square.grid.3x3.fill")
-        }
-        .menuBarExtraStyle(.window)
     }
 }

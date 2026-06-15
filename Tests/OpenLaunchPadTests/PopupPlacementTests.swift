@@ -33,4 +33,17 @@ struct PopupPlacementTests {
         #expect(origin.x == 88)
         #expect(origin.y == 400)
     }
+
+    @Test
+    func menuBarPlacementSitsBelowClickedIcon() {
+        let origin = PopupPlacement.origin(
+            anchor: NSPoint(x: 1_500, y: 1_068),
+            panelSize: panelSize,
+            screenFrame: screenFrame,
+            visibleFrame: visibleFrame
+        )
+
+        #expect(origin.x == 1_100)
+        #expect(origin.y == 448)
+    }
 }

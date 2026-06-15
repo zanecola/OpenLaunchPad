@@ -21,11 +21,17 @@ Last updated: 2026-07-21
 - Kept full-screen mode at normal window level so other apps can come forward.
 - Added an opaque popup panel background and Dock-edge popup placement.
 - Added a custom Dock icon and bundled it into local `.app` builds.
+- Replaced the split SwiftUI menu-bar implementation with one reusable AppKit status item.
+- Added a right-click menu with Settings, name sorting, About, and Quit.
+- Added a Settings action tile to the launchpad grid and reused the same Settings opening path.
+- Added persisted one-shot A–Z and Z–A sorting across pages and inside folders.
+- Fixed menu-bar popup placement so the panel opens below the clicked status icon.
+- Made hidden menu-bar icon changes apply immediately without restarting the app.
 - Updated `README.md` with build, run, test, data, and organization instructions.
 
 ## Verified
 
-- `swift test` passes with 63 tests.
+- `swift test` passes with 67 tests.
 - `./script/build_and_run.sh --verify` builds, bundles, launches, and confirms the process is alive.
 - Bundle inspection confirms `CFBundleIconFile` is `AppIcon`.
 - Bundle inspection confirms `dist/OpenLaunchPad.app/Contents/Resources/AppIcon.icns` is present.
@@ -39,3 +45,6 @@ Last updated: 2026-07-21
 - Drag an app out of a folder onto the dimmed backdrop.
 - Confirm folder dissolution when dragging out from a two-app folder.
 - Confirm the new Dock icon appears after macOS refreshes the bundle icon cache.
+- Left-click the menu bar icon and confirm the popup opens directly below it.
+- Right-click the menu bar icon and exercise Settings, Sort By, About, and Quit.
+- Open Settings from the launcher tile and confirm the launcher closes behind it.

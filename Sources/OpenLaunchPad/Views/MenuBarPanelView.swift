@@ -7,6 +7,7 @@ struct MenuBarPanelView: View {
     @Environment(ConfigStore.self) private var config
     @Environment(\.dismiss) private var dismiss
     var onDismissRequested: () -> Void = {}
+    var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
 
     var body: some View {
@@ -24,7 +25,11 @@ struct MenuBarPanelView: View {
                 if let results = vm.searchResults {
                     compactGrid(results)
                 } else {
-                    AppGridView(mode: .scrolling, onLaunch: launchAndDismiss)
+                    AppGridView(
+                        mode: .scrolling,
+                        onLaunch: launchAndDismiss,
+                        onOpenSettings: onOpenSettings
+                    )
                 }
             }
 
@@ -62,7 +67,6 @@ struct MenuBarPanelView: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
         .environment(dragState)
-        .task { await vm.load() }
     }
 
     private func compactGrid(_ results: [LaunchpadItem]) -> some View {

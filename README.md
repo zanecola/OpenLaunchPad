@@ -144,6 +144,8 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 
 - Full-screen Launchpad-style overlay
 - Menu bar popup panel
+- Left-click the menu bar icon to open the launcher; right-click it for Settings, name sorting, About, and Quit
+- Settings launcher tile on the first full-screen page and in the popup grid
 - Dock click mode: full-screen or an opaque popup anchored beside the clicked Dock icon
 - AppKit-backed shortcut recorder with immediate Carbon hotkey registration
 - Full-screen paging with controls, horizontal wheel/trackpad gestures, and `Command-Left` / `Command-Right`
@@ -160,7 +162,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 
 ## Current Limitations
 
-- There is no packaged `.app` target yet.
+- Local scripts create an unsigned `.app` bundle; release signing and distribution are not configured yet.
 - Test coverage currently focuses on the view model and database parsing. UI and window behavior still need coverage.
 - Cross-page drag behavior is intentionally simple and may need a custom gesture implementation later.
 - Legacy user-created Launchpad folders cannot be recovered when macOS has removed `desktopproperties.db`; filesystem application folders remain available.
