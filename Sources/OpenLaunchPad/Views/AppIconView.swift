@@ -14,7 +14,10 @@ struct AppIconView: View {
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
+    @State private var showsUninstallConfirmation = false
+    @State private var actionError: String?
     @Environment(LaunchpadDragState.self) private var dragState
+    @Environment(LaunchpadViewModel.self) private var vm
 
     var body: some View {
         content
@@ -25,6 +28,61 @@ struct AppIconView: View {
                 onDragChanged: onDragChanged,
                 onDragEnded: onDragEnded
             )
+            .contextMenu { appContextMenu }
+            .confirmationDialog(
+                "Uninstall \(app.title)?",
+                isPresented: $showsUninstallConfirmation
+            ) {
+                Button("Move to Trash", role: .destructive, action: uninstall)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The application will be moved to the Trash. Your documents and app data will not be removed.")
+            }
+            .alert(
+                "Couldn’t Complete Action",
+                isPresented: Binding(
+                    get: { actionError != nil },
+                    set: { if !$0 { actionError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(actionError ?? "Unknown error")
+            }
+    }
+
+    @ViewBuilder
+    private var appContextMenu: some View {
+        Button("Open", action: onTap)
+
+        Divider()
+
+        Button("Show in Finder") {
+            perform { try vm.revealInFinder(app) }
+        }
+
+        Button("Get Info") {
+            perform { try vm.showInfo(app) }
+        }
+
+        Divider()
+
+        Button("Uninstall…", role: .destructive) {
+            showsUninstallConfirmation = true
+        }
+        .disabled(!vm.canUninstall(app))
+    }
+
+    private func perform(_ action: () throws -> Void) {
+        do {
+            try action()
+        } catch {
+            actionError = error.localizedDescription
+        }
+    }
+
+    private func uninstall() {
+        perform { try vm.uninstall(app) }
     }
 
     private var content: some View {

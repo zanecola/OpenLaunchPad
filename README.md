@@ -156,6 +156,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 - Scrollable folder overlays in both full-screen and popup modes
 - Configurable icon size, labels, grid columns, popup dimensions, blur, animation speed, and menu bar visibility
 - Drag-to-rearrange, drag-to-folder, folder-internal reorder, and drag-out support with layout persistence
+- App icon context menus with Open, Show in Finder, Get Info, and confirmed Move to Trash uninstall
 - Read-only Launchpad database access with `/Applications` fallback
 - Automatic reload when the Dock Launchpad database changes
 - Filesystem-folder preservation and app deduplication when using the applications fallback
@@ -167,6 +168,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 - Cross-page drag behavior is intentionally simple and may need a custom gesture implementation later.
 - Legacy user-created Launchpad folders cannot be recovered when macOS has removed `desktopproperties.db`; filesystem application folders remain available.
 - The app does not write changes back to the Dock Launchpad database by design.
+- Uninstall moves an app bundle to Trash; it does not remove that app's documents, preferences, or support files.
 
 ## Troubleshooting
 

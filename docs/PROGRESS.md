@@ -27,11 +27,13 @@ Last updated: 2026-07-21
 - Added persisted one-shot A–Z and Z–A sorting across pages and inside folders.
 - Fixed menu-bar popup placement so the panel opens below the clicked status icon.
 - Made hidden menu-bar icon changes apply immediately without restarting the app.
+- Added reusable app-icon context menus with Open, Show in Finder, Get Info, and Uninstall.
+- Added protected-app checks, Move to Trash confirmation, visible error reporting, and atomic layout updates after uninstall.
 - Updated `README.md` with build, run, test, data, and organization instructions.
 
 ## Verified
 
-- `swift test` passes with 67 tests.
+- `swift test` passes with 70 tests.
 - `./script/build_and_run.sh --verify` builds, bundles, launches, and confirms the process is alive.
 - Bundle inspection confirms `CFBundleIconFile` is `AppIcon`.
 - Bundle inspection confirms `dist/OpenLaunchPad.app/Contents/Resources/AppIcon.icns` is present.
@@ -48,3 +50,5 @@ Last updated: 2026-07-21
 - Left-click the menu bar icon and confirm the popup opens directly below it.
 - Right-click the menu bar icon and exercise Settings, Sort By, About, and Quit.
 - Open Settings from the launcher tile and confirm the launcher closes behind it.
+- Right-click top-level, search-result, and folder app icons and verify the context actions.
+- Confirm Uninstall moves a disposable test app to Trash and updates its folder without removing app data.

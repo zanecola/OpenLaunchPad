@@ -198,6 +198,47 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func uninstallRemovesAppNormalizesFolderAndPersistsAfterTrashSucceeds() throws {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let notes = Self.app("Notes")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [mail, calendar])
+        let store = StubLayoutStore()
+        let applicationManager = StubApplicationManager()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: store,
+            iconProvider: StubIconProvider(),
+            applicationManager: applicationManager
+        )
+        viewModel.pages = [[.folder(folder), .app(notes)]]
+
+        try viewModel.uninstall(mail)
+
+        #expect(applicationManager.uninstalledApps == [mail])
+        #expect(viewModel.pages == [[.app(calendar), .app(notes)]])
+        #expect(store.savedLayouts == [StoredLayout(pageIDs: [[calendar.id, notes.id]])])
+    }
+
+    @Test
+    func failedUninstallLeavesLayoutUntouched() {
+        let mail = Self.app("Mail")
+        let applicationManager = StubApplicationManager(uninstallError: TestApplicationError.failed)
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            applicationManager: applicationManager
+        )
+        viewModel.pages = [[.app(mail)]]
+
+        #expect(throws: TestApplicationError.self) {
+            try viewModel.uninstall(mail)
+        }
+        #expect(viewModel.pages == [[.app(mail)]])
+    }
+
+    @Test
     func expandedFolderResolvesFromPagesAndCloses() {
         let folder = FolderItem(
             id: UUID(),
@@ -603,5 +644,28 @@ private final class StubLayoutStore: LayoutStoring {
 private final class StubIconProvider: AppIconProviding {
     func icon(for bundleID: String) -> NSImage {
         NSImage(size: NSSize(width: 1, height: 1))
+    }
+}
+
+private enum TestApplicationError: Error {
+    case failed
+}
+
+@MainActor
+private final class StubApplicationManager: ApplicationManaging {
+    var uninstalledApps: [AppItem] = []
+    let uninstallError: Error?
+
+    init(uninstallError: Error? = nil) {
+        self.uninstallError = uninstallError
+    }
+
+    func canUninstall(_ app: AppItem) -> Bool { true }
+    func revealInFinder(_ app: AppItem) throws {}
+    func showInfo(_ app: AppItem) throws {}
+
+    func uninstall(_ app: AppItem) throws {
+        if let uninstallError { throw uninstallError }
+        uninstalledApps.append(app)
     }
 }

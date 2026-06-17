@@ -50,6 +50,7 @@ final class LaunchpadViewModel {
     private let dataSource: any AppDataSource
     private let layoutStore: any LayoutStoring
     private let iconProvider: any AppIconProviding
+    private let applicationManager: any ApplicationManaging
     private let makeUUID: () -> UUID
 
     // MARK: - Icon cache (bundleID → NSImage)
@@ -62,11 +63,13 @@ final class LaunchpadViewModel {
         dataSource: any AppDataSource,
         layoutStore: any LayoutStoring,
         iconProvider: any AppIconProviding,
+        applicationManager: (any ApplicationManaging)? = nil,
         makeUUID: @escaping () -> UUID = UUID.init
     ) {
         self.dataSource = dataSource
         self.layoutStore = layoutStore
         self.iconProvider = iconProvider
+        self.applicationManager = applicationManager ?? SystemApplicationManager()
         self.makeUUID = makeUUID
     }
 
@@ -239,6 +242,49 @@ final class LaunchpadViewModel {
             at: NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleID) ?? URL(fileURLWithPath: "/"),
             configuration: .init()
         )
+    }
+
+    func canUninstall(_ app: AppItem) -> Bool {
+        applicationManager.canUninstall(app)
+    }
+
+    func revealInFinder(_ app: AppItem) throws {
+        try applicationManager.revealInFinder(app)
+    }
+
+    func showInfo(_ app: AppItem) throws {
+        try applicationManager.showInfo(app)
+    }
+
+    func uninstall(_ app: AppItem) throws {
+        try applicationManager.uninstall(app)
+
+        let oldPages = pages
+        pages = pages.compactMap { page in
+            let updatedPage = page.compactMap { item -> LaunchpadItem? in
+                switch item {
+                case .app(let existingApp):
+                    return existingApp.bundleID == app.bundleID ? nil : item
+                case .folder(var folder):
+                    folder.apps.removeAll { $0.bundleID == app.bundleID }
+                    switch folder.apps.count {
+                    case 0: return nil
+                    case 1: return .app(folder.apps[0])
+                    default: return .folder(folder)
+                    }
+                }
+            }
+            return updatedPage.isEmpty ? nil : updatedPage
+        }
+
+        iconCache.removeValue(forKey: app.bundleID)
+        if pages != oldPages {
+            if expandedFolderID != nil, expandedFolder == nil {
+                closeFolder()
+            }
+            persistLayout()
+            clampCurrentPage()
+        }
     }
 
     // MARK: - Folder expand/collapse
