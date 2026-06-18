@@ -26,6 +26,7 @@ Last updated: 2026-07-21
 - Added a Settings action tile to the launchpad grid and reused the same Settings opening path.
 - Added persisted one-shot A–Z and Z–A sorting across pages and inside folders.
 - Fixed menu-bar popup placement so the panel opens below the clicked status icon.
+- Deferred menu-bar popup presentation until app activation completes so left-click reliably keeps it visible.
 - Made hidden menu-bar icon changes apply immediately without restarting the app.
 - Added reusable app-icon context menus with Open, Show in Finder, Get Info, and Uninstall.
 - Added protected-app checks, Move to Trash confirmation, visible error reporting, and atomic layout updates after uninstall.

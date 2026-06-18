@@ -58,7 +58,7 @@ enum PopupPlacement {
     }
 }
 
-/// Floating panel used for Dock popup mode.
+/// Floating panel shared by Dock and menu-bar popup modes.
 final class PopupPanel: NSPanel {
     init(width: CGFloat, height: CGFloat) {
         super.init(

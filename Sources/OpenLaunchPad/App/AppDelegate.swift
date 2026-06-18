@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
+    private var pendingStatusPopupAnchor: NSPoint?
     private lazy var databaseWatcher = LaunchpadDatabaseWatcher { [weak self] in
         Task { @MainActor [weak self] in
             await self?.viewModel.load()
@@ -63,6 +64,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.presentPendingStatusPopup()
+        }
+    }
+
     // Dock icon click: reopen → show Launchpad (ADR, dock-click behavior)
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if isLaunchpadVisible {
@@ -96,6 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hideLaunchpad() {
+        pendingStatusPopupAnchor = nil
         isLaunchpadVisible = false
         fullScreenWindow.hide()
         popupPanel?.hide()
@@ -117,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fullScreenWindow.show(hostingView: controller)
     }
 
-    // MARK: - Dock popup mode
+    // MARK: - Popup mode
 
     func showPopup(anchorPoint: NSPoint?) {
         let panel = popupPanel ?? PopupPanel(width: config.paneWidth, height: config.paneHeight)
@@ -181,8 +189,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isLaunchpadVisible {
             hideLaunchpad()
         } else {
-            showPopup(anchorPoint: statusItemAnchor(for: sender))
+            scheduleStatusPopup(anchorPoint: statusItemAnchor(for: sender))
         }
+    }
+
+    private func scheduleStatusPopup(anchorPoint: NSPoint) {
+        pendingStatusPopupAnchor = anchorPoint
+        if NSApp.isActive {
+            DispatchQueue.main.async { [weak self] in
+                self?.presentPendingStatusPopup()
+            }
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    private func presentPendingStatusPopup() {
+        guard let anchorPoint = pendingStatusPopupAnchor else { return }
+        pendingStatusPopupAnchor = nil
+        showPopup(anchorPoint: anchorPoint)
     }
 
     private func showStatusMenu(relativeTo button: NSStatusBarButton) {
