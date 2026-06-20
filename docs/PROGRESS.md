@@ -23,7 +23,7 @@ Last updated: 2026-07-21
 - Added a custom Dock icon and bundled it into local `.app` builds.
 - Replaced the split SwiftUI menu-bar implementation with one reusable AppKit status item.
 - Added a right-click menu with Settings, name sorting, About, and Quit.
-- Added a Settings action tile to the launchpad grid and reused the same Settings opening path.
+- Added a compact Settings button beside the search field and reused the same Settings opening path.
 - Added persisted one-shot A–Z and Z–A sorting across pages and inside folders.
 - Fixed menu-bar popup placement so the panel opens below the clicked status icon.
 - Deferred menu-bar popup presentation until app activation completes so left-click reliably keeps it visible.
@@ -50,6 +50,6 @@ Last updated: 2026-07-21
 - Confirm the new Dock icon appears after macOS refreshes the bundle icon cache.
 - Left-click the menu bar icon and confirm the popup opens directly below it.
 - Right-click the menu bar icon and exercise Settings, Sort By, About, and Quit.
-- Open Settings from the launcher tile and confirm the launcher closes behind it.
+- Open Settings from the button beside Search and confirm the launcher closes behind it.
 - Right-click top-level, search-result, and folder app icons and verify the context actions.
 - Confirm Uninstall moves a disposable test app to Trash and updates its folder without removing app data.

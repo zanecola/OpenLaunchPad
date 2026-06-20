@@ -145,7 +145,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 - Full-screen Launchpad-style overlay
 - Menu bar popup panel
 - Left-click the menu bar icon to open the launcher; right-click it for Settings, name sorting, About, and Quit
-- Settings launcher tile on the first full-screen page and in the popup grid
+- Compact Settings button beside the search field in full-screen and popup modes
 - Dock click mode: full-screen or an opaque popup anchored beside the clicked Dock icon
 - AppKit-backed shortcut recorder with immediate Carbon hotkey registration
 - Full-screen paging with controls, horizontal wheel/trackpad gestures, and `Command-Left` / `Command-Right`

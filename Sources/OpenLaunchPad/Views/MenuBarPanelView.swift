@@ -15,7 +15,10 @@ struct MenuBarPanelView: View {
 
         ZStack {
             VStack(spacing: 0) {
-                SearchBarView(text: $vm.searchQuery)
+                SearchBarView(
+                    text: $vm.searchQuery,
+                    onOpenSettings: onOpenSettings
+                )
                     .padding(.horizontal, 12)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
@@ -27,8 +30,7 @@ struct MenuBarPanelView: View {
                 } else {
                     AppGridView(
                         mode: .scrolling,
-                        onLaunch: launchAndDismiss,
-                        onOpenSettings: onOpenSettings
+                        onLaunch: launchAndDismiss
                     )
                 }
             }

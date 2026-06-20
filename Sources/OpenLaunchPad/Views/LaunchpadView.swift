@@ -27,7 +27,11 @@ struct LaunchpadView: View {
 
             VStack(spacing: 0) {
                 // Search bar
-                SearchBarView(text: $vm.searchQuery, onClear: vm.closeFolder)
+                SearchBarView(
+                    text: $vm.searchQuery,
+                    onClear: vm.closeFolder,
+                    onOpenSettings: onOpenSettings
+                )
                     .padding(.top, 40)
                     .padding(.bottom, 24)
 
@@ -40,8 +44,7 @@ struct LaunchpadView: View {
                         onLaunch: { app in
                             vm.launch(app)
                             onDismiss()
-                        },
-                        onOpenSettings: onOpenSettings
+                        }
                     )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
