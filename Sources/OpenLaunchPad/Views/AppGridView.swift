@@ -8,12 +8,13 @@ enum AppGridMode {
 struct AppGridLayout {
     let columnCount: Int
     let cellWidth: CGFloat
+    let cellHeight: CGFloat
     let columnSpacing: CGFloat
     let rowSpacing: CGFloat
     let contentWidth: CGFloat
     let viewportHeight: CGFloat
 
-    init(size: CGSize, iconSize: CGFloat, requestedColumns: Int) {
+    init(size: CGSize, iconSize: CGFloat, requestedColumns: Int, showsLabels: Bool = true) {
         let horizontalPadding = min(max(size.width * 0.06, 24), 120)
         let availableWidth = max(size.width - horizontalPadding * 2, iconSize)
         let cellWidth = iconSize + 40
@@ -28,6 +29,7 @@ struct AppGridLayout {
 
         self.columnCount = columnCount
         self.cellWidth = cellWidth
+        self.cellHeight = LaunchpadIconMetrics.cellHeight(for: iconSize, showsLabel: showsLabels)
         self.columnSpacing = columnSpacing
         self.rowSpacing = min(max(size.height * 0.04, 24), 48)
         self.contentWidth = CGFloat(columnCount) * cellWidth + CGFloat(max(columnCount - 1, 0)) * columnSpacing
@@ -37,7 +39,7 @@ struct AppGridLayout {
     func contentHeight(itemCount: Int) -> CGFloat {
         guard itemCount > 0 else { return 0 }
         let rowCount = Int(ceil(Double(itemCount) / Double(columnCount)))
-        return CGFloat(rowCount) * cellWidth + CGFloat(max(rowCount - 1, 0)) * rowSpacing
+        return CGFloat(rowCount) * cellHeight + CGFloat(max(rowCount - 1, 0)) * rowSpacing
     }
 }
 
@@ -63,7 +65,8 @@ struct AppGridView: View {
             let layout = AppGridLayout(
                 size: proxy.size,
                 iconSize: config.iconSize,
-                requestedColumns: config.gridColumns
+                requestedColumns: config.gridColumns,
+                showsLabels: config.iconLabelVisible
             )
 
             ZStack {
@@ -136,15 +139,22 @@ struct AppGridView: View {
 
     private func itemGrid(items: [LaunchpadItem], layout: AppGridLayout) -> some View {
         let gridColumns = Array(
-            repeating: GridItem(.fixed(layout.cellWidth), spacing: layout.columnSpacing),
+            repeating: GridItem(
+                .fixed(layout.cellWidth),
+                spacing: layout.columnSpacing,
+                alignment: .top
+            ),
             count: layout.columnCount
         )
 
         return LazyVGrid(columns: gridColumns, spacing: layout.rowSpacing) {
             ForEach(items) { item in
                 itemView(item: item)
-                    .frame(width: layout.cellWidth)
-                    .frame(minHeight: layout.cellWidth)
+                    .frame(
+                        width: layout.cellWidth,
+                        height: layout.cellHeight,
+                        alignment: .top
+                    )
                     .contentShape(Rectangle())
                     .overlay(alignment: activeTarget?.alignment(for: item.id) ?? .center) {
                         dragTargetIndicator(for: item.id, width: layout.cellWidth)

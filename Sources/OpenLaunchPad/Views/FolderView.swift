@@ -38,13 +38,7 @@ struct FolderView: View {
                 .animation(.spring(duration: 0.15), value: isHovered)
 
             if showLabel {
-                Text(folder.title)
-                    .font(.system(size: max(10, iconSize * 0.145)))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 2)
-                    .frame(maxWidth: iconSize + 16)
+                LaunchpadIconLabel(title: folder.title, iconSize: CGFloat(iconSize))
             }
         }
         .contentShape(Rectangle())

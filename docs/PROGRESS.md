@@ -30,11 +30,12 @@ Last updated: 2026-07-21
 - Made hidden menu-bar icon changes apply immediately without restarting the app.
 - Added reusable app-icon context menus with Open, Show in Finder, Get Info, and Uninstall.
 - Added protected-app checks, Move to Trash confirmation, visible error reporting, and atomic layout updates after uninstall.
+- Top-aligned app and folder cells with a shared two-line label height so every icon in a row has the same top edge.
 - Updated `README.md` with build, run, test, data, and organization instructions.
 
 ## Verified
 
-- `swift test` passes with 70 tests.
+- `swift test` passes with 71 tests.
 - `./script/build_and_run.sh --verify` builds, bundles, launches, and confirms the process is alive.
 - Bundle inspection confirms `CFBundleIconFile` is `AppIcon`.
 - Bundle inspection confirms `dist/OpenLaunchPad.app/Contents/Resources/AppIcon.icns` is present.

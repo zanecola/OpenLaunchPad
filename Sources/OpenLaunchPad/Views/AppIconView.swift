@@ -96,13 +96,7 @@ struct AppIconView: View {
                 .scaleEffect(isHovered && !isEditMode ? 1.08 : 1.0)
 
             if showLabel {
-                Text(app.title)
-                    .font(.system(size: max(10, iconSize * 0.145)))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 2)
-                    .frame(maxWidth: iconSize + 16)
+                LaunchpadIconLabel(title: app.title, iconSize: CGFloat(iconSize))
             }
         }
         .contentShape(Rectangle())

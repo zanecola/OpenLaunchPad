@@ -15,6 +15,7 @@ struct AppGridLayoutTests {
         #expect(layout.columnSpacing >= 64)
         #expect(layout.contentWidth >= 1_200)
         #expect(layout.contentWidth <= 1_800)
+        #expect(layout.cellHeight >= 120)
     }
 
     @Test
@@ -28,5 +29,17 @@ struct AppGridLayoutTests {
         #expect(layout.contentWidth <= 552)
         #expect(layout.columnCount < 7)
         #expect(layout.contentHeight(itemCount: 35) > 500)
+    }
+
+    @Test
+    func largeIconsReserveTwoAlignedLabelLines() {
+        let layout = AppGridLayout(
+            size: CGSize(width: 1_400, height: 900),
+            iconSize: 128,
+            requestedColumns: 7,
+            showsLabels: true
+        )
+
+        #expect(layout.cellHeight >= 128 + 6 + LaunchpadIconMetrics.labelHeight(for: 128))
     }
 }
