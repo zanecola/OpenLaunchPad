@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
     private var pendingStatusPopupAnchor: NSPoint?
+    private var pendingStatusPopupWorkItem: DispatchWorkItem?
+    private var isStatusPopupActivationRequested = false
     private lazy var databaseWatcher = LaunchpadDatabaseWatcher { [weak self] in
         Task { @MainActor [weak self] in
             await self?.viewModel.load()
@@ -52,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        cancelPendingStatusPopup()
         databaseWatcher.stop()
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
@@ -65,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        guard isStatusPopupActivationRequested else { return }
         DispatchQueue.main.async { [weak self] in
             self?.presentPendingStatusPopup()
         }
@@ -103,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hideLaunchpad() {
-        pendingStatusPopupAnchor = nil
+        cancelPendingStatusPopup()
         isLaunchpadVisible = false
         fullScreenWindow.hide()
         popupPanel?.hide()
@@ -194,20 +198,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func scheduleStatusPopup(anchorPoint: NSPoint) {
+        cancelPendingStatusPopup()
         pendingStatusPopupAnchor = anchorPoint
-        if NSApp.isActive {
-            DispatchQueue.main.async { [weak self] in
-                self?.presentPendingStatusPopup()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.pendingStatusPopupAnchor != nil else { return }
+            self.isStatusPopupActivationRequested = true
+
+            if NSApp.isActive {
+                self.presentPendingStatusPopup()
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+                DispatchQueue.main.async { [weak self] in
+                    guard NSApp.isActive else { return }
+                    self?.presentPendingStatusPopup()
+                }
             }
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
         }
+        pendingStatusPopupWorkItem = workItem
+
+        // Status-item tracking briefly activates this app before restoring the previous app.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+    }
+
+    private func cancelPendingStatusPopup() {
+        pendingStatusPopupWorkItem?.cancel()
+        pendingStatusPopupWorkItem = nil
+        pendingStatusPopupAnchor = nil
+        isStatusPopupActivationRequested = false
     }
 
     private func presentPendingStatusPopup() {
-        guard let anchorPoint = pendingStatusPopupAnchor else { return }
+        guard isStatusPopupActivationRequested,
+              let anchorPoint = pendingStatusPopupAnchor else { return }
+        pendingStatusPopupWorkItem?.cancel()
+        pendingStatusPopupWorkItem = nil
         pendingStatusPopupAnchor = nil
-        showPopup(anchorPoint: anchorPoint)
+        isStatusPopupActivationRequested = false
+
+        DispatchQueue.main.async { [weak self] in
+            self?.showPopup(anchorPoint: anchorPoint)
+        }
     }
 
     private func showStatusMenu(relativeTo button: NSStatusBarButton) {
