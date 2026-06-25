@@ -17,7 +17,7 @@ struct SettingsView: View {
             ShortcutSettingsTab()
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
         }
-        .frame(width: 480, height: 340)
+        .frame(width: 520, height: 430)
         .environment(config)
         .environment(vm)
     }
@@ -76,13 +76,23 @@ private struct AppearanceSettingsTab: View {
                         .frame(width: 36)
                 }
 
-                Stepper("Columns: \(config.gridColumns == 0 ? "Auto" : "\(config.gridColumns)")",
-                        value: $config.gridColumns, in: 0...12)
-
                 Toggle("Show app labels", isOn: $config.iconLabelVisible)
             }
 
-            Section("Window (Popup Mode)") {
+            Section("Full-Screen Layout") {
+                Picker("Preferred columns", selection: $config.gridColumns) {
+                    Text("Automatic").tag(0)
+                    ForEach(4...12, id: \.self) { count in
+                        Text("\(count)").tag(count)
+                    }
+                }
+
+                Text("The actual count may reduce on smaller displays so icons never overlap.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Popup Window") {
                 HStack {
                     Text("Width")
                     Slider(value: $config.paneWidth, in: 400...1400, step: 20)
@@ -97,6 +107,16 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 40)
                 }
+
+                LabeledContent("Columns") {
+                    Text("\(popupColumnCount) (automatic)")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+
+                Text("Popup columns adapt automatically when width or icon size changes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Background") {
@@ -121,6 +141,18 @@ private struct AppearanceSettingsTab: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+
+    private var popupColumnCount: Int {
+        AppGridLayout(
+            size: CGSize(
+                width: config.paneWidth,
+                height: max(config.paneHeight - 70, 1)
+            ),
+            iconSize: config.iconSize,
+            requestedColumns: 0,
+            showsLabels: config.iconLabelVisible
+        ).columnCount
     }
 }
 

@@ -4,6 +4,12 @@ import Testing
 
 struct AppGridLayoutTests {
     @Test
+    func popupUsesAutomaticColumnsWhileFullScreenUsesPreference() {
+        #expect(AppGridMode.scrolling.requestedColumns(configuredColumns: 12) == 0)
+        #expect(AppGridMode.paged.requestedColumns(configuredColumns: 12) == 12)
+    }
+
+    @Test
     func fullScreenLayoutUsesAvailableWidth() {
         let layout = AppGridLayout(
             size: CGSize(width: 2_000, height: 1_000),

@@ -10,6 +10,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let viewModel: LaunchpadViewModel
 
     private let fullScreenWindow = FullScreenWindow()
+    private lazy var settingsWindowController = SettingsWindowController(
+        viewModel: viewModel,
+        config: config
+    )
     private var popupPanel: PopupPanel?
     private var statusItem: NSStatusItem?
     private var hotkeyRef: EventHotKeyRef?
@@ -284,8 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func openSettings() {
         hideLaunchpad()
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindowController.present()
     }
 
     @objc private func openSettingsFromMenu() {

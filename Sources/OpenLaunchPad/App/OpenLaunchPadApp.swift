@@ -11,6 +11,13 @@ struct OpenLaunchPadApp: App {
                 .environment(appDelegate.config)
         }
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    appDelegate.openSettings()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandMenu("Pages") {
                 Button("Previous Page") {
                     appDelegate.viewModel.showPreviousPage()

@@ -72,7 +72,7 @@ struct MenuBarPanelView: View {
     }
 
     private func compactGrid(_ results: [LaunchpadItem]) -> some View {
-        let cols = Array(repeating: GridItem(.fixed(config.iconSize + 16), spacing: 8), count: 5)
+        let cols = [GridItem(.adaptive(minimum: config.iconSize + 16), spacing: 8, alignment: .top)]
         return ScrollView {
             LazyVGrid(columns: cols, spacing: 12) {
                 ForEach(results) { item in

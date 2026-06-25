@@ -5,6 +5,19 @@ import Testing
 
 struct ConfigStoreTests {
     @Test
+    func legacyColumnPreferenceIsNormalizedIntoSupportedRange() throws {
+        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(2, forKey: "gridColumns")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.gridColumns == 4)
+        #expect(defaults.integer(forKey: "gridColumns") == 4)
+    }
+
+    @Test
     func menuBarVisibilityChangesPersistAndNotify() throws {
         let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))

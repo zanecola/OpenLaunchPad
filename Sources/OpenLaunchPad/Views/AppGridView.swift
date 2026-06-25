@@ -3,6 +3,13 @@ import SwiftUI
 enum AppGridMode {
     case paged
     case scrolling
+
+    func requestedColumns(configuredColumns: Int) -> Int {
+        switch self {
+        case .paged: configuredColumns
+        case .scrolling: 0
+        }
+    }
 }
 
 struct AppGridLayout {
@@ -65,7 +72,7 @@ struct AppGridView: View {
             let layout = AppGridLayout(
                 size: proxy.size,
                 iconSize: config.iconSize,
-                requestedColumns: config.gridColumns,
+                requestedColumns: mode.requestedColumns(configuredColumns: config.gridColumns),
                 showsLabels: config.iconLabelVisible
             )
 

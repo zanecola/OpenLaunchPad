@@ -85,7 +85,8 @@ final class ConfigStore {
             iconLabelVisible = defaults.bool(forKey: Keys.iconLabelVisible)
         }
         if defaults.object(forKey: Keys.gridColumns) != nil {
-            gridColumns = defaults.integer(forKey: Keys.gridColumns)
+            let storedColumns = defaults.integer(forKey: Keys.gridColumns)
+            gridColumns = storedColumns == 0 ? 0 : min(max(storedColumns, 4), 12)
         }
         if defaults.object(forKey: Keys.paneWidth) != nil {
             paneWidth = defaults.double(forKey: Keys.paneWidth)

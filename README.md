@@ -155,6 +155,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 - App launch automatically dismisses the active launcher surface
 - Scrollable folder overlays in both full-screen and popup modes
 - Configurable icon size, labels, grid columns, popup dimensions, blur, animation speed, and menu bar visibility
+- Independent layout behavior: preferred columns for full-screen and automatic width-aware columns for popup mode
 - Drag-to-rearrange, drag-to-folder, folder-internal reorder, and drag-out support with layout persistence
 - App icon context menus with Open, Show in Finder, Get Info, and confirmed Move to Trash uninstall
 - Read-only Launchpad database access with `/Applications` fallback
