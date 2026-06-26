@@ -26,7 +26,7 @@ Last updated: 2026-07-21
 - Added a compact Settings button beside the search field and reused the same Settings opening path.
 - Added persisted one-shot A–Z and Z–A sorting across pages and inside folders.
 - Fixed menu-bar popup placement so the panel opens below the clicked status icon.
-- Deferred menu-bar popup activation until status-item tracking releases the previously active app, then presents only after explicit activation completes.
+- Converted the menu-bar dropdown to a non-activating popup-menu panel that preserves the current app and dismisses on outside click.
 - Made hidden menu-bar icon changes apply immediately without restarting the app.
 - Added reusable app-icon context menus with Open, Show in Finder, Get Info, and Uninstall.
 - Added protected-app checks, Move to Trash confirmation, visible error reporting, and atomic layout updates after uninstall.
@@ -37,7 +37,7 @@ Last updated: 2026-07-21
 
 ## Verified
 
-- `swift test` passes with 73 tests.
+- `swift test` passes with 74 tests.
 - `./script/build_and_run.sh --verify` builds, bundles, launches, and confirms the process is alive.
 - Bundle inspection confirms `CFBundleIconFile` is `AppIcon`.
 - Bundle inspection confirms `dist/OpenLaunchPad.app/Contents/Resources/AppIcon.icns` is present.

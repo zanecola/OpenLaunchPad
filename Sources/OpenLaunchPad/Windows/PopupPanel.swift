@@ -69,10 +69,11 @@ final class PopupPanel: NSPanel {
         )
         isOpaque = false
         backgroundColor = .clear
-        level = .floating
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        level = .popUpMenu
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         isReleasedWhenClosed = false
-        hidesOnDeactivate = true
+        hidesOnDeactivate = false
+        becomesKeyOnlyIfNeeded = true
         hasShadow = true
     }
 
@@ -105,7 +106,7 @@ final class PopupPanel: NSPanel {
             ))
         }
 
-        makeKeyAndOrderFront(nil)
+        orderFrontRegardless()
     }
 
     func hide() {

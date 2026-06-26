@@ -7,6 +7,16 @@ struct PopupPlacementTests {
     private let visibleFrame = NSRect(x: 0, y: 70, width: 1_920, height: 986)
     private let panelSize = NSSize(width: 800, height: 600)
 
+    @Test @MainActor
+    func popupBehavesLikeANonActivatingMenuBarPanel() {
+        let panel = PopupPanel(width: 800, height: 600)
+
+        #expect(panel.styleMask.contains(.nonactivatingPanel))
+        #expect(panel.level == .popUpMenu)
+        #expect(!panel.hidesOnDeactivate)
+        #expect(panel.becomesKeyOnlyIfNeeded)
+    }
+
     @Test
     func bottomDockPlacementCentersOnClickedIcon() {
         let origin = PopupPlacement.origin(

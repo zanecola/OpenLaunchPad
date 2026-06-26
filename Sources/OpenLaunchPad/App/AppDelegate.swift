@@ -4,6 +4,11 @@ import Carbon
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private enum VisibleSurface {
+        case none
+        case fullScreen
+        case popup
+    }
 
     // Shared ViewModel and config — single instances for the whole app lifetime
     let config = ConfigStore.shared
@@ -18,16 +23,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
-    private var pendingStatusPopupAnchor: NSPoint?
-    private var pendingStatusPopupWorkItem: DispatchWorkItem?
-    private var isStatusPopupActivationRequested = false
+    private var popupDismissMonitor: Any?
     private lazy var databaseWatcher = LaunchpadDatabaseWatcher { [weak self] in
         Task { @MainActor [weak self] in
             await self?.viewModel.load()
         }
     }
 
-    private var isLaunchpadVisible = false
+    private var visibleSurface = VisibleSurface.none
+
+    private var isLaunchpadVisible: Bool {
+        visibleSurface != .none
+    }
 
     override init() {
         let dataSource = CompositeDataSource(
@@ -58,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        cancelPendingStatusPopup()
+        removePopupDismissMonitor()
         databaseWatcher.stop()
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
@@ -66,15 +73,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidResignActive(_ notification: Notification) {
-        if isLaunchpadVisible {
+        if visibleSurface == .fullScreen {
             hideLaunchpad()
-        }
-    }
-
-    func applicationDidBecomeActive(_ notification: Notification) {
-        guard isStatusPopupActivationRequested else { return }
-        DispatchQueue.main.async { [weak self] in
-            self?.presentPendingStatusPopup()
         }
     }
 
@@ -100,7 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showLaunchpad(popupAnchor: NSPoint? = nil) {
         guard !isLaunchpadVisible else { return }
-        isLaunchpadVisible = true
 
         switch config.dockClickMode {
         case .fullScreen:
@@ -111,8 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hideLaunchpad() {
-        cancelPendingStatusPopup()
-        isLaunchpadVisible = false
+        visibleSurface = .none
+        removePopupDismissMonitor()
         fullScreenWindow.hide()
         popupPanel?.hide()
         viewModel.searchQuery = ""
@@ -130,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(config)
 
         let controller = NSHostingController(rootView: root)
+        visibleSurface = .fullScreen
         fullScreenWindow.show(hostingView: controller)
     }
 
@@ -154,7 +154,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             width: config.paneWidth,
             height: config.paneHeight
         )
-        isLaunchpadVisible = true
+        visibleSurface = .popup
+        installPopupDismissMonitor()
     }
 
     // MARK: - Menu bar
@@ -197,50 +198,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isLaunchpadVisible {
             hideLaunchpad()
         } else {
-            scheduleStatusPopup(anchorPoint: statusItemAnchor(for: sender))
-        }
-    }
-
-    private func scheduleStatusPopup(anchorPoint: NSPoint) {
-        cancelPendingStatusPopup()
-        pendingStatusPopupAnchor = anchorPoint
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.pendingStatusPopupAnchor != nil else { return }
-            self.isStatusPopupActivationRequested = true
-
-            if NSApp.isActive {
-                self.presentPendingStatusPopup()
-            } else {
-                NSApp.activate(ignoringOtherApps: true)
-                DispatchQueue.main.async { [weak self] in
-                    guard NSApp.isActive else { return }
-                    self?.presentPendingStatusPopup()
-                }
+            let anchorPoint = statusItemAnchor(for: sender)
+            DispatchQueue.main.async { [weak self] in
+                self?.showPopup(anchorPoint: anchorPoint)
             }
         }
-        pendingStatusPopupWorkItem = workItem
-
-        // Status-item tracking briefly activates this app before restoring the previous app.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
     }
 
-    private func cancelPendingStatusPopup() {
-        pendingStatusPopupWorkItem?.cancel()
-        pendingStatusPopupWorkItem = nil
-        pendingStatusPopupAnchor = nil
-        isStatusPopupActivationRequested = false
+    private func installPopupDismissMonitor() {
+        removePopupDismissMonitor()
+        popupDismissMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard self?.visibleSurface == .popup else { return }
+                self?.hideLaunchpad()
+            }
+        }
     }
 
-    private func presentPendingStatusPopup() {
-        guard isStatusPopupActivationRequested,
-              let anchorPoint = pendingStatusPopupAnchor else { return }
-        pendingStatusPopupWorkItem?.cancel()
-        pendingStatusPopupWorkItem = nil
-        pendingStatusPopupAnchor = nil
-        isStatusPopupActivationRequested = false
-
-        DispatchQueue.main.async { [weak self] in
-            self?.showPopup(anchorPoint: anchorPoint)
+    private func removePopupDismissMonitor() {
+        if let popupDismissMonitor {
+            NSEvent.removeMonitor(popupDismissMonitor)
+            self.popupDismissMonitor = nil
         }
     }
 
