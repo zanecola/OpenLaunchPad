@@ -62,7 +62,9 @@ struct MenuBarPanelView: View {
             LaunchpadDragPreviewView()
         }
         .frame(width: config.paneWidth, height: config.paneHeight)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background {
+            LaunchpadBackdropView(mode: .popup, blurAmount: config.backgroundBlur)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)

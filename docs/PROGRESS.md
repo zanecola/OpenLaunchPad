@@ -33,11 +33,12 @@ Last updated: 2026-07-21
 - Top-aligned app and folder cells with a shared two-line label height so every icon in a row has the same top edge.
 - Added a retained Settings window used by the gear button, status menu, and Command-comma.
 - Separated full-screen preferred columns from automatic popup columns derived from panel width and icon size.
+- Replaced the ineffective blur slider path with a shared intensity-controlled material backdrop for full-screen and popup modes.
 - Updated `README.md` with build, run, test, data, and organization instructions.
 
 ## Verified
 
-- `swift test` passes with 74 tests.
+- `swift test` passes with 75 tests.
 - `./script/build_and_run.sh --verify` builds, bundles, launches, and confirms the process is alive.
 - Bundle inspection confirms `CFBundleIconFile` is `AppIcon`.
 - Bundle inspection confirms `dist/OpenLaunchPad.app/Contents/Resources/AppIcon.icns` is present.

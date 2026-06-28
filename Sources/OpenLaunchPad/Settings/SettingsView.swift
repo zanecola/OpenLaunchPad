@@ -121,12 +121,16 @@ private struct AppearanceSettingsTab: View {
 
             Section("Background") {
                 HStack {
-                    Text("Blur")
+                    Text("Blur intensity")
                     Slider(value: $config.backgroundBlur, in: 0...60)
                     Text("\(Int(config.backgroundBlur))")
                         .monospacedDigit()
                         .frame(width: 28)
                 }
+
+                Text("Applies to both full-screen and popup backgrounds.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Animation") {

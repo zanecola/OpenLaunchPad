@@ -159,32 +159,7 @@ struct LaunchpadView: View {
 
     @ViewBuilder
     private var backdrop: some View {
-        ZStack {
-            VisualEffectBlur(material: .underWindowBackground, blendingMode: .behindWindow)
-            Color.black.opacity(min(0.14 + config.backgroundBlur / 400, 0.28))
-        }
-        .ignoresSafeArea()
-    }
-}
-
-// MARK: - NSVisualEffectView bridge (ADR-6 fallback)
-
-import AppKit
-
-struct VisualEffectBlur: NSViewRepresentable {
-    var material: NSVisualEffectView.Material
-    var blendingMode: NSVisualEffectView.BlendingMode
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView()
-        v.material = material
-        v.blendingMode = blendingMode
-        v.state = .active
-        return v
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
+        LaunchpadBackdropView(mode: .fullScreen, blurAmount: config.backgroundBlur)
+            .ignoresSafeArea()
     }
 }
