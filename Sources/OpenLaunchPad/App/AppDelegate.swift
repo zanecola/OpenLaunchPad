@@ -229,24 +229,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.autoenablesItems = false
         menu.addItem(withTitle: "Settings…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
 
-        let sortItem = NSMenuItem(title: "Sort By", action: nil, keyEquivalent: "")
-        let sortMenu = NSMenu(title: "Sort By")
-        let sortAscendingItem = sortMenu.addItem(
-            withTitle: "Name A–Z",
-            action: #selector(sortAscending),
-            keyEquivalent: ""
-        )
-        let sortDescendingItem = sortMenu.addItem(
-            withTitle: "Name Z–A",
-            action: #selector(sortDescending),
-            keyEquivalent: ""
-        )
-        let canSort = !viewModel.isLoading && !viewModel.pages.isEmpty
-        sortAscendingItem.isEnabled = canSort
-        sortDescendingItem.isEnabled = canSort
-        sortItem.submenu = sortMenu
-        menu.addItem(sortItem)
-
         menu.addItem(.separator())
         menu.addItem(withTitle: "About OpenLaunchPad", action: #selector(showAboutPanel), keyEquivalent: "")
         menu.addItem(.separator())
@@ -273,14 +255,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettingsFromMenu() {
         openSettings()
-    }
-
-    @objc private func sortAscending() {
-        viewModel.sortByName(.ascending)
-    }
-
-    @objc private func sortDescending() {
-        viewModel.sortByName(.descending)
     }
 
     @objc private func showAboutPanel() {

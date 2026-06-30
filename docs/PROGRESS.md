@@ -53,7 +53,7 @@ Last updated: 2026-07-21
 - Confirm folder dissolution when dragging out from a two-app folder.
 - Confirm the new Dock icon appears after macOS refreshes the bundle icon cache.
 - Left-click the menu bar icon and confirm the popup opens directly below it.
-- Right-click the menu bar icon and exercise Settings, Sort By, About, and Quit.
+- Right-click the menu bar icon and exercise Settings, About, and Quit.
 - Open Settings from the button beside Search and confirm the launcher closes behind it.
 - Right-click top-level, search-result, and folder app icons and verify the context actions.
 - Confirm Uninstall moves a disposable test app to Trash and updates its folder without removing app data.
