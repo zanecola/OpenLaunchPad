@@ -1,5 +1,7 @@
 # Drag-and-Drop Organization Design
 
+> Status: implemented. This is the original feature design; see `DESIGN.md` and `docs/PROGRESS.md` for the current architecture and behavior.
+
 ## Goal
 
 Make app and folder organization behave predictably across the paged launcher and expanded folder view. Users can reorder top-level items, create folders by combining apps, add apps to folders, and drag apps back out. Every accepted operation persists immediately and survives relaunch.

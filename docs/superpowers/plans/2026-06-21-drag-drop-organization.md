@@ -1,5 +1,7 @@
 # Drag-and-Drop Organization Implementation Plan
 
+> Status: implemented. This plan is retained as a historical execution record; unchecked boxes do not represent current progress. See `docs/PROGRESS.md` for the active handoff.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add persistent drag reordering, app-to-folder creation, folder insertion, folder-internal ordering, and drag-out with automatic folder dissolution.

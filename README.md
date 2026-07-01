@@ -52,27 +52,26 @@ Run the SwiftPM test suite from the repository root:
 swift test
 ```
 
-The current tests cover key `LaunchpadViewModel` behavior:
+The current tests cover the main domain, persistence, data-source, settings, and window behavior:
 
-- loading pages and clamping the selected page
-- merging custom layout with new apps from the source data
-- persisting rearranged layouts
-- resetting to the source order
+- layout reordering, folder creation, insertion, internal ordering, drag-out, and normalization
+- loading, migrating, merging, and atomically persisting custom layouts
 - reconstructing ordered pages, folders, and folder contents from SQLite fixtures
-- skipping the Dock database's holding hierarchy
-- rejecting malformed Launchpad databases
+- scanning application folders, preserving source folders, and deduplicating apps
 - coalescing rapid database file writes into one reload notification
-- formatting and persisting recorded global shortcuts
+- popup placement, non-activating panel behavior, responsive grid sizing, and page scroll gestures
+- application context actions, protected uninstall rules, settings persistence, blur normalization, and shortcut formatting
 
 ## How It Works
 
-OpenLaunchPad is split into four main areas:
+OpenLaunchPad is split into five source areas plus its test target:
 
 - `Sources/OpenLaunchPad/App`: app entry point and `NSApplicationDelegate` lifecycle handling.
 - `Sources/OpenLaunchPad/Data`: Launchpad database reading, `/Applications` fallback scanning, icon loading, config persistence, and custom layout storage.
-- `Sources/OpenLaunchPad/ViewModel`: central observable state for pages, search, folders, icons, launch actions, and layout persistence.
+- `Sources/OpenLaunchPad/Models`: app/folder values, drag intent, and the pure layout mutation engine.
+- `Sources/OpenLaunchPad/ViewModel`: observable orchestration for pages, search, icons, system actions, and persistence.
 - `Sources/OpenLaunchPad/Views` and `Sources/OpenLaunchPad/Windows`: SwiftUI launcher UI plus small AppKit wrappers for full-screen and popup windows.
-- `Tests/OpenLaunchPadTests`: Swift Testing coverage for view-model behavior.
+- `Tests/OpenLaunchPadTests`: Swift Testing coverage for domain and integration boundaries.
 
 The main data flow is:
 
@@ -143,30 +142,31 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 ## Features
 
 - Full-screen Launchpad-style overlay
-- Menu bar popup panel
-- Left-click the menu bar icon to open the launcher; right-click it for Settings, name sorting, About, and Quit
+- Non-activating menu bar popup that opens below the status icon without taking focus from the current app
+- Left-click the menu bar icon to toggle the launcher; right-click it for Settings, About, and Quit
 - Compact Settings button beside the search field in full-screen and popup modes
-- Dock click mode: full-screen or an opaque popup anchored beside the clicked Dock icon
+- Dock click mode: full-screen or a material popup anchored beside the clicked Dock icon
 - AppKit-backed shortcut recorder with immediate Carbon hotkey registration
-- Full-screen paging with controls, horizontal wheel/trackpad gestures, and `Command-Left` / `Command-Right`
-- Continuous vertical scrolling in the menu-bar popup
+- Full-screen paging with controls, horizontal wheel/trackpad gestures, arrow keys, and `Command-Left` / `Command-Right`
+- Continuous vertical scrolling in the popup with hidden native scroll chrome
 - Search by app name, folder name, or app inside folder
 - Folder preview and expanded folder overlay
 - App launch automatically dismisses the active launcher surface
 - Scrollable folder overlays in both full-screen and popup modes
-- Configurable icon size, labels, grid columns, popup dimensions, blur, animation speed, and menu bar visibility
+- Configurable icon size, labels, full-screen columns, popup dimensions, working background blur, animation speed, Dock action, shortcut, and menu bar visibility
 - Independent layout behavior: preferred columns for full-screen and automatic width-aware columns for popup mode
-- Drag-to-rearrange, drag-to-folder, folder-internal reorder, and drag-out support with layout persistence
+- Animated drag preview, target feedback, top-level reorder, folder creation/insertion, folder-internal reorder, and drag-out with persistence
 - App icon context menus with Open, Show in Finder, Get Info, and confirmed Move to Trash uninstall
 - Read-only Launchpad database access with `/Applications` fallback
 - Automatic reload when the Dock Launchpad database changes
 - Filesystem-folder preservation and app deduplication when using the applications fallback
+- Bundled Dock icon in local `.app` builds
 
 ## Current Limitations
 
 - Local scripts create an unsigned `.app` bundle; release signing and distribution are not configured yet.
-- Test coverage currently focuses on the view model and database parsing. UI and window behavior still need coverage.
-- Cross-page drag behavior is intentionally simple and may need a custom gesture implementation later.
+- SwiftUI interaction behavior still relies on manual UX checks; the deterministic layout and window policies are unit tested.
+- Dragging does not currently auto-switch pages at a page edge.
 - Legacy user-created Launchpad folders cannot be recovered when macOS has removed `desktopproperties.db`; filesystem application folders remain available.
 - The app does not write changes back to the Dock Launchpad database by design.
 - Uninstall moves an app bundle to Trash; it does not remove that app's documents, preferences, or support files.
@@ -192,5 +192,14 @@ If the global shortcut does not work, open Settings, record it again, and verify
 ## Project Notes
 
 - `DESIGN.md` contains the functional design and architectural decisions.
+- `docs/PROGRESS.md` contains the current handoff, verification status, manual checklist, and next steps.
 - The app intentionally keeps AppKit at the edges for windows, panels, icons, app launching, and global hotkeys.
 - The Dock database is treated as source data only. All OpenLaunchPad-specific state lives under the app's own support path or user defaults.
+
+## Continuing Development
+
+1. Read `docs/PROGRESS.md` and `DESIGN.md` before changing behavior.
+2. Run `swift test` to establish a clean baseline.
+3. Build and launch the exact checkout with `./script/build_and_run.sh --verify` so an older app bundle is not mistaken for the current code.
+4. Keep layout rules in `LaunchpadLayout`, orchestration in `LaunchpadViewModel`, reusable interaction in `Views`, and macOS lifecycle behavior in `App` or `Windows`.
+5. Update the progress checklist and verification count with each completed milestone.
