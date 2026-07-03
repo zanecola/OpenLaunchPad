@@ -2,6 +2,16 @@
 
 OpenLaunchPad is a SwiftUI and AppKit macOS app that recreates a Launchpad-style app launcher for macOS 26+. It reads the existing Dock Launchpad database in read-only mode, falls back to scanning system application folders, and stores any custom icon ordering in its own JSON file.
 
+## Download & Install
+
+1. Download the latest `OpenLaunchPad-<version>.dmg` from the [Releases page](../../releases).
+2. Open the DMG and drag **OpenLaunchPad** into the **Applications** folder.
+3. Because the app is distributed unsigned (no Apple Developer ID), macOS Gatekeeper will block the first launch. To open it:
+   - Right-click (or Control-click) **OpenLaunchPad** in Applications and choose **Open**, then confirm in the dialog; **or**
+   - Run `xattr -dr com.apple.quarantine /Applications/OpenLaunchPad.app` in Terminal.
+
+You only need to do this once. Subsequent launches open normally.
+
 ## Requirements
 
 - macOS 26.0 or newer
@@ -164,7 +174,7 @@ OpenLaunchPad stores organization changes in its own layout file and never write
 
 ## Current Limitations
 
-- Local scripts create an unsigned `.app` bundle; release signing and distribution are not configured yet.
+- Releases ship an unsigned, ad-hoc-signed `.dmg` (no Apple Developer ID), so the first launch requires a manual Gatekeeper bypass — see [Download & Install](#download--install).
 - SwiftUI interaction behavior still relies on manual UX checks; the deterministic layout and window policies are unit tested.
 - Dragging does not currently auto-switch pages at a page edge.
 - Legacy user-created Launchpad folders cannot be recovered when macOS has removed `desktopproperties.db`; filesystem application folders remain available.
@@ -191,15 +201,15 @@ If the global shortcut does not work, open Settings, record it again, and verify
 
 ## Project Notes
 
-- `DESIGN.md` contains the functional design and architectural decisions.
-- `docs/PROGRESS.md` contains the current handoff, verification status, manual checklist, and next steps.
 - The app intentionally keeps AppKit at the edges for windows, panels, icons, app launching, and global hotkeys.
 - The Dock database is treated as source data only. All OpenLaunchPad-specific state lives under the app's own support path or user defaults.
 
 ## Continuing Development
 
-1. Read `docs/PROGRESS.md` and `DESIGN.md` before changing behavior.
-2. Run `swift test` to establish a clean baseline.
-3. Build and launch the exact checkout with `./script/build_and_run.sh --verify` so an older app bundle is not mistaken for the current code.
-4. Keep layout rules in `LaunchpadLayout`, orchestration in `LaunchpadViewModel`, reusable interaction in `Views`, and macOS lifecycle behavior in `App` or `Windows`.
-5. Update the progress checklist and verification count with each completed milestone.
+1. Run `swift test` to establish a clean baseline.
+2. Build and launch the exact checkout with `./script/build_and_run.sh --verify` so an older app bundle is not mistaken for the current code.
+3. Keep layout rules in `LaunchpadLayout`, orchestration in `LaunchpadViewModel`, reusable interaction in `Views`, and macOS lifecycle behavior in `App` or `Windows`.
+
+## License
+
+OpenLaunchPad is released under the [MIT License](LICENSE).
