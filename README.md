@@ -1,215 +1,226 @@
+<div align="center">
+
 # OpenLaunchPad
 
-OpenLaunchPad is a SwiftUI and AppKit macOS app that recreates a Launchpad-style app launcher for macOS 26+. It reads the existing Dock Launchpad database in read-only mode, falls back to scanning system application folders, and stores any custom icon ordering in its own JSON file.
+**A native, open-source Launchpad replacement for macOS 26.**
 
-## Download & Install
+Search, launch, group, and rearrange your apps from a full-screen grid or a compact menu-bar popup.
 
-1. Download the latest `OpenLaunchPad-<version>.dmg` from the [Releases page](../../releases).
-2. Open the DMG and drag **OpenLaunchPad** into the **Applications** folder.
-3. Because the app is distributed unsigned (no Apple Developer ID), macOS Gatekeeper will block the first launch. To open it:
-   - Right-click (or Control-click) **OpenLaunchPad** in Applications and choose **Open**, then confirm in the dialog; **or**
-   - Run `xattr -dr com.apple.quarantine /Applications/OpenLaunchPad.app` in Terminal.
+[![Latest release](https://img.shields.io/github/v/release/zanecola/OpenLaunchPad?display_name=tag&style=flat-square)](https://github.com/zanecola/OpenLaunchPad/releases/latest)
+![macOS 26+](https://img.shields.io/badge/macOS-26%2B-111111?style=flat-square&logo=apple)
+![Swift 5.9](https://img.shields.io/badge/Swift-5.9-F05138?style=flat-square&logo=swift&logoColor=white)
+[![MIT License](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
 
-You only need to do this once. Subsequent launches open normally.
+[Download the latest release](https://github.com/zanecola/OpenLaunchPad/releases/latest) | [Build from source](#build-from-source) | [Report an issue](https://github.com/zanecola/OpenLaunchPad/issues)
+
+</div>
+
+![OpenLaunchPad full-screen launcher](assets/screenshots/full-screen.png)
+
+Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brings back the parts that made it useful while adding a compact popup, configurable layouts, persistent folders, and familiar macOS controls.
+
+## Highlights
+
+- **Two ways to launch.** Use a paginated full-screen grid or a non-activating popup from the menu bar or Dock.
+- **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
+- **Fast navigation.** Search instantly, use horizontal mouse or trackpad gestures, click page controls, or navigate with the keyboard.
+- **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
+- **Make it yours.** Configure icon size, labels, full-screen columns, popup dimensions, blur, animation speed, Dock behavior, and a global shortcut.
+- **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
+
+## Gallery
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="assets/screenshots/popup.png" alt="OpenLaunchPad compact popup">
+    </td>
+    <td width="50%">
+      <img src="assets/screenshots/folders.png" alt="OpenLaunchPad expanded folder">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Compact popup</strong><br>Open without leaving the app you are using.</td>
+    <td align="center"><strong>Folders</strong><br>Group, rename, reorder, and drag apps back out.</td>
+  </tr>
+</table>
+
+Screenshots are rendered from the current SwiftUI views with curated macOS system apps.
+
+## Install
+
+### Download a release
+
+1. Download `OpenLaunchPad-<version>.dmg` from [GitHub Releases](https://github.com/zanecola/OpenLaunchPad/releases/latest).
+2. Open the DMG and drag **OpenLaunchPad** into **Applications**.
+3. Open OpenLaunchPad from Applications.
+
+### First launch on macOS
+
+Current releases are ad-hoc signed, not notarized with an Apple Developer ID. Gatekeeper may block the first launch.
+
+Try Control-clicking OpenLaunchPad in Applications and choosing **Open**. If macOS still blocks it, go to **System Settings > Privacy & Security** and choose **Open Anyway** for OpenLaunchPad.
+
+As a Terminal alternative:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/OpenLaunchPad.app
+```
+
+Only use the command for a copy downloaded from this repository's official Releases page.
 
 ## Requirements
 
 - macOS 26.0 or newer
-- Xcode with the macOS 26 SDK installed
-- SwiftPM, available through Xcode's toolchain
-- A non-sandboxed runtime if you want Launchpad database access and global hotkeys
+- A non-sandboxed installation for Launchpad database access and global shortcuts
 
-The package uses Swift tools version 5.9 but targets macOS 26 with `platforms: [.macOS("26.0")]`.
+Building from source additionally requires Xcode with the macOS 26 SDK and SwiftPM.
 
-## Build
+## Using OpenLaunchPad
 
-From the repository root:
+### Open the launcher
 
-```bash
-swift build
-```
+| Action | Result |
+|---|---|
+| Click the Dock icon | Opens full-screen or popup mode, depending on Settings |
+| Left-click the menu-bar icon | Toggles the compact popup below the icon |
+| Right-click the menu-bar icon | Shows Settings, About, and Quit |
+| Press your configured global shortcut | Toggles the launcher from any app |
+| Click the gear beside Search | Opens Settings |
 
-In the Codex desktop sandbox, SwiftPM may try to write caches outside the workspace. If that happens, use workspace-local cache paths:
+Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 
-```bash
-env HOME="$PWD/.build" CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache" swift build
-```
+### Navigate
 
-## Run
+- Type in Search to filter apps and folders.
+- Use Left/Right, Command-Left/Command-Right, the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode.
+- Scroll vertically in popup mode and inside large folders.
+- Press Escape to close an expanded folder or dismiss full-screen mode.
 
-Build a local `.app` bundle and launch it:
+### Organize apps
 
-```bash
-./script/build_and_run.sh
-```
+- Drag to the left or right edge of another icon to reorder.
+- Drop an app onto the center of another app to create a folder.
+- Drop an app onto an existing folder to add it.
+- Open a folder and drag apps to reorder them.
+- Drag an app outside the expanded folder to move it back to the launcher.
+- Edit the folder name directly in its header.
 
-The script stages `dist/OpenLaunchPad.app`, stops an existing instance, and launches the fresh build. The Codex project Run action uses this same script.
-The generated bundle includes `Sources/OpenLaunchPad/Resources/AppIcon.icns` as the Dock icon.
+Changes are saved immediately and survive relaunches. Search results are launch-only, so filtering cannot accidentally change your layout.
 
-To launch and confirm that the process remains alive:
+### App context menu
 
-```bash
-./script/build_and_run.sh --verify
-```
+Right-click an app for:
 
-The generated bundle is for local development. Regular distribution still requires signing, notarization, and release packaging.
+- Open
+- Show in Finder
+- Get Info
+- Uninstall (Move to Trash, with confirmation)
 
-## Test
+OpenLaunchPad protects system apps and itself from uninstall. Moving an app to Trash does not remove that app's documents or support files.
 
-Run the SwiftPM test suite from the repository root:
+## Data and Privacy
 
-```bash
-swift test
-```
+OpenLaunchPad does not write to Apple's Dock database.
 
-The current tests cover the main domain, persistence, data-source, settings, and window behavior:
-
-- layout reordering, folder creation, insertion, internal ordering, drag-out, and normalization
-- loading, migrating, merging, and atomically persisting custom layouts
-- reconstructing ordered pages, folders, and folder contents from SQLite fixtures
-- scanning application folders, preserving source folders, and deduplicating apps
-- coalescing rapid database file writes into one reload notification
-- popup placement, non-activating panel behavior, responsive grid sizing, and page scroll gestures
-- application context actions, protected uninstall rules, settings persistence, blur normalization, and shortcut formatting
-
-## How It Works
-
-OpenLaunchPad is split into five source areas plus its test target:
-
-- `Sources/OpenLaunchPad/App`: app entry point and `NSApplicationDelegate` lifecycle handling.
-- `Sources/OpenLaunchPad/Data`: Launchpad database reading, `/Applications` fallback scanning, icon loading, config persistence, and custom layout storage.
-- `Sources/OpenLaunchPad/Models`: app/folder values, drag intent, and the pure layout mutation engine.
-- `Sources/OpenLaunchPad/ViewModel`: observable orchestration for pages, search, icons, system actions, and persistence.
-- `Sources/OpenLaunchPad/Views` and `Sources/OpenLaunchPad/Windows`: SwiftUI launcher UI plus small AppKit wrappers for full-screen and popup windows.
-- `Tests/OpenLaunchPadTests`: Swift Testing coverage for domain and integration boundaries.
-
-The main data flow is:
-
-```text
-LaunchpadDBDataSource or ApplicationsFolderDataSource
-    -> CompositeDataSource
-    -> LaunchpadViewModel
-    -> SwiftUI views
-```
-
-User ordering is merged on load:
-
-```text
-system app list + ~/Library/Application Support/OpenLaunchPad/layout.json
-    -> visible pages
-```
-
-## Data Sources
-
-The primary data source reads the Dock Launchpad SQLite database:
+It reads the legacy Launchpad database in read-only mode when available:
 
 ```text
 ~/Library/Application Support/Dock/desktopproperties.db
 ```
 
-It opens the database with `SQLITE_OPEN_READONLY` and never writes to it.
+If the database is unavailable, it scans `/Applications`, `~/Applications`, and `/System/Applications`. Existing filesystem folders are preserved and duplicate bundle identifiers are removed.
 
-If that database cannot be opened or queried, the fallback source scans:
-
-```text
-/Applications
-~/Applications
-/System/Applications
-```
-
-The fallback preserves immediate application directories as folders, removes duplicate bundle identifiers, and derives stable IDs so custom ordering survives reloads. On macOS 26 systems where the legacy Dock Launchpad database no longer exists, old user-created Launchpad groups are not available to import.
-
-## Stored Data
-
-User settings are stored in `UserDefaults` with the suite name:
-
-```text
-com.openlaunchpad
-```
-
-Custom layout is stored separately from the Dock database:
+Your custom pages, folders, and ordering are stored separately:
 
 ```text
 ~/Library/Application Support/OpenLaunchPad/layout.json
 ```
 
-Deleting `layout.json` resets icon order back to the data source order. The Settings window also exposes a reset action.
-Folder names are edited directly in the expanded folder header and are persisted in the same file. Legacy layout files containing only page IDs are migrated automatically when next saved.
+Settings are stored locally in the `com.openlaunchpad` UserDefaults suite. There are no network services, accounts, analytics, or telemetry.
 
-## Organizing Apps
+## Build from Source
 
-OpenLaunchPad stores organization changes in its own layout file and never writes back to Apple's Dock Launchpad database.
-
-- Drag an app or folder near the left or right edge of another top-level icon to reorder it.
-- Drop one app on the center of another app to create a folder.
-- Drop an app on the center of an existing folder to append it to that folder.
-- Open a folder and drag its apps before or after another app in the folder to reorder the folder contents.
-- Drag an app from an open folder onto the dimmed background around the folder to move it back out beside the folder.
-- If dragging an app out leaves only one app in the folder, the folder dissolves automatically.
-- Rename a folder from the text field in the expanded folder header.
-- Search results are launch-only, so organization drops are ignored while filtering.
-
-## Features
-
-- Full-screen Launchpad-style overlay
-- Non-activating menu bar popup that opens below the status icon without taking focus from the current app
-- Left-click the menu bar icon to toggle the launcher; right-click it for Settings, About, and Quit
-- Compact Settings button beside the search field in full-screen and popup modes
-- Dock click mode: full-screen or a material popup anchored beside the clicked Dock icon
-- AppKit-backed shortcut recorder with immediate Carbon hotkey registration
-- Full-screen paging with controls, horizontal wheel/trackpad gestures, arrow keys, and `Command-Left` / `Command-Right`
-- Continuous vertical scrolling in the popup with hidden native scroll chrome
-- Search by app name, folder name, or app inside folder
-- Folder preview and expanded folder overlay
-- App launch automatically dismisses the active launcher surface
-- Scrollable folder overlays in both full-screen and popup modes
-- Configurable icon size, labels, full-screen columns, popup dimensions, working background blur, animation speed, Dock action, shortcut, and menu bar visibility
-- Independent layout behavior: preferred columns for full-screen and automatic width-aware columns for popup mode
-- Animated drag preview, target feedback, top-level reorder, folder creation/insertion, folder-internal reorder, and drag-out with persistence
-- App icon context menus with Open, Show in Finder, Get Info, and confirmed Move to Trash uninstall
-- Read-only Launchpad database access with `/Applications` fallback
-- Automatic reload when the Dock Launchpad database changes
-- Filesystem-folder preservation and app deduplication when using the applications fallback
-- Bundled Dock icon in local `.app` builds
-
-## Current Limitations
-
-- Releases ship an unsigned, ad-hoc-signed `.dmg` (no Apple Developer ID), so the first launch requires a manual Gatekeeper bypass — see [Download & Install](#download--install).
-- SwiftUI interaction behavior still relies on manual UX checks; the deterministic layout and window policies are unit tested.
-- Dragging does not currently auto-switch pages at a page edge.
-- Legacy user-created Launchpad folders cannot be recovered when macOS has removed `desktopproperties.db`; filesystem application folders remain available.
-- The app does not write changes back to the Dock Launchpad database by design.
-- Uninstall moves an app bundle to Trash; it does not remove that app's documents, preferences, or support files.
-
-## Troubleshooting
-
-If `swift build` fails with cache or module-cache permission errors, use workspace-local cache paths:
+Clone and enter the repository:
 
 ```bash
-env HOME="$PWD/.build" CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache" swift build
+git clone https://github.com/zanecola/OpenLaunchPad.git
+cd OpenLaunchPad
 ```
 
-If Launchpad data is missing, verify that this file exists and is readable:
+Run the test suite:
+
+```bash
+swift test
+```
+
+Build a local `.app` bundle and launch it:
+
+```bash
+./script/build_and_run.sh --verify
+```
+
+Create an ad-hoc-signed DMG:
+
+```bash
+./script/build_dmg.sh 0.1.0
+```
+
+Generated artifacts are written to `dist/`.
+
+If SwiftPM cache permissions are restricted, use workspace-local paths:
+
+```bash
+env HOME="$PWD/.build" CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache" swift test
+```
+
+## Architecture
+
+OpenLaunchPad is a SwiftUI and AppKit application with deliberately small boundaries:
 
 ```text
-~/Library/Application Support/Dock/desktopproperties.db
+Launchpad database or Applications folders
+                    |
+                    v
+            CompositeDataSource
+                    |
+                    v
+          LaunchpadViewModel
+           /              \
+          v                v
+ LaunchpadLayout      SwiftUI views
+ (pure mutations)          |
+                          v
+              AppKit windows and status item
 ```
 
-If it is not readable, OpenLaunchPad should fall back to scanning `/Applications` and `/System/Applications`.
+- `LaunchpadLayout` owns deterministic page and folder mutations.
+- `LaunchpadViewModel` coordinates state, persistence, icons, and app actions.
+- SwiftUI views render full-screen, popup, folder, drag, search, and Settings experiences.
+- AppKit handles windows, the status item, system services, and the Carbon global hotkey.
+- JSON persistence is versioned and migrates earlier layout formats.
 
-If the global shortcut does not work, open Settings, record it again, and verify that another application has not already registered the same combination.
+The test suite covers layout invariants, persistence migrations, data sources, view-model orchestration, settings, popup placement, paging input, app actions, and backdrop behavior.
 
-## Project Notes
+## Known Limitations
 
-- The app intentionally keeps AppKit at the edges for windows, panels, icons, app launching, and global hotkeys.
-- The Dock database is treated as source data only. All OpenLaunchPad-specific state lives under the app's own support path or user defaults.
+- Releases are not yet Developer ID signed or notarized.
+- Dragging to a page edge does not automatically switch pages yet.
+- Legacy user-created Launchpad folders cannot be recovered when macOS no longer provides `desktopproperties.db`.
+- Uninstall moves only the app bundle to Trash; user data remains in place.
+- Per-display layouts and iCloud sync are not implemented.
 
-## Continuing Development
+## Contributing
 
-1. Run `swift test` to establish a clean baseline.
-2. Build and launch the exact checkout with `./script/build_and_run.sh --verify` so an older app bundle is not mistaken for the current code.
-3. Keep layout rules in `LaunchpadLayout`, orchestration in `LaunchpadViewModel`, reusable interaction in `Views`, and macOS lifecycle behavior in `App` or `Windows`.
+Issues and pull requests are welcome. Before opening a pull request:
+
+1. Describe the user-facing behavior and any macOS-specific tradeoffs.
+2. Keep layout rules in `LaunchpadLayout`, orchestration in `LaunchpadViewModel`, reusable interaction in `Views`, and lifecycle behavior in `App` or `Windows`.
+3. Add focused tests for deterministic behavior.
+4. Run `swift test` and `./script/build_and_run.sh --verify`.
+
+Please use [GitHub Issues](https://github.com/zanecola/OpenLaunchPad/issues) for bugs and feature proposals.
 
 ## License
 
-OpenLaunchPad is released under the [MIT License](LICENSE).
+OpenLaunchPad is available under the [MIT License](LICENSE).
