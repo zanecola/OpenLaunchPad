@@ -20,6 +20,8 @@ enum FrequentlyUsedAppsPresentation {
 }
 
 struct FrequentlyUsedAppsLayout {
+    static let headerHeight: CGFloat = 26
+
     let visibleCount: Int
     let iconSize: CGFloat
     let cellWidth: CGFloat
@@ -53,7 +55,7 @@ struct FrequentlyUsedAppsLayout {
         rowHeight = LaunchpadIconMetrics.cellHeight(
             for: iconSize,
             showsLabel: showsLabels
-        ) + 24
+        ) + 24 + Self.headerHeight
     }
 }
 
@@ -77,6 +79,20 @@ struct FrequentlyUsedAppsView: View {
                 let apps = vm.frequentlyUsedApps(limit: layout.visibleCount)
 
                 VStack(spacing: 0) {
+                    HStack {
+                        Label("Frequently Used", systemImage: "clock.arrow.circlepath")
+                            .font(.caption.weight(.semibold))
+                            .help(
+                                "Apps launched through OpenLaunchPad are ranked by how often "
+                                    + "and how recently you use them. You can turn this off in Settings."
+                            )
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, presentation.horizontalPadding)
+                    .frame(height: FrequentlyUsedAppsLayout.headerHeight)
+                    .accessibilityElement(children: .combine)
+
                     HStack(spacing: layout.spacing) {
                         ForEach(apps) { app in
                             AppIconView(
@@ -115,6 +131,6 @@ struct FrequentlyUsedAppsView: View {
         return LaunchpadIconMetrics.cellHeight(
             for: iconSize,
             showsLabel: config.iconLabelVisible
-        ) + 24
+        ) + 24 + FrequentlyUsedAppsLayout.headerHeight
     }
 }

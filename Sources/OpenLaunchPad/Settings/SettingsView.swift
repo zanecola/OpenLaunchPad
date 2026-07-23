@@ -47,14 +47,25 @@ private struct GeneralSettingsTab: View {
             }
 
             Section("Suggestions") {
-                Toggle("Show frequently used apps", isOn: $config.showFrequentlyUsedApps)
+                Toggle(
+                    "Show Frequently Used row",
+                    isOn: $config.showFrequentlyUsedApps
+                )
+
+                Text(
+                    config.showFrequentlyUsedApps
+                        ? "Shows a shortcut row above your apps, ranked by launch frequency and recency."
+                        : "The shortcut row is hidden. Existing usage history remains stored until cleared."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
                 Button("Clear Usage History") {
                     vm.clearAppUsageHistory()
                 }
                 .disabled(!vm.hasAppUsageHistory)
 
-                Text("Usage history records only apps launched through OpenLaunchPad and stays on this Mac.")
+                Text("Only apps launched through OpenLaunchPad are recorded. This history stays on your Mac.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
