@@ -239,6 +239,72 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func frequentlyUsedAppsResolveFoldersAndIgnoreMissingApps() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [calendar])
+        let usageStore = StubAppUsageStore(history: AppUsageHistory(records: [
+            AppUsageRecord(
+                bundleID: "com.example.missing",
+                launchCount: 100,
+                lastLaunchedAt: Date(timeIntervalSince1970: 500)
+            ),
+            AppUsageRecord(
+                bundleID: calendar.bundleID,
+                launchCount: 4,
+                lastLaunchedAt: Date(timeIntervalSince1970: 300)
+            ),
+            AppUsageRecord(
+                bundleID: mail.bundleID,
+                launchCount: 2,
+                lastLaunchedAt: Date(timeIntervalSince1970: 400)
+            )
+        ]))
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: usageStore
+        )
+        viewModel.pages = [[.app(mail), .folder(folder)]]
+
+        #expect(viewModel.frequentlyUsedApps(limit: 2) == [calendar, mail])
+        #expect(viewModel.hasAppUsageHistory)
+    }
+
+    @Test
+    func recordingAndClearingUsagePersistsAndUpdatesSuggestions() {
+        let mail = Self.app("Mail")
+        let usageStore = StubAppUsageStore()
+        let launchDate = Date(timeIntervalSince1970: 600)
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: usageStore,
+            now: { launchDate }
+        )
+        viewModel.pages = [[.app(mail)]]
+
+        viewModel.recordLaunch(of: mail)
+
+        #expect(viewModel.frequentlyUsedApps(limit: 1) == [mail])
+        #expect(usageStore.savedHistories.last?.records == [
+            AppUsageRecord(
+                bundleID: mail.bundleID,
+                launchCount: 1,
+                lastLaunchedAt: launchDate
+            )
+        ])
+
+        viewModel.clearAppUsageHistory()
+
+        #expect(viewModel.frequentlyUsedApps(limit: 1).isEmpty)
+        #expect(!viewModel.hasAppUsageHistory)
+        #expect(usageStore.savedHistories.last?.records.isEmpty == true)
+    }
+
+    @Test
     func expandedFolderResolvesFromPagesAndCloses() {
         let folder = FolderItem(
             id: UUID(),
@@ -644,6 +710,24 @@ private final class StubLayoutStore: LayoutStoring {
 private final class StubIconProvider: AppIconProviding {
     func icon(for bundleID: String) -> NSImage {
         NSImage(size: NSSize(width: 1, height: 1))
+    }
+}
+
+private final class StubAppUsageStore: AppUsageStoring {
+    var history: AppUsageHistory
+    var savedHistories: [AppUsageHistory] = []
+
+    init(history: AppUsageHistory = AppUsageHistory()) {
+        self.history = history
+    }
+
+    func loadHistory() -> AppUsageHistory {
+        history
+    }
+
+    func saveHistory(_ history: AppUsageHistory) {
+        self.history = history
+        savedHistories.append(history)
     }
 }
 

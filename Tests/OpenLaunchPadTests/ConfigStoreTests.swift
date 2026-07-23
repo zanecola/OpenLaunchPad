@@ -57,4 +57,17 @@ struct ConfigStoreTests {
         #expect(defaults.data(forKey: "globalShortcut") == nil)
         #expect(notificationCount == 2)
     }
+
+    @Test
+    func frequentlyUsedAppsVisibilityPersists() throws {
+        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let config = ConfigStore(defaults: defaults)
+
+        config.showFrequentlyUsedApps = false
+
+        #expect(defaults.bool(forKey: "showFrequentlyUsedApps") == false)
+        #expect(ConfigStore(defaults: defaults).showFrequentlyUsedApps == false)
+    }
 }

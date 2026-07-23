@@ -22,6 +22,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 ## Highlights
 
 - **Two ways to launch.** Use a paginated full-screen grid or a non-activating popup from the menu bar or Dock.
+- **Recent favorites up front.** Apps launched most often through OpenLaunchPad appear in a responsive first row, with recent use breaking frequency ties.
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Search instantly, use horizontal mouse or trackpad gestures, click page controls, or navigate with the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
@@ -93,6 +94,7 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 ### Navigate
 
 - Type in Search to filter apps and folders.
+- The first row shows up to seven frequently used apps and updates after each launch. Disable it or clear its history in Settings.
 - Use Left/Right, Command-Left/Command-Right, the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode.
 - Scroll vertically in popup mode and inside large folders.
 - Press Escape to close an expanded folder or dismiss full-screen mode.
@@ -137,7 +139,7 @@ Your custom pages, folders, and ordering are stored separately:
 ~/Library/Application Support/OpenLaunchPad/layout.json
 ```
 
-Settings are stored locally in the `com.openlaunchpad` UserDefaults suite. There are no network services, accounts, analytics, or telemetry.
+Settings and frequently used app history are stored locally in the `com.openlaunchpad` UserDefaults suite. Usage history contains only bundle IDs, launch counts, and last-launch timestamps for apps opened through OpenLaunchPad. There are no network services, accounts, analytics, or telemetry.
 
 ## Build from Source
 

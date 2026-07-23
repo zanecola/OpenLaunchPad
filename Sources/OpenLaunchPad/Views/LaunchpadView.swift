@@ -33,7 +33,17 @@ struct LaunchpadView: View {
                     onOpenSettings: onOpenSettings
                 )
                     .padding(.top, 40)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 12)
+
+                if vm.searchResults == nil {
+                    FrequentlyUsedAppsView(
+                        presentation: .fullScreen,
+                        onLaunch: { app in
+                            vm.launch(app)
+                            onDismiss()
+                        }
+                    )
+                }
 
                 // Content: search results or paginated grid
                 if let results = vm.searchResults {

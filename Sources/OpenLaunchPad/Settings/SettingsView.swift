@@ -46,6 +46,19 @@ private struct GeneralSettingsTab: View {
                 Toggle("Show menu bar icon", isOn: $config.showMenuBarIcon)
             }
 
+            Section("Suggestions") {
+                Toggle("Show frequently used apps", isOn: $config.showFrequentlyUsedApps)
+
+                Button("Clear Usage History") {
+                    vm.clearAppUsageHistory()
+                }
+                .disabled(!vm.hasAppUsageHistory)
+
+                Text("Usage history records only apps launched through OpenLaunchPad and stays on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Layout") {
                 Button("Reset to Launchpad Order") {
                     Task { await vm.resetToDefault() }

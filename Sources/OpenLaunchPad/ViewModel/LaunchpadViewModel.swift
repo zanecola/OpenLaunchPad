@@ -17,6 +17,7 @@ final class LaunchpadViewModel {
     var currentPage: Int = 0
     var isLoading: Bool = false
     var loadError: String? = nil
+    private var appUsageHistory: AppUsageHistory
 
     // MARK: - Derived state
 
@@ -45,13 +46,43 @@ final class LaunchpadViewModel {
             .first
     }
 
+    var hasAppUsageHistory: Bool {
+        !appUsageHistory.records.isEmpty
+    }
+
+    func frequentlyUsedApps(limit: Int) -> [AppItem] {
+        guard limit > 0 else { return [] }
+
+        var appsByBundleID: [String: AppItem] = [:]
+        for item in pages.flatMap({ $0 }) {
+            switch item {
+            case .app(let app):
+                if appsByBundleID[app.bundleID] == nil {
+                    appsByBundleID[app.bundleID] = app
+                }
+            case .folder(let folder):
+                for app in folder.apps where appsByBundleID[app.bundleID] == nil {
+                    appsByBundleID[app.bundleID] = app
+                }
+            }
+        }
+
+        return appUsageHistory
+            .rankedBundleIDs(limit: appUsageHistory.records.count)
+            .compactMap { appsByBundleID[$0] }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     // MARK: - Dependencies (injected, enabling testability)
 
     private let dataSource: any AppDataSource
     private let layoutStore: any LayoutStoring
     private let iconProvider: any AppIconProviding
     private let applicationManager: any ApplicationManaging
+    private let appUsageStore: any AppUsageStoring
     private let makeUUID: () -> UUID
+    private let now: () -> Date
 
     // MARK: - Icon cache (bundleID → NSImage)
 
@@ -64,13 +95,19 @@ final class LaunchpadViewModel {
         layoutStore: any LayoutStoring,
         iconProvider: any AppIconProviding,
         applicationManager: (any ApplicationManaging)? = nil,
-        makeUUID: @escaping () -> UUID = UUID.init
+        appUsageStore: (any AppUsageStoring)? = nil,
+        makeUUID: @escaping () -> UUID = UUID.init,
+        now: @escaping () -> Date = Date.init
     ) {
         self.dataSource = dataSource
         self.layoutStore = layoutStore
         self.iconProvider = iconProvider
         self.applicationManager = applicationManager ?? SystemApplicationManager()
+        let resolvedUsageStore = appUsageStore ?? UserDefaultsAppUsageStore()
+        self.appUsageStore = resolvedUsageStore
+        appUsageHistory = resolvedUsageStore.loadHistory()
         self.makeUUID = makeUUID
+        self.now = now
     }
 
     // MARK: - Loading
@@ -238,10 +275,21 @@ final class LaunchpadViewModel {
     // MARK: - Launch
 
     func launch(_ app: AppItem) {
+        recordLaunch(of: app)
         NSWorkspace.shared.openApplication(
             at: NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleID) ?? URL(fileURLWithPath: "/"),
             configuration: .init()
         )
+    }
+
+    func recordLaunch(of app: AppItem) {
+        appUsageHistory.recordLaunch(bundleID: app.bundleID, at: now())
+        appUsageStore.saveHistory(appUsageHistory)
+    }
+
+    func clearAppUsageHistory() {
+        appUsageHistory.removeAll()
+        appUsageStore.saveHistory(appUsageHistory)
     }
 
     func canUninstall(_ app: AppItem) -> Bool {
@@ -258,6 +306,8 @@ final class LaunchpadViewModel {
 
     func uninstall(_ app: AppItem) throws {
         try applicationManager.uninstall(app)
+        appUsageHistory.remove(bundleID: app.bundleID)
+        appUsageStore.saveHistory(appUsageHistory)
 
         let oldPages = pages
         pages = pages.compactMap { page in
