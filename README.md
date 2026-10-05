@@ -99,6 +99,7 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 - Scroll vertically in popup mode and inside large folders.
 - Press Return to open the top search result.
 - Press Escape to step back one level: close an open folder, then clear the search, then close the launcher.
+- Click empty space, including the space between icons, to close an open folder or the full-screen launcher.
 
 ### Organize apps
 

@@ -16,10 +16,13 @@ struct LaunchpadView: View {
         let searchResults = vm.searchResults
 
         ZStack {
-            // Backdrop — clicks outside folder overlay close the folder or dismiss
+            // Backdrop — clicks on empty space, including between icons, close the folder,
+            // leave edit mode or dismiss
             Color.clear
                 .contentShape(Rectangle())
-                .onTapGesture {
+                .gesture(DragGesture(minimumDistance: 0).onEnded { value in
+                    // The end of a drag or a slipped press is not a click.
+                    guard hypot(value.translation.width, value.translation.height) < 6 else { return }
                     if vm.expandedFolderID != nil {
                         vm.closeFolder()
                     } else if vm.isEditMode {
@@ -27,7 +30,7 @@ struct LaunchpadView: View {
                     } else {
                         onDismiss()
                     }
-                }
+                })
 
             VStack(spacing: 0) {
                 // Search bar

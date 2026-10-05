@@ -77,8 +77,8 @@ struct AppGridView: View {
             )
 
             ZStack {
+                // Not hit-testable, so clicks between icons reach the launcher's backdrop.
                 Color.clear
-                    .contentShape(Rectangle())
 
                 if vm.isLoading {
                     ProgressView()
@@ -162,7 +162,6 @@ struct AppGridView: View {
                         height: layout.cellHeight,
                         alignment: .top
                     )
-                    .contentShape(Rectangle())
                     .overlay(alignment: activeTarget?.alignment(for: item.id) ?? .center) {
                         dragTargetIndicator(for: item.id, width: layout.cellWidth)
                     }
