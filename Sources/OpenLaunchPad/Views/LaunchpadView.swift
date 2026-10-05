@@ -11,6 +11,7 @@ struct FullScreenPageLayout {
     static let searchBottomPadding: CGFloat = 12
     static let pageIndicatorHeight: CGFloat = 36
     static let bottomPadding: CGFloat = 12
+    static let settingsButtonInset: CGFloat = 24
 
     let grid: AppGridLayout
     /// Height left for the grid below the search bar and, when shown, the Frequently Used row.
@@ -60,6 +61,11 @@ struct FullScreenPageLayout {
         self.grid = grid
         self.gridHeight = gridHeight
         self.showsFrequentlyUsed = showsFrequentlyUsed
+    }
+
+    /// About a quarter of the content width, within 320-480 pt.
+    static func searchFieldWidth(contentWidth: CGFloat) -> CGFloat {
+        min(max(contentWidth * 0.24, 320), 480)
     }
 
     /// The layout with the largest icons, from `iconSize` down to the minimum, whose rows fit below
@@ -134,14 +140,22 @@ struct LaunchpadView: View {
                     })
 
                 VStack(spacing: 0) {
-                    // Search bar
+                    // The field is centered on its own; the gear sits in the corner, clear of it.
                     SearchBarView(
                         text: $vm.searchQuery,
+                        backdrop: .fullScreen,
                         onClear: vm.closeFolder,
-                        onSubmit: openTopSearchResult,
-                        onOpenSettings: onOpenSettings
+                        onSubmit: openTopSearchResult
                     )
+                        .frame(width: FullScreenPageLayout.searchFieldWidth(
+                            contentWidth: proxy.size.width - contentInsets.leading - contentInsets.trailing
+                        ))
+                        .frame(maxWidth: .infinity)
                         .frame(height: FullScreenPageLayout.searchBarHeight)
+                        .overlay(alignment: .trailing) {
+                            SettingsButton(backdrop: .fullScreen, action: onOpenSettings)
+                                .padding(.trailing, FullScreenPageLayout.settingsButtonInset)
+                        }
                         .padding(.bottom, FullScreenPageLayout.searchBottomPadding)
 
                     if searchResults == nil && pageLayout.showsFrequentlyUsed {

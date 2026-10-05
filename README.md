@@ -87,7 +87,7 @@ Building from source additionally requires Xcode with the macOS 26 SDK and Swift
 | Left-click the menu-bar icon | Toggles the compact popup below the icon |
 | Right-click the menu-bar icon | Shows Settings, About, and Quit |
 | Press your configured global shortcut | Toggles the launcher from any app |
-| Click the gear beside Search | Opens Settings |
+| Click the gear (top-right corner in full screen) | Opens Settings |
 
 Launching an app automatically closes OpenLaunchPad so it stays out of your way. Closing it without launching anything returns you to the app you were using.
 

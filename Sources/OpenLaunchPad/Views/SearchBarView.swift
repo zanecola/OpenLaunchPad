@@ -2,39 +2,22 @@ import SwiftUI
 
 struct SearchBarView: View {
     @Binding var text: String
+    /// Glass over the full-screen backdrop; a filled, outlined field in the popup, so it reads in
+    /// either appearance.
+    let backdrop: LaunchpadBackdropMode
     var onClear: () -> Void = {}
     var onSubmit: () -> Void = {}
-    var onOpenSettings: (() -> Void)? = nil
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            searchField
-
-            if let onOpenSettings {
-                Button(action: onOpenSettings) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 17, weight: .medium))
-                        .symbolRenderingMode(.hierarchical)
-                        .frame(width: 40, height: 40)
-                        .background(.ultraThinMaterial, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .help("Open Settings")
-                .accessibilityLabel("Open Settings")
-            }
-        }
-        .frame(maxWidth: onOpenSettings == nil ? 400 : 450)
-    }
-
-    private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
+                .font(.system(size: 14))
                 .foregroundStyle(.secondary)
 
             TextField("Search", text: $text)
                 .textFieldStyle(.plain)
-                .font(.title3)
+                .font(.system(size: 15))
                 .focused($isFocused)
                 .onSubmit(onSubmit)
                 // Hosts are rebuilt on every show, so this focuses search each time the launcher opens.
@@ -46,11 +29,48 @@ struct SearchBarView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clear Search")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: Capsule())
-        .frame(maxWidth: 400)
+        .padding(.horizontal, 12)
+        .frame(height: backdrop == .fullScreen ? 36 : 32)
+        .background { fieldBackground }
+    }
+
+    @ViewBuilder
+    private var fieldBackground: some View {
+        switch backdrop {
+        case .fullScreen:
+            Color.clear.glassEffect(.regular, in: .capsule)
+        case .popup:
+            Capsule()
+                .fill(.quaternary)
+                .overlay(Capsule().strokeBorder(.separator, lineWidth: 0.5))
+        }
+    }
+}
+
+/// Opens Settings. In full screen it rests faded in the top-trailing corner, out of the way.
+struct SettingsButton: View {
+    let backdrop: LaunchpadBackdropMode
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        let diameter: CGFloat = backdrop == .fullScreen ? 30 : 28
+        Button(action: action) {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: diameter / 2, weight: .medium))
+                .symbolRenderingMode(.hierarchical)
+                .frame(width: diameter, height: diameter)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .opacity(backdrop == .fullScreen && !isHovered ? 0.55 : 1)
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+        .onHover { isHovered = $0 }
+        .help("Open Settings")
+        .accessibilityLabel("Open Settings")
     }
 }

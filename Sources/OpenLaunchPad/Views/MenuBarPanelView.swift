@@ -19,16 +19,15 @@ struct MenuBarPanelView: View {
 
         ZStack {
             VStack(spacing: 0) {
-                SearchBarView(
-                    text: $vm.searchQuery,
-                    onSubmit: openTopSearchResult,
-                    onOpenSettings: onOpenSettings
-                )
-                    .padding(.horizontal, 12)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-
-                Divider()
+                HStack(spacing: 12) {
+                    SearchBarView(
+                        text: $vm.searchQuery,
+                        backdrop: .popup,
+                        onSubmit: openTopSearchResult
+                    )
+                    SettingsButton(backdrop: .popup, action: onOpenSettings)
+                }
+                .padding(12)
 
                 if searchResults == nil {
                     FrequentlyUsedAppsView(

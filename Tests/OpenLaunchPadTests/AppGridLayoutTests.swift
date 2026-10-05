@@ -165,6 +165,11 @@ struct FullScreenPageLayoutTests {
         #expect(page.grid.iconSize == 80)
     }
 
+    @Test(arguments: [(CGFloat(1_280), CGFloat(320)), (1_728, 414.72), (2_000, 480), (5_120, 480)])
+    func searchFieldIsAQuarterOfTheWidthWithinLimits(contentWidth: CGFloat, fieldWidth: CGFloat) {
+        #expect(abs(FullScreenPageLayout.searchFieldWidth(contentWidth: contentWidth) - fieldWidth) < 0.001)
+    }
+
     @Test
     func pageThatCannotFitStopsAtTheMinimumIconSize() {
         // Four columns put 35 items in 9 rows, more than any laptop fits until pages get a capacity.
