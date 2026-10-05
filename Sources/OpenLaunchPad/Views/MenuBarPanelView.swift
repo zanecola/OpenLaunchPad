@@ -9,6 +9,7 @@ struct MenuBarPanelView: View {
     var onDismissRequested: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
+    @State private var missingApp: AppItem?
 
     var body: some View {
         @Bindable var vm = vm
@@ -78,6 +79,7 @@ struct MenuBarPanelView: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
         .environment(dragState)
+        .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
     }
 
     private func compactGrid(_ results: [LaunchpadItem]) -> some View {
@@ -104,7 +106,10 @@ struct MenuBarPanelView: View {
     }
 
     private func launchAndDismiss(_ app: AppItem) {
-        vm.launch(app)
+        guard vm.launch(app) else {
+            missingApp = app
+            return
+        }
         vm.searchQuery = ""
         vm.closeFolder()
         onDismissRequested()

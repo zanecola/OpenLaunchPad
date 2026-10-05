@@ -254,6 +254,59 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func launchCountsUsageOnlyWhenTheAppCanBeFound() {
+        let mail = Self.app("Mail")
+        let deleted = Self.app("Deleted")
+        let applicationManager = StubApplicationManager(missingBundleIDs: [deleted.bundleID])
+        let usageStore = StubAppUsageStore()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            applicationManager: applicationManager,
+            appUsageStore: usageStore
+        )
+        viewModel.pages = [[.app(mail), .app(deleted)]]
+
+        #expect(!viewModel.launch(deleted))
+        #expect(usageStore.savedHistories.isEmpty)
+
+        #expect(viewModel.launch(mail))
+        #expect(applicationManager.launchedApps == [mail])
+        #expect(usageStore.savedHistories.last?.records.map(\.bundleID) == [mail.bundleID])
+    }
+
+    @Test
+    func removeFromLayoutDropsAMissingAppWithoutTrashingAnything() {
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let notes = Self.app("Notes")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [mail, calendar])
+        let store = StubLayoutStore()
+        let applicationManager = StubApplicationManager()
+        let usageStore = StubAppUsageStore(history: AppUsageHistory(records: [
+            AppUsageRecord(bundleID: mail.bundleID, launchCount: 2, lastLaunchedAt: Date(timeIntervalSince1970: 100))
+        ]))
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: store,
+            iconProvider: StubIconProvider(),
+            applicationManager: applicationManager,
+            appUsageStore: usageStore
+        )
+        viewModel.pages = [[.folder(folder), .app(notes)]]
+        viewModel.toggleFolder(folder.id)
+
+        viewModel.removeFromLayout(mail)
+
+        #expect(applicationManager.uninstalledApps.isEmpty)
+        #expect(viewModel.pages == [[.app(calendar), .app(notes)]])
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(store.savedLayouts == [StoredLayout(pageIDs: [[calendar.id, notes.id]])])
+        #expect(usageStore.savedHistories.last?.records.isEmpty == true)
+    }
+
+    @Test
     func frequentlyUsedAppsResolveFoldersAndIgnoreMissingApps() {
         let mail = Self.app("Mail")
         let calendar = Self.app("Calendar")
@@ -887,13 +940,23 @@ private enum TestApplicationError: Error {
 @MainActor
 private final class StubApplicationManager: ApplicationManaging {
     var uninstalledApps: [AppItem] = []
+    var launchedApps: [AppItem] = []
     let uninstallError: Error?
+    let missingBundleIDs: Set<String>
 
-    init(uninstallError: Error? = nil) {
+    init(uninstallError: Error? = nil, missingBundleIDs: Set<String> = []) {
         self.uninstallError = uninstallError
+        self.missingBundleIDs = missingBundleIDs
     }
 
     func uninstallURL(for app: AppItem) -> URL? { app.bundleURL }
+
+    func launch(_ app: AppItem) throws {
+        if missingBundleIDs.contains(app.bundleID) {
+            throw ApplicationManagerError.applicationNotFound(app.title)
+        }
+        launchedApps.append(app)
+    }
     func revealInFinder(_ app: AppItem) throws {}
     func showInfo(_ app: AppItem) throws {}
 

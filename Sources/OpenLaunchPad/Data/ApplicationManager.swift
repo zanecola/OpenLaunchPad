@@ -5,6 +5,7 @@ import Foundation
 protocol ApplicationManaging {
     /// The bundle Uninstall would move to the Trash, or nil when it can't be uninstalled.
     func uninstallURL(for app: AppItem) -> URL?
+    func launch(_ app: AppItem) throws
     func revealInFinder(_ app: AppItem) throws
     func showInfo(_ app: AppItem) throws
     func uninstall(_ app: AppItem) throws
@@ -57,6 +58,10 @@ final class SystemApplicationManager: ApplicationManaging {
 
     func uninstallURL(for app: AppItem) -> URL? {
         try? uninstallTarget(for: app)
+    }
+
+    func launch(_ app: AppItem) throws {
+        workspace.openApplication(at: try requiredApplicationURL(for: app), configuration: .init())
     }
 
     func revealInFinder(_ app: AppItem) throws {

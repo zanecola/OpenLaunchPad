@@ -287,12 +287,16 @@ final class LaunchpadViewModel {
 
     // MARK: - Launch
 
-    func launch(_ app: AppItem) {
+    /// Opens the app and counts the launch. Returns false, counting nothing, when its bundle can't be found.
+    @discardableResult
+    func launch(_ app: AppItem) -> Bool {
+        do {
+            try applicationManager.launch(app)
+        } catch {
+            return false
+        }
         recordLaunch(of: app)
-        NSWorkspace.shared.openApplication(
-            at: NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleID) ?? URL(fileURLWithPath: "/"),
-            configuration: .init()
-        )
+        return true
     }
 
     func recordLaunch(of app: AppItem) {
@@ -319,6 +323,11 @@ final class LaunchpadViewModel {
 
     func uninstall(_ app: AppItem) throws {
         try applicationManager.uninstall(app)
+        removeFromLayout(app)
+    }
+
+    /// Removes every tile and the usage record of an app; its bundle is left alone.
+    func removeFromLayout(_ app: AppItem) {
         appUsageHistory.remove(bundleID: app.bundleID)
         appUsageStore.saveHistory(appUsageHistory)
 

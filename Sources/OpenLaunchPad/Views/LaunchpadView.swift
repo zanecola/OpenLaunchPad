@@ -7,6 +7,7 @@ struct LaunchpadView: View {
     var onDismiss: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
+    @State private var missingApp: AppItem?
 
     var body: some View {
         @Bindable var vm = vm
@@ -38,10 +39,7 @@ struct LaunchpadView: View {
                 if vm.searchResults == nil {
                     FrequentlyUsedAppsView(
                         presentation: .fullScreen,
-                        onLaunch: { app in
-                            vm.launch(app)
-                            onDismiss()
-                        }
+                        onLaunch: launch
                     )
                 }
 
@@ -51,10 +49,7 @@ struct LaunchpadView: View {
                 } else {
                     AppGridView(
                         mode: .paged,
-                        onLaunch: { app in
-                            vm.launch(app)
-                            onDismiss()
-                        }
+                        onLaunch: launch
                     )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -77,7 +72,7 @@ struct LaunchpadView: View {
                     iconSize: config.iconSize,
                     showLabel: config.iconLabelVisible,
                     iconProvider: { vm.icon(for: $0) },
-                    onLaunch: { app in vm.launch(app); onDismiss() },
+                    onLaunch: launch,
                     onRename: { vm.renameFolder(folder.id, to: $0) },
                     onAppDrop: { payload, targetApp, zone in
                         handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
@@ -113,6 +108,16 @@ struct LaunchpadView: View {
             vm.showNextPage()
             return .handled
         }
+        .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
+    }
+
+    /// Stays open when the app can't be found, so the user can see why nothing opened.
+    private func launch(_ app: AppItem) {
+        if vm.launch(app) {
+            onDismiss()
+        } else {
+            missingApp = app
+        }
     }
 
     private func handleFolderAppDrop(
@@ -145,7 +150,7 @@ struct LaunchpadView: View {
                             iconSize: config.iconSize,
                             showLabel: config.iconLabelVisible,
                             isEditMode: false,
-                            onTap: { vm.launch(app); onDismiss() }
+                            onTap: { launch(app) }
                         )
                     case .folder(let folder):
                         FolderView(

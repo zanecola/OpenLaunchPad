@@ -53,6 +53,7 @@ struct ApplicationManagerTests {
 
         #expect(manager.uninstallURL(for: app) == nil)
         #expect(throws: ApplicationManagerError.self) { try manager.uninstall(app) }
+        #expect(throws: ApplicationManagerError.self) { try manager.launch(app) }
         #expect(throws: ApplicationManagerError.self) { try manager.revealInFinder(app) }
         #expect(throws: ApplicationManagerError.self) { try manager.showInfo(app) }
     }
