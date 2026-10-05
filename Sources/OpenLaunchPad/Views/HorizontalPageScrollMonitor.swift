@@ -87,8 +87,10 @@ struct HorizontalPageScrollMonitor: NSViewRepresentable {
             }
         }
 
-        private func handle(_ event: NSEvent) {
-            if event.phase.contains(.began) {
+        func handle(_ event: NSEvent) {
+            // Momentum after the fingers lift belongs to the gesture that already paged.
+            guard event.momentumPhase.isEmpty else { return }
+            if event.phase.contains(.began) || event.phase.contains(.mayBegin) {
                 accumulator.endGesture()
             }
 
