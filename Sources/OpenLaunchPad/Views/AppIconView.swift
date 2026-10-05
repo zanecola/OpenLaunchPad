@@ -14,7 +14,7 @@ struct AppIconView: View {
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
-    @State private var showsUninstallConfirmation = false
+    @State private var uninstallTarget: URL?
     @State private var actionError: String?
     @Environment(LaunchpadDragState.self) private var dragState
     @Environment(LaunchpadViewModel.self) private var vm
@@ -31,12 +31,16 @@ struct AppIconView: View {
             .contextMenu { appContextMenu }
             .confirmationDialog(
                 "Uninstall \(app.title)?",
-                isPresented: $showsUninstallConfirmation
-            ) {
+                isPresented: Binding(
+                    get: { uninstallTarget != nil },
+                    set: { if !$0 { uninstallTarget = nil } }
+                ),
+                presenting: uninstallTarget
+            ) { _ in
                 Button("Move to Trash", role: .destructive, action: uninstall)
                 Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The application will be moved to the Trash. Your documents and app data will not be removed.")
+            } message: { url in
+                Text("\((url.path as NSString).abbreviatingWithTildeInPath) will be moved to the Trash. Your documents and app data will not be removed.")
             }
             .alert(
                 "Couldn’t Complete Action",
@@ -67,10 +71,11 @@ struct AppIconView: View {
 
         Divider()
 
+        let uninstallURL = vm.uninstallURL(for: app)
         Button("Uninstall…", role: .destructive) {
-            showsUninstallConfirmation = true
+            uninstallTarget = uninstallURL
         }
-        .disabled(!vm.canUninstall(app))
+        .disabled(uninstallURL == nil)
     }
 
     private func perform(_ action: () throws -> Void) {

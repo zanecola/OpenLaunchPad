@@ -36,6 +36,32 @@ struct ApplicationsFolderDataSourceTests {
     }
 
     @Test
+    func appsRecordTheBundleTheScanFound() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        try fixture.addApp(name: "Mail Copy", bundleID: "com.example.mail", under: fixture.firstRoot)
+        try fixture.addApp(name: "Mail", bundleID: "com.example.mail", under: fixture.secondRoot)
+        let tools = fixture.firstRoot.appendingPathComponent("Tools", isDirectory: true)
+        try fixture.addApp(name: "Notes", bundleID: "com.example.notes", under: tools)
+        try fixture.addApp(name: "Terminal", bundleID: "com.example.terminal", under: tools)
+
+        let items = try ApplicationsFolderDataSource(
+            searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path]
+        ).loadPages().flatMap { $0 }
+
+        // The first search path wins a duplicate bundle ID, and the item keeps that copy's path.
+        guard items.count == 2, case .app(let mail) = items[0], case .folder(let folder) = items[1] else {
+            Issue.record("Expected Mail Copy and the Tools folder, got \(items.map(\.title))")
+            return
+        }
+        #expect(mail.bundleURL?.path == fixture.firstRoot.appendingPathComponent("Mail Copy.app").path)
+        #expect(folder.apps.map { $0.bundleURL?.path } == [
+            tools.appendingPathComponent("Notes.app").path,
+            tools.appendingPathComponent("Terminal.app").path
+        ])
+    }
+
+    @Test
     func titlesUseTheFinderNameWhileIDsFollowTheBundleID() throws {
         let fixture = try ApplicationsFixture()
         defer { fixture.remove() }

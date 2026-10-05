@@ -305,8 +305,8 @@ final class LaunchpadViewModel {
         appUsageStore.saveHistory(appUsageHistory)
     }
 
-    func canUninstall(_ app: AppItem) -> Bool {
-        applicationManager.canUninstall(app)
+    func uninstallURL(for app: AppItem) -> URL? {
+        applicationManager.uninstallURL(for: app)
     }
 
     func revealInFinder(_ app: AppItem) throws {

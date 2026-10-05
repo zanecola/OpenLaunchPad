@@ -83,8 +83,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
     private func appItem(at path: String, seenBundleIDs: inout Set<String>) -> AppItem? {
         // Read Info.plist directly: Bundle(path:) caches per path for the process lifetime,
         // so an app scanned mid-install would stay hidden after the install finished.
-        let url = URL(fileURLWithPath: path) as CFURL
-        guard let info = CFBundleCopyInfoDictionaryInDirectory(url) as? [String: Any],
+        let bundleURL = URL(fileURLWithPath: path, isDirectory: true)
+        guard let info = CFBundleCopyInfoDictionaryInDirectory(bundleURL as CFURL) as? [String: Any],
               let bundleID = info["CFBundleIdentifier"] as? String,
               seenBundleIDs.insert(bundleID).inserted else {
             return nil
@@ -103,7 +103,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
             id: stableUUID(for: "app:\(bundleID)"),
             bundleID: bundleID,
             title: title,
-            aliases: aliases
+            aliases: aliases,
+            bundleURL: bundleURL
         )
     }
 

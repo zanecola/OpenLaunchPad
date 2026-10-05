@@ -893,7 +893,7 @@ private final class StubApplicationManager: ApplicationManaging {
         self.uninstallError = uninstallError
     }
 
-    func canUninstall(_ app: AppItem) -> Bool { true }
+    func uninstallURL(for app: AppItem) -> URL? { app.bundleURL }
     func revealInFinder(_ app: AppItem) throws {}
     func showInfo(_ app: AppItem) throws {}
 

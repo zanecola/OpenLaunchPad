@@ -8,6 +8,9 @@ struct AppItem: Identifiable, Hashable, Codable, Sendable {
     let title: String
     /// Other names search matches, such as CFBundleName and the file name.
     var aliases: [String] = []
+    /// The bundle the data source found, so app actions target this copy rather than
+    /// LaunchServices' preferred one. Not persisted: layout.json stores IDs only.
+    var bundleURL: URL? = nil
 }
 
 struct FolderItem: Identifiable, Hashable, Codable, Sendable {
