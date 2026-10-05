@@ -10,6 +10,8 @@ struct KeyComboTests {
         #expect(KeyCombo(keyCode: 0x24, modifiers: UInt32(controlKey)).displayString == "⌃Return")
         #expect(KeyCombo(keyCode: 0x7B, modifiers: UInt32(shiftKey)).displayString == "⇧←")
         #expect(KeyCombo(keyCode: 0x7A, modifiers: 0).displayString == "F1")
+        #expect(KeyCombo(keyCode: UInt32(kVK_F13), modifiers: 0).displayString == "F13")
+        #expect(KeyCombo(keyCode: UInt32(kVK_F20), modifiers: UInt32(shiftKey)).displayString == "⇧F20")
     }
 
     @Test
@@ -40,6 +42,10 @@ struct KeyComboTests {
     func globalShortcutAllowsFunctionKeysWithAnyModifiers() {
         #expect(KeyCombo(keyCode: UInt32(kVK_F1), modifiers: 0).isAllowedGlobalShortcut)
         #expect(KeyCombo(keyCode: UInt32(kVK_F12), modifiers: 0).isAllowedGlobalShortcut)
+        // Extended keyboards' F13-F20 never type either.
+        for keyCode in [kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20] {
+            #expect(KeyCombo(keyCode: UInt32(keyCode), modifiers: 0).isAllowedGlobalShortcut)
+        }
         #expect(KeyCombo(keyCode: UInt32(kVK_F5), modifiers: UInt32(shiftKey)).isAllowedGlobalShortcut)
         #expect(KeyCombo(keyCode: UInt32(kVK_F5), modifiers: UInt32(optionKey)).isAllowedGlobalShortcut)
     }

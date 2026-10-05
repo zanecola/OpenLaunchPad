@@ -41,7 +41,8 @@ struct KeyCombo: Codable, Hashable, Sendable {
     static func isFunctionKey(_ keyCode: UInt32) -> Bool {
         switch Int(keyCode) {
         case kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6,
-             kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12:
+             kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12,
+             kVK_F13, kVK_F14, kVK_F15, kVK_F16, kVK_F17, kVK_F18, kVK_F19, kVK_F20:
             return true
         default:
             return false
@@ -105,6 +106,14 @@ private extension UInt32 {
         case 0x6D: return "F10"
         case 0x67: return "F11"
         case 0x6F: return "F12"
+        case 0x69: return "F13"
+        case 0x6B: return "F14"
+        case 0x71: return "F15"
+        case 0x6A: return "F16"
+        case 0x40: return "F17"
+        case 0x4F: return "F18"
+        case 0x50: return "F19"
+        case 0x5A: return "F20"
         case 0x7B: return "←"
         case 0x7C: return "→"
         case 0x7D: return "↓"
