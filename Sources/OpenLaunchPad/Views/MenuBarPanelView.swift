@@ -54,7 +54,7 @@ struct MenuBarPanelView: View {
 
                 FolderExpandedView(
                     folder: folder,
-                    iconSize: config.iconSize,
+                    iconSize: config.popupIconSize,
                     showLabel: config.iconLabelVisible,
                     availableSize: CGSize(
                         width: config.paneWidth - Self.folderInsets.leading - Self.folderInsets.trailing,
@@ -106,7 +106,7 @@ struct MenuBarPanelView: View {
             ContentUnavailableView.search(text: vm.searchQuery)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            let cols = [GridItem(.adaptive(minimum: config.iconSize + 16), spacing: 8, alignment: .top)]
+            let cols = [GridItem(.adaptive(minimum: config.popupIconSize + 16), spacing: 8, alignment: .top)]
             ScrollView {
                 LazyVGrid(columns: cols, spacing: 12) {
                     ForEach(results) { item in
@@ -115,7 +115,7 @@ struct MenuBarPanelView: View {
                             AppIconView(
                                 app: app,
                                 icon: vm.icon(for: app.bundleID),
-                                iconSize: config.iconSize * 0.75,
+                                iconSize: config.popupIconSize * 0.75,
                                 showLabel: config.iconLabelVisible,
                                 isEditMode: false,
                                 onTap: { launchAndDismiss(app) }
@@ -123,7 +123,7 @@ struct MenuBarPanelView: View {
                         case .folder(let folder):
                             FolderView(
                                 folder: folder,
-                                iconSize: config.iconSize * 0.75,
+                                iconSize: config.popupIconSize * 0.75,
                                 showLabel: config.iconLabelVisible,
                                 isEditMode: false,
                                 iconProvider: { vm.icon(for: $0) },

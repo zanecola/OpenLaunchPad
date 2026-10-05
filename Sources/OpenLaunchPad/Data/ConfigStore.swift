@@ -19,10 +19,19 @@ final class ConfigStore {
 
     // MARK: - Settings (each triggers observation on write)
 
-    var iconSize: Double = 80 {
-        didSet { save(iconSize, forKey: Keys.iconSize) }
+    /// Automatic sizes full-screen icons to their slots.
+    var iconSizeMode: IconSizeMode = .automatic {
+        didSet { defaults.set(iconSizeMode.rawValue, forKey: Keys.iconSizeMode) }
     }
-    static let iconSizeRange: ClosedRange<Double> = 48...128
+    /// Used while the mode is Custom, and kept while it is Automatic.
+    var customIconSize: Double = 80 {
+        didSet { save(customIconSize, forKey: Keys.iconSize) }
+    }
+    static let iconSizeRange: ClosedRange<Double> = 48...160
+    /// The popup has no slots to size icons to, so Automatic keeps it at the old default.
+    var popupIconSize: Double {
+        iconSizeMode == .custom ? customIconSize : 80
+    }
     var iconLabelVisible: Bool = true {
         didSet { save(iconLabelVisible, forKey: Keys.iconLabelVisible) }
     }
@@ -107,6 +116,7 @@ final class ConfigStore {
     // MARK: - Persistence helpers
 
     private enum Keys {
+        static let iconSizeMode = "iconSizeMode"
         static let iconSize = "iconSize"
         static let iconLabelVisible = "iconLabelVisible"
         static let gridColumns = "gridColumns"
@@ -132,7 +142,14 @@ final class ConfigStore {
     private func load() {
         if defaults.object(forKey: Keys.iconSize) != nil {
             let storedSize = defaults.double(forKey: Keys.iconSize)
-            iconSize = min(max(storedSize, Self.iconSizeRange.lowerBound), Self.iconSizeRange.upperBound)
+            customIconSize = min(max(storedSize, Self.iconSizeRange.lowerBound), Self.iconSizeRange.upperBound)
+        }
+        if let raw = defaults.string(forKey: Keys.iconSizeMode),
+           let mode = IconSizeMode(rawValue: raw) {
+            iconSizeMode = mode
+        } else if defaults.object(forKey: Keys.iconSize) != nil {
+            // A size saved before Automatic existed was picked on the slider, so it stays in use.
+            iconSizeMode = .custom
         }
         if defaults.object(forKey: Keys.iconLabelVisible) != nil {
             iconLabelVisible = defaults.bool(forKey: Keys.iconLabelVisible)

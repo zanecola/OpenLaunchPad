@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// Fits the full-screen page between the search bar and the page dots, inside insets that keep it
-/// clear of the menu bar and the Dock. Icons shrink, down to 48 pt, until the largest page fits, so
-/// every page shares one geometry. Page capacity is not limited yet (ROADMAP P1-1), so a page with
-/// more rows than fit at 48 pt still overflows.
+/// clear of the menu bar and the Dock. The page is a grid of columns × rows slots that fills that
+/// space, so a partly filled page keeps its rows where the other pages have them. Automatic icons
+/// are sized to the slots; a custom size draws smaller, down to 48 pt, only when it does not fit.
 struct FullScreenPageLayout {
     static let minimumIconSize: CGFloat = 48
+    static let maximumAutomaticIconSize: CGFloat = 144
     static let searchTopPadding: CGFloat = 20
     static let searchBarHeight: CGFloat = 40
     static let searchBottomPadding: CGFloat = 12
@@ -16,16 +17,17 @@ struct FullScreenPageLayout {
     let grid: AppGridLayout
     /// Height left for the grid below the search bar and, when shown, the Frequently Used row.
     let gridHeight: CGFloat
-    /// False when the grid would not fit beside the row even with the smallest icons.
+    /// False when the grid's icons would be under 48 pt beside the row.
     let showsFrequentlyUsed: Bool
 
+    /// `customIconSize` is nil for Automatic.
     init(
         size: CGSize,
         insets: EdgeInsets,
-        iconSize: CGFloat,
-        requestedColumns: Int,
+        customIconSize: CGFloat?,
+        columns: Int,
+        rows: Int,
         showsLabels: Bool,
-        largestPageItemCount: Int,
         showsPageIndicator: Bool,
         wantsFrequentlyUsed: Bool
     ) {
@@ -36,22 +38,17 @@ struct FullScreenPageLayout {
         let fit = { (showsFrequentlyUsed: Bool) in
             Self.fitting(
                 in: available,
-                iconSize: iconSize,
-                requestedColumns: requestedColumns,
+                customIconSize: customIconSize,
+                columns: columns,
+                rows: rows,
                 showsLabels: showsLabels,
-                itemCount: largestPageItemCount,
                 showsFrequentlyUsed: showsFrequentlyUsed
             )
         }
 
         // The row stays if the grid fits beside it; otherwise the grid gets its space.
         self = (wantsFrequentlyUsed ? fit(true) : nil) ?? fit(false) ?? FullScreenPageLayout(
-            grid: AppGridLayout(
-                size: available,
-                iconSize: min(iconSize, Self.minimumIconSize),
-                requestedColumns: requestedColumns,
-                showsLabels: showsLabels
-            ),
+            grid: AppGridLayout(slotsIn: available, columns: columns, rows: rows, iconSize: Self.minimumIconSize),
             gridHeight: available.height,
             showsFrequentlyUsed: false
         )
@@ -68,17 +65,17 @@ struct FullScreenPageLayout {
         min(max(contentWidth * 0.24, 320), 480)
     }
 
-    /// The layout with the largest icons, from `iconSize` down to the minimum, whose rows fit below
-    /// the Frequently Used row, which shrinks with the grid.
+    /// The layout with the largest icons, from the custom or largest automatic size down to the
+    /// minimum, that fit their slots below the Frequently Used row, which shrinks with the grid.
     private static func fitting(
         in available: CGSize,
-        iconSize: CGFloat,
-        requestedColumns: Int,
+        customIconSize: CGFloat?,
+        columns: Int,
+        rows: Int,
         showsLabels: Bool,
-        itemCount: Int,
         showsFrequentlyUsed: Bool
     ) -> FullScreenPageLayout? {
-        var candidate = iconSize
+        var candidate = customIconSize ?? maximumAutomaticIconSize
         while candidate >= minimumIconSize {
             let rowHeight = showsFrequentlyUsed
                 ? FrequentlyUsedAppsLayout.rowHeight(
@@ -89,17 +86,29 @@ struct FullScreenPageLayout {
                 : 0
             let gridHeight = max(available.height - rowHeight, 0)
             let grid = AppGridLayout(
-                size: CGSize(width: available.width, height: gridHeight),
-                iconSize: candidate,
-                requestedColumns: requestedColumns,
-                showsLabels: showsLabels
+                slotsIn: CGSize(width: available.width, height: gridHeight),
+                columns: columns,
+                rows: rows,
+                iconSize: candidate
             )
-            if grid.contentHeight(itemCount: itemCount) <= gridHeight {
+            if fits(grid, automatic: customIconSize == nil, showsLabels: showsLabels) {
                 return FullScreenPageLayout(grid: grid, gridHeight: gridHeight, showsFrequentlyUsed: showsFrequentlyUsed)
             }
             candidate = candidate.rounded(.up) - 1
         }
         return nil
+    }
+
+    /// Automatic icons leave Launchpad's room around them: at most 62% of the slot width, and 78%
+    /// of the height the label leaves. A custom size only needs 8 pt between neighboring labels
+    /// (each is 16 pt wider than its icon) and between a label and the row below.
+    private static func fits(_ grid: AppGridLayout, automatic: Bool, showsLabels: Bool) -> Bool {
+        let icon = grid.iconSize
+        let labelHeight = LaunchpadIconMetrics.contentHeight(for: icon, showsLabel: showsLabels) - icon
+        if automatic {
+            return icon <= 0.62 * grid.cellWidth && icon <= 0.78 * (grid.cellHeight - labelHeight)
+        }
+        return icon + 16 + 8 <= grid.cellWidth && icon + labelHeight + 8 <= grid.cellHeight
     }
 }
 
@@ -156,7 +165,7 @@ struct LaunchpadView: View {
 
                     // Content: search results or paginated grid
                     if let results = searchResults {
-                        searchResultsView(results)
+                        searchResultsView(results, grid: pageLayout.grid)
                     } else {
                         AppGridView(
                             mode: .paged,
@@ -239,10 +248,10 @@ struct LaunchpadView: View {
         FullScreenPageLayout(
             size: size,
             insets: contentInsets,
-            iconSize: config.iconSize,
-            requestedColumns: config.gridColumns,
+            customIconSize: config.iconSizeMode == .custom ? config.customIconSize : nil,
+            columns: config.gridColumns,
+            rows: config.gridRows,
             showsLabels: config.iconLabelVisible,
-            largestPageItemCount: vm.pages.map(\.count).max() ?? 0,
             showsPageIndicator: vm.pages.count > 1,
             wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps(limit: 1).isEmpty
         )
@@ -300,15 +309,16 @@ struct LaunchpadView: View {
 
     // MARK: - Search results
 
+    /// In the grid's columns and at its icon size.
     @ViewBuilder
-    private func searchResultsView(_ results: [LaunchpadItem]) -> some View {
+    private func searchResultsView(_ results: [LaunchpadItem], grid: AppGridLayout) -> some View {
         if results.isEmpty {
             // The full-screen backdrop is dark in either appearance.
             ContentUnavailableView.search(text: vm.searchQuery)
                 .environment(\.colorScheme, .dark)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            let cols = Array(repeating: GridItem(.fixed(config.iconSize + 24), spacing: 12), count: 7)
+            let cols = Array(repeating: GridItem(.fixed(grid.iconSize + 24), spacing: 12), count: grid.columnCount)
             GeometryReader { viewport in
                 ScrollView {
                     LazyVGrid(columns: cols, spacing: 16) {
@@ -318,7 +328,7 @@ struct LaunchpadView: View {
                                 AppIconView(
                                     app: app,
                                     icon: vm.icon(for: app.bundleID),
-                                    iconSize: config.iconSize,
+                                    iconSize: grid.iconSize,
                                     showLabel: config.iconLabelVisible,
                                     isEditMode: false,
                                     onTap: { launch(app) }
@@ -326,7 +336,7 @@ struct LaunchpadView: View {
                             case .folder(let folder):
                                 FolderView(
                                     folder: folder,
-                                    iconSize: config.iconSize,
+                                    iconSize: grid.iconSize,
                                     showLabel: config.iconLabelVisible,
                                     isEditMode: false,
                                     iconProvider: { vm.icon(for: $0) },

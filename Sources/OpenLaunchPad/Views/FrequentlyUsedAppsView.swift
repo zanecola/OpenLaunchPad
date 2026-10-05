@@ -76,7 +76,7 @@ struct FrequentlyUsedAppsView: View {
     @Environment(ConfigStore.self) private var config
 
     let presentation: FrequentlyUsedAppsPresentation
-    /// Overrides the configured icon size, so full screen can shrink the row with its grid.
+    /// The full-screen grid's fitted icon size, so the row shrinks with the grid; nil uses the popup's.
     var iconSize: CGFloat?
     let onLaunch: (AppItem) -> Void
 
@@ -86,7 +86,7 @@ struct FrequentlyUsedAppsView: View {
             GeometryReader { proxy in
                 let layout = FrequentlyUsedAppsLayout(
                     width: proxy.size.width,
-                    configuredIconSize: iconSize ?? config.iconSize,
+                    configuredIconSize: iconSize ?? config.popupIconSize,
                     showsLabels: config.iconLabelVisible,
                     presentation: presentation
                 )
@@ -142,7 +142,7 @@ struct FrequentlyUsedAppsView: View {
 
     private var rowHeight: CGFloat {
         FrequentlyUsedAppsLayout.rowHeight(
-            configuredIconSize: iconSize ?? config.iconSize,
+            configuredIconSize: iconSize ?? config.popupIconSize,
             showsLabels: config.iconLabelVisible,
             presentation: presentation
         )

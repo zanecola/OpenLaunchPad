@@ -4,7 +4,7 @@ struct LaunchpadDragPreviewView: View {
     @Environment(LaunchpadDragState.self) private var dragState
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    /// The grid's icon size when it differs from the configured one, as in a fitted full-screen page.
+    /// The full-screen grid's fitted icon size; nil uses the popup's.
     var iconSize: CGFloat?
 
     var body: some View {
@@ -28,7 +28,7 @@ struct LaunchpadDragPreviewView: View {
             AppIconView(
                 app: app,
                 icon: vm.icon(for: app.bundleID),
-                iconSize: iconSize ?? config.iconSize,
+                iconSize: iconSize ?? config.popupIconSize,
                 showLabel: config.iconLabelVisible,
                 isEditMode: false,
                 dragPayload: nil
@@ -36,7 +36,7 @@ struct LaunchpadDragPreviewView: View {
         case .folder(let folder):
             FolderView(
                 folder: folder,
-                iconSize: iconSize ?? config.iconSize,
+                iconSize: iconSize ?? config.popupIconSize,
                 showLabel: config.iconLabelVisible,
                 isEditMode: false,
                 iconProvider: { vm.icon(for: $0) },

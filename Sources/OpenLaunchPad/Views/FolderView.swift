@@ -118,8 +118,8 @@ struct FolderPanelLayout {
 
     /// `availableSize` is the space the whole panel, padding and title included, may take.
     init(appCount: Int, iconSize: CGFloat, showsLabels: Bool, availableSize: CGSize) {
-        // The same cells as the launcher grid (AppGridLayout).
-        let cellWidth = iconSize + 40
+        // Packed tiles, as in the popup grid (AppGridLayout).
+        let cellWidth = AppGridLayout.tileWidth(for: iconSize)
         let cellHeight = LaunchpadIconMetrics.cellHeight(for: iconSize, showsLabel: showsLabels)
         let gridSpace = CGSize(
             width: availableSize.width - Self.horizontalPadding * 2,

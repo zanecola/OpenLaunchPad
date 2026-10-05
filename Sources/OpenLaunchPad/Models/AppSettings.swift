@@ -12,6 +12,11 @@ enum PopupAppearance: String, CaseIterable, Sendable {
     case dark = "Dark"
 }
 
+enum IconSizeMode: String, CaseIterable, Sendable {
+    case automatic = "Automatic"
+    case custom = "Custom"
+}
+
 enum LaunchpadSortOrder: Sendable {
     case ascending
     case descending

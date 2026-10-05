@@ -109,13 +109,29 @@ private struct AppearanceSettingsTab: View {
 
         Form {
             Section("Icons") {
-                HStack {
-                    Text("Size")
-                    Slider(value: $config.iconSize, in: ConfigStore.iconSizeRange, step: 4)
-                    Text("\(Int(config.iconSize))pt")
-                        .monospacedDigit()
-                        .frame(width: 36)
+                Picker("Size", selection: $config.iconSizeMode) {
+                    ForEach(IconSizeMode.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
                 }
+                .pickerStyle(.segmented)
+
+                HStack {
+                    Text("Custom size")
+                    Slider(value: $config.customIconSize, in: ConfigStore.iconSizeRange, step: 4)
+                    Text("\(Int(config.customIconSize))pt")
+                        .monospacedDigit()
+                        .frame(width: 40)
+                }
+                .disabled(config.iconSizeMode == .automatic)
+
+                Text(
+                    config.iconSizeMode == .automatic
+                        ? "Full screen sizes icons to fill its grid. The popup uses 80 pt."
+                        : "Full screen draws icons smaller, down to 48 pt, when its grid has no room for this size."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
                 Toggle("Show app labels", isOn: $config.iconLabelVisible)
             }
@@ -216,7 +232,7 @@ private struct AppearanceSettingsTab: View {
                 width: config.paneWidth,
                 height: max(config.paneHeight - 70, 1)
             ),
-            iconSize: config.iconSize,
+            iconSize: config.popupIconSize,
             requestedColumns: 0,
             showsLabels: config.iconLabelVisible
         ).columnCount

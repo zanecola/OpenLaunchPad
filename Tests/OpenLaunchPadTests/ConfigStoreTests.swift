@@ -16,24 +16,31 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func freshSettingsUseTheLaunchpadGrid() {
+    func freshSettingsUseTheLaunchpadGridWithAutomaticIcons() {
         let config = ConfigStore(defaults: InMemoryKeyValueStore())
 
+        #expect(config.iconSizeMode == .automatic)
         #expect(config.gridColumns == 7)
         #expect(config.gridRows == 5)
         #expect(config.pageCapacity == 35)
+        #expect(config.popupIconSize == 80)
     }
 
     @Test
-    func columnsSavedBeforeRowsExistedAreKept() {
+    func sizeAndColumnsSavedBeforeRowsExistedAreKept() {
         let defaults = InMemoryKeyValueStore()
+        defaults.set(56.0, forKey: "iconSize")
         defaults.set(11, forKey: "gridColumns")
 
         let config = ConfigStore(defaults: defaults)
 
+        #expect(config.iconSizeMode == .custom)
+        #expect(config.customIconSize == 56)
+        #expect(config.popupIconSize == 56)
         #expect(config.gridColumns == 11)
         #expect(config.gridRows == 5)
         #expect(config.pageCapacity == 55)
+        #expect(defaults.string(forKey: "iconSizeMode") == "Custom")
     }
 
     @Test
@@ -43,6 +50,21 @@ struct ConfigStoreTests {
 
         #expect(ConfigStore(defaults: defaults).gridColumns == 7)
         #expect(defaults.integer(forKey: "gridColumns") == 7)
+    }
+
+    @Test
+    func automaticIconSizeKeepsTheCustomSizeForLater() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        config.iconSizeMode = .custom
+        config.customIconSize = 120
+        config.iconSizeMode = .automatic
+
+        let reloaded = ConfigStore(defaults: defaults)
+
+        #expect(reloaded.iconSizeMode == .automatic)
+        #expect(reloaded.customIconSize == 120)
+        #expect(reloaded.popupIconSize == 80)
     }
 
     @Test
@@ -224,11 +246,11 @@ struct ConfigStoreTests {
         let defaults = InMemoryKeyValueStore()
         defaults.set(1e9, forKey: "iconSize")
 
-        #expect(ConfigStore(defaults: defaults).iconSize == ConfigStore.iconSizeRange.upperBound)
+        #expect(ConfigStore(defaults: defaults).customIconSize == ConfigStore.iconSizeRange.upperBound)
 
         defaults.set(10, forKey: "iconSize")
 
-        #expect(ConfigStore(defaults: defaults).iconSize == ConfigStore.iconSizeRange.lowerBound)
+        #expect(ConfigStore(defaults: defaults).customIconSize == ConfigStore.iconSizeRange.lowerBound)
     }
 
     @Test

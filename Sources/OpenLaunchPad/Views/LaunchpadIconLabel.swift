@@ -9,9 +9,14 @@ enum LaunchpadIconMetrics {
         ceil(labelFontSize(for: iconSize) * 2.4)
     }
 
+    /// What a tile draws: the icon and, 6 pt below it, the label.
+    static func contentHeight(for iconSize: CGFloat, showsLabel: Bool) -> CGFloat {
+        showsLabel ? iconSize + 6 + labelHeight(for: iconSize) : iconSize
+    }
+
     static func cellHeight(for iconSize: CGFloat, showsLabel: Bool) -> CGFloat {
         guard showsLabel else { return iconSize }
-        return max(iconSize + 40, iconSize + 6 + labelHeight(for: iconSize))
+        return max(iconSize + 40, contentHeight(for: iconSize, showsLabel: true))
     }
 }
 

@@ -51,102 +51,150 @@ struct AppGridLayoutTests {
 }
 
 struct FullScreenPageLayoutTests {
-    /// Width, height and menu-bar height (camera housing included) of common displays.
-    static let displays: [(CGFloat, CGFloat, CGFloat)] = [
-        (1_280, 800, 24),
-        (1_440, 900, 24),
-        (1_470, 956, 38),
-        (1_512, 982, 38),
-        (1_920, 1_080, 24),
-        (2_560, 1_440, 24)
+    /// Common displays with a visible 70 pt Dock: size, and the insets the menu bar (camera
+    /// housing included) and the Dock leave.
+    static let displays: [(CGSize, EdgeInsets)] = [
+        (CGSize(width: 1_280, height: 800), EdgeInsets(top: 24, leading: 0, bottom: 70, trailing: 0)),
+        (CGSize(width: 1_470, height: 956), EdgeInsets(top: 38, leading: 0, bottom: 70, trailing: 0)),
+        (CGSize(width: 1_512, height: 982), EdgeInsets(top: 38, leading: 70, bottom: 0, trailing: 0)),
+        (CGSize(width: 2_560, height: 1_440), EdgeInsets(top: 24, leading: 0, bottom: 70, trailing: 0))
     ]
 
     private func layout(
-        width: CGFloat,
-        height: CGFloat,
-        insets: EdgeInsets,
-        requestedColumns: Int = 7,
+        _ display: (CGSize, EdgeInsets),
+        customIconSize: CGFloat? = nil,
+        columns: Int = 7,
+        rows: Int = 5,
         showsPageIndicator: Bool = true,
-        wantsFrequentlyUsed: Bool
+        wantsFrequentlyUsed: Bool = false
     ) -> FullScreenPageLayout {
         FullScreenPageLayout(
-            size: CGSize(width: width, height: height),
-            insets: insets,
-            iconSize: 80,
-            requestedColumns: requestedColumns,
+            size: display.0,
+            insets: display.1,
+            customIconSize: customIconSize,
+            columns: columns,
+            rows: rows,
             showsLabels: true,
-            largestPageItemCount: 35,
             showsPageIndicator: showsPageIndicator,
             wantsFrequentlyUsed: wantsFrequentlyUsed
         )
     }
 
-    private func bottomDockInsets(menuBar: CGFloat) -> EdgeInsets {
-        EdgeInsets(top: menuBar, leading: 0, bottom: 70, trailing: 0)
-    }
-
-    @Test(arguments: displays, [false, true])
-    func fullPageFitsAboveTheDotsAndTheDock(display: (CGFloat, CGFloat, CGFloat), wantsFrequentlyUsed: Bool) {
-        let (width, height, menuBar) = display
-        let insets = bottomDockInsets(menuBar: menuBar)
-        let page = layout(width: width, height: height, insets: insets, wantsFrequentlyUsed: wantsFrequentlyUsed)
-
-        let rowHeight = page.showsFrequentlyUsed
+    private func frequentlyUsedRowHeight(_ page: FullScreenPageLayout) -> CGFloat {
+        page.showsFrequentlyUsed
             ? FrequentlyUsedAppsLayout.rowHeight(
                 configuredIconSize: page.grid.iconSize,
                 showsLabels: true,
                 presentation: .fullScreen
             )
             : 0
+    }
+
+    @Test(arguments: displays, [false, true])
+    func slotsFillTheSpaceBetweenTheSearchBarAndTheDots(display: (CGSize, EdgeInsets), wantsFrequentlyUsed: Bool) {
+        let (size, insets) = display
+        let page = layout(display, wantsFrequentlyUsed: wantsFrequentlyUsed)
+        let grid = page.grid
+
         let stackHeight = insets.top + FullScreenPageLayout.searchTopPadding
             + FullScreenPageLayout.searchBarHeight + FullScreenPageLayout.searchBottomPadding
-            + rowHeight + page.gridHeight
+            + frequentlyUsedRowHeight(page) + page.gridHeight
             + FullScreenPageLayout.pageIndicatorHeight + FullScreenPageLayout.bottomPadding + insets.bottom
+        #expect(abs(stackHeight - size.height) < 0.001)
+        // Five rows of slots take exactly the grid's height, whatever the page holds.
+        #expect(abs(5 * grid.cellHeight - page.gridHeight) < 0.001)
+        #expect(abs(grid.contentHeight(itemCount: 35) - page.gridHeight) < 0.001)
 
-        #expect(page.grid.contentHeight(itemCount: 35) <= page.gridHeight)
-        #expect(abs(stackHeight - height) < 0.001)
-        #expect(page.grid.iconSize >= FullScreenPageLayout.minimumIconSize)
-        #expect(page.grid.iconSize <= 80)
-        #expect(page.grid.columnCount == 7)
+        let safeWidth = size.width - insets.leading - insets.trailing
+        #expect(grid.columnCount == 7)
+        #expect(grid.contentWidth <= safeWidth - 2 * 48)
+
+        #expect(grid.iconSize >= FullScreenPageLayout.minimumIconSize)
+        #expect(grid.iconSize <= FullScreenPageLayout.maximumAutomaticIconSize)
+        #expect(LaunchpadIconMetrics.contentHeight(for: grid.iconSize, showsLabel: true) <= grid.cellHeight)
+        #expect(grid.iconSize + 16 <= grid.cellWidth)
+    }
+
+    @Test
+    func automaticIconsGrowWithTheDisplay() {
+        let sizes = Self.displays.map { layout($0).grid.iconSize }
+
+        #expect((60...76).contains(sizes[0]))
+        #expect((80...90).contains(sizes[1]))
+        #expect((90...105).contains(sizes[2]))
+        #expect(sizes[3] == FullScreenPageLayout.maximumAutomaticIconSize)
+        #expect(sizes == sizes.sorted())
+    }
+
+    @Test
+    func customSizeIsKeptWhereItFits() {
+        // The 56 pt, 11-column setup a user had before rows existed.
+        let large = Self.displays[3]
+
+        #expect(layout(large, customIconSize: 56, columns: 11).grid.iconSize == 56)
+
+        let withRow = layout(large, customIconSize: 56, columns: 11, wantsFrequentlyUsed: true)
+        #expect(withRow.showsFrequentlyUsed)
+        #expect(withRow.grid.iconSize == 56)
+    }
+
+    @Test
+    func customSizeShrinksOnlyAsFarAsItsSlotsNeed() {
+        let page = layout(Self.displays[0], customIconSize: 160)
+        let grid = page.grid
+        let contentHeight = LaunchpadIconMetrics.contentHeight(for: grid.iconSize, showsLabel: true)
+
+        #expect(grid.iconSize < 160)
+        #expect(grid.iconSize > layout(Self.displays[0]).grid.iconSize)
+        #expect(grid.iconSize + 24 <= grid.cellWidth)
+        #expect(contentHeight + 8 <= grid.cellHeight)
+        #expect(LaunchpadIconMetrics.contentHeight(for: grid.iconSize + 1, showsLabel: true) + 8 > grid.cellHeight)
+    }
+
+    @Test
+    func densestGridKeepsEveryRowInsideTheGrid() {
+        let page = layout(Self.displays[0], columns: 12, rows: 7, wantsFrequentlyUsed: true)
+        let grid = page.grid
+
+        #expect(!page.showsFrequentlyUsed)
+        #expect(grid.iconSize == FullScreenPageLayout.minimumIconSize)
+        #expect(abs(7 * grid.cellHeight - page.gridHeight) < 0.001)
+        #expect(LaunchpadIconMetrics.contentHeight(for: grid.iconSize, showsLabel: true) <= grid.cellHeight)
+        #expect(grid.iconSize + 16 <= grid.cellWidth)
     }
 
     @Test
     func thirteenInchAirKeepsFrequentlyUsedWithSmallerIcons() {
-        let page = layout(width: 1_470, height: 956, insets: bottomDockInsets(menuBar: 38), wantsFrequentlyUsed: true)
+        let air = Self.displays[1]
+        let page = layout(air, wantsFrequentlyUsed: true)
 
         #expect(page.showsFrequentlyUsed)
-        #expect(page.grid.iconSize < 80)
+        #expect(page.grid.iconSize < layout(air).grid.iconSize)
         #expect(page.grid.iconSize > 52)
     }
 
     @Test
-    func thirteenInchAirWithoutFrequentlyUsedKeepsTheConfiguredSize() {
-        let page = layout(width: 1_470, height: 956, insets: bottomDockInsets(menuBar: 38), wantsFrequentlyUsed: false)
-
-        #expect(page.grid.iconSize == 80)
-    }
-
-    @Test
-    func shortDisplayLeavesOutFrequentlyUsedRatherThanHidingRows() {
-        let page = layout(width: 1_280, height: 800, insets: bottomDockInsets(menuBar: 24), wantsFrequentlyUsed: true)
+    func shortDisplayLeavesOutFrequentlyUsedRatherThanShrinkingIconsPastTheMinimum() {
+        let short = Self.displays[0]
+        let page = layout(short, wantsFrequentlyUsed: true)
 
         #expect(!page.showsFrequentlyUsed)
-        #expect(page.grid.iconSize > 56)
+        #expect(page.grid.iconSize == layout(short).grid.iconSize)
     }
 
     @Test
-    func largeDisplayKeepsTheConfiguredSizeAndTheRow() {
-        let page = layout(width: 2_560, height: 1_440, insets: bottomDockInsets(menuBar: 24), wantsFrequentlyUsed: true)
+    func largeDisplayKeepsTheRowAndLargeIcons() {
+        let page = layout(Self.displays[3], wantsFrequentlyUsed: true)
 
         #expect(page.showsFrequentlyUsed)
-        #expect(page.grid.iconSize == 80)
+        #expect(page.grid.iconSize >= 100)
     }
 
     @Test
     func singlePageGivesTheDotsSpaceToTheGrid() {
-        let insets = bottomDockInsets(menuBar: 24)
-        let paged = layout(width: 1_440, height: 900, insets: insets, wantsFrequentlyUsed: false)
-        let single = layout(width: 1_440, height: 900, insets: insets, showsPageIndicator: false, wantsFrequentlyUsed: false)
+        let display = Self.displays[1]
+        let paged = layout(display)
+        let single = layout(display, showsPageIndicator: false)
 
         #expect(single.gridHeight - paged.gridHeight == FullScreenPageLayout.pageIndicatorHeight)
         #expect(single.grid.iconSize > paged.grid.iconSize)
@@ -154,15 +202,13 @@ struct FullScreenPageLayoutTests {
 
     @Test
     func sideDockNarrowsTheGrid() {
-        let page = layout(
-            width: 1_440,
-            height: 900,
-            insets: EdgeInsets(top: 24, leading: 70, bottom: 0, trailing: 0),
-            wantsFrequentlyUsed: false
-        )
+        let display = Self.displays[2]
+        let page = layout(display)
+        let safeWidth = display.0.width - display.1.leading
+        let margin = max(48, safeWidth * 0.09)
 
-        #expect(page.grid.contentWidth <= 1_440 - 70)
-        #expect(page.grid.iconSize == 80)
+        #expect(abs(page.grid.contentWidth - (safeWidth - 2 * margin)) < 0.001)
+        #expect(abs(page.grid.cellWidth * 7 - page.grid.contentWidth) < 0.001)
     }
 
     @Test(arguments: [(CGFloat(1_280), CGFloat(320)), (1_728, 414.72), (2_000, 480), (5_120, 480)])
@@ -171,17 +217,13 @@ struct FullScreenPageLayoutTests {
     }
 
     @Test
-    func pageThatCannotFitStopsAtTheMinimumIconSize() {
-        // Four columns put 35 items in 9 rows, more than any laptop fits until pages get a capacity.
-        let page = layout(
-            width: 1_280,
-            height: 800,
-            insets: bottomDockInsets(menuBar: 24),
-            requestedColumns: 4,
-            wantsFrequentlyUsed: true
-        )
+    func slotsDivideTheSpaceInsideTheirMargins() {
+        let grid = AppGridLayout(slotsIn: CGSize(width: 1_000, height: 500), columns: 5, rows: 4, iconSize: 80)
 
-        #expect(page.grid.iconSize == FullScreenPageLayout.minimumIconSize)
-        #expect(!page.showsFrequentlyUsed)
+        #expect(grid.cellWidth == 164)
+        #expect(grid.cellHeight == 125)
+        #expect(grid.contentWidth == 820)
+        #expect(grid.columnSpacing == 0)
+        #expect(grid.rowSpacing == 0)
     }
 }

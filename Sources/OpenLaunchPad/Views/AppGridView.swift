@@ -20,11 +20,19 @@ struct AppGridLayout {
     let columnSpacing: CGFloat
     let rowSpacing: CGFloat
     let contentWidth: CGFloat
+    /// Where a tile sits in its cell.
+    let tileAlignment: Alignment
 
+    /// The width a tile takes when tiles are packed: its icon with 20 pt either side.
+    static func tileWidth(for iconSize: CGFloat) -> CGFloat {
+        iconSize + 40
+    }
+
+    /// Packed tiles in as many columns as fit, up to `requestedColumns` (0 for no limit).
     init(size: CGSize, iconSize: CGFloat, requestedColumns: Int, showsLabels: Bool = true) {
         let horizontalPadding = min(max(size.width * 0.06, 24), 120)
         let availableWidth = max(size.width - horizontalPadding * 2, iconSize)
-        let cellWidth = iconSize + 40
+        let cellWidth = Self.tileWidth(for: iconSize)
         let minimumSpacing: CGFloat = 24
         let fittingColumns = max(1, Int((availableWidth + minimumSpacing) / (cellWidth + minimumSpacing)))
         let preferredColumns = requestedColumns > 0 ? requestedColumns : fittingColumns
@@ -41,6 +49,24 @@ struct AppGridLayout {
         self.columnSpacing = columnSpacing
         self.rowSpacing = min(max(size.height * 0.04, 24), 48)
         self.contentWidth = CGFloat(columnCount) * cellWidth + CGFloat(max(columnCount - 1, 0)) * columnSpacing
+        tileAlignment = .top
+    }
+
+    /// Full screen's fixed slots: `columns` × `rows` cells that fill `size` inside side margins
+    /// of max(48, 9%) of its width. Tiles are centered in them, so the spare height is shared
+    /// above and below each row, and a slot is at the same place on every page.
+    init(slotsIn size: CGSize, columns: Int, rows: Int, iconSize: CGFloat) {
+        let margin = max(48, size.width * 0.09)
+        let cellWidth = max(size.width - margin * 2, 0) / CGFloat(columns)
+
+        self.iconSize = iconSize
+        columnCount = columns
+        self.cellWidth = cellWidth
+        cellHeight = size.height / CGFloat(rows)
+        columnSpacing = 0
+        rowSpacing = 0
+        contentWidth = cellWidth * CGFloat(columns)
+        tileAlignment = .center
     }
 
     func contentHeight(itemCount: Int) -> CGFloat {
@@ -75,7 +101,7 @@ struct AppGridView: View {
         GeometryReader { proxy in
             let layout = fittedLayout ?? AppGridLayout(
                 size: proxy.size,
-                iconSize: config.iconSize,
+                iconSize: config.popupIconSize,
                 requestedColumns: mode.requestedColumns(configuredColumns: config.gridColumns),
                 showsLabels: config.iconLabelVisible
             )
@@ -162,10 +188,10 @@ struct AppGridView: View {
                     .frame(
                         width: layout.cellWidth,
                         height: layout.cellHeight,
-                        alignment: .top
+                        alignment: layout.tileAlignment
                     )
                     .overlay(alignment: activeTarget?.alignment(for: item.id) ?? .center) {
-                        dragTargetIndicator(for: item.id, width: layout.cellWidth)
+                        dragTargetIndicator(for: item.id, width: AppGridLayout.tileWidth(for: layout.iconSize))
                     }
                     .launchpadItemFrame(id: item.id)
             }
