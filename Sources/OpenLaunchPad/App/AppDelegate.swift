@@ -238,6 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
         })
+            .launchpadMotion()
             .environment(viewModel)
             .environment(config))
         popupHost.sizingOptions = []
@@ -270,6 +271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onAppLaunched: hideLaunchpad,
             onOpenSettings: openSettings
         )
+            .launchpadMotion()
             .environment(viewModel)
             .environment(config)
             .environment(wallpaperProvider)

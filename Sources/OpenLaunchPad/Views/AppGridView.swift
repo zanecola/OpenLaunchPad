@@ -80,6 +80,7 @@ struct AppGridLayout {
 struct AppGridView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
+    @Environment(\.launchpadMotion) private var motion
     let mode: AppGridMode
     /// Geometry fitted by the full-screen page; without it the grid sizes itself to its frame.
     private let fittedLayout: AppGridLayout?
@@ -130,7 +131,7 @@ struct AppGridView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(config.animationDuration(0.22).map { .easeInOut(duration: $0) }, value: vm.currentPage)
+            .animation(motion.animation(0.22) { .easeInOut(duration: $0) }, value: vm.currentPage)
             // Turning the page cancels a drag on the old page without a drop.
             .onChange(of: vm.currentPage) { activeTarget = nil }
         }
@@ -142,7 +143,7 @@ struct AppGridView: View {
             itemGrid(items: currentPageItems, layout: layout)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .id(currentPageIndex)
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .transition(motion.transition(.opacity.combined(with: .scale(scale: 0.98))))
 
             HorizontalPageScrollMonitor(
                 onPrevious: vm.showPreviousPage,

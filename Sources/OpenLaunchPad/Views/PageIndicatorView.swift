@@ -11,7 +11,7 @@ struct PageIndicatorView: View {
 
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.launchpadMotion) private var motion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Namespace private var dotNamespace
     @State private var hover = LauncherHover()
@@ -75,8 +75,7 @@ struct PageIndicatorView: View {
 
     /// The current dot slides along with the page turn; Reduce Motion moves it at once.
     private var dotSlide: Animation? {
-        guard !reduceMotion else { return nil }
-        return config.animationDuration(0.3).map { .spring(response: $0, dampingFraction: 0.8) }
+        motion.movement(0.3) { .spring(response: $0, dampingFraction: 0.8) }
     }
 
     private func arrow(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {

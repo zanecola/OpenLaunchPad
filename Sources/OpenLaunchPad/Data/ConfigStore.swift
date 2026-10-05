@@ -122,16 +122,11 @@ final class ConfigStore {
         didSet { save(animationSpeed, forKey: Keys.animationSpeed) }
     }
     static let animationSpeedRange: ClosedRange<Double> = 0.5...2.0
-    /// Off turns pages and opens folders without a transition.
+    /// Off makes every launcher transition instant (see `LaunchpadMotion`).
     var animatesTransitions: Bool = true {
         didSet { save(animatesTransitions, forKey: Keys.animatesTransitions) }
     }
 
-    /// Length of a launcher transition that takes `base` seconds at 1×; higher speeds are shorter.
-    /// nil when transitions are off.
-    func animationDuration(_ base: Double) -> Double? {
-        animatesTransitions ? base / animationSpeed : nil
-    }
     // MARK: - Persistence helpers
 
     private enum Keys {

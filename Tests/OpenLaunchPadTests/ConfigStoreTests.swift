@@ -159,10 +159,10 @@ struct ConfigStoreTests {
         let config = ConfigStore(defaults: InMemoryKeyValueStore())
 
         config.animationSpeed = 2
-        #expect(config.animationDuration(0.3) == 0.15)
+        #expect(LaunchpadMotion(config: config, reduceMotion: false).duration(0.3) == 0.15)
 
         config.animationSpeed = 0.5
-        #expect(config.animationDuration(0.3) == 0.6)
+        #expect(LaunchpadMotion(config: config, reduceMotion: false).duration(0.3) == 0.6)
     }
 
     @Test
@@ -173,7 +173,7 @@ struct ConfigStoreTests {
 
         config.animatesTransitions = false
 
-        #expect(config.animationDuration(0.3) == nil)
+        #expect(LaunchpadMotion(config: config, reduceMotion: false).duration(0.3) == nil)
         #expect(ConfigStore(defaults: defaults).animatesTransitions == false)
     }
 

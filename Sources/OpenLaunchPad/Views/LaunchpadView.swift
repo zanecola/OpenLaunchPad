@@ -111,6 +111,7 @@ struct FullScreenPageLayout {
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
+    @Environment(\.launchpadMotion) private var motion
     /// Keeps content clear of the menu bar and the Dock; the backdrop still fills the screen.
     var contentInsets = EdgeInsets()
     /// Closes without launching anything.
@@ -205,7 +206,7 @@ struct LaunchpadView: View {
                         },
                         onClose: vm.closeFolder
                     )
-                    .animation(config.animationDuration(0.3).map { .spring(duration: $0) }, value: folder.id)
+                    .animation(motion.movement(0.3) { .spring(duration: $0) }, value: folder.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(folderInsets)
                 }
@@ -380,6 +381,7 @@ struct LaunchpadView: View {
 private struct FullScreenBackdrop: View {
     @Environment(ConfigStore.self) private var config
     @Environment(WallpaperProvider.self) private var wallpapers
+    @Environment(\.launchpadMotion) private var motion
 
     var body: some View {
         LaunchpadBackdropView(
@@ -387,7 +389,7 @@ private struct FullScreenBackdrop: View {
             style: config.backgroundStyle,
             wallpaper: wallpapers.status,
             dim: config.backgroundDim,
-            wallpaperFade: config.animationDuration(0.18).map { .easeOut(duration: $0) }
+            wallpaperFade: motion.animation(0.18) { .easeOut(duration: $0) }
         )
     }
 }
