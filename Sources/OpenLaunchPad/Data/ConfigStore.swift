@@ -11,6 +11,7 @@ final class ConfigStore {
     @ObservationIgnored var onGlobalShortcutChange: (() -> Void)?
     @ObservationIgnored var onMenuBarVisibilityChange: (() -> Void)?
     @ObservationIgnored var onPageCapacityChange: (() -> Void)?
+    @ObservationIgnored var onWallpaperSettingsChange: (() -> Void)?
 
     init(defaults: any KeyValueStoring = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
         self.defaults = defaults
@@ -67,7 +68,21 @@ final class ConfigStore {
     var popupAppearance: PopupAppearance = .system {
         didSet { defaults.set(popupAppearance.rawValue, forKey: Keys.popupAppearance) }
     }
-    /// Opacity of the black layer over the full-screen blur.
+    var backgroundStyle: BackdropStyle = .wallpaper {
+        didSet {
+            defaults.set(backgroundStyle.rawValue, forKey: Keys.backgroundStyle)
+            onWallpaperSettingsChange?()
+        }
+    }
+    /// How far Wallpaper blurs the desktop picture, in points.
+    var backgroundBlurRadius: Double = 48 {
+        didSet {
+            save(backgroundBlurRadius, forKey: Keys.backgroundBlurRadius)
+            onWallpaperSettingsChange?()
+        }
+    }
+    static let backgroundBlurRadiusRange: ClosedRange<Double> = 0...80
+    /// Opacity of the black layer over the full-screen wallpaper or glass.
     var backgroundDim: Double = 0.25 {
         didSet { save(backgroundDim, forKey: Keys.backgroundDim) }
     }
@@ -125,6 +140,8 @@ final class ConfigStore {
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
         static let popupAppearance = "popupAppearance"
+        static let backgroundStyle = "backgroundStyle"
+        static let backgroundBlurRadius = "backgroundBlurRadius"
         static let backgroundDim = "backgroundDim"
         static let legacyBackgroundBlur = "backgroundBlur"
         static let showMenuBarIcon = "showMenuBarIcon"
@@ -178,6 +195,14 @@ final class ConfigStore {
         if let raw = defaults.string(forKey: Keys.popupAppearance),
            let appearance = PopupAppearance(rawValue: raw) {
             popupAppearance = appearance
+        }
+        if let raw = defaults.string(forKey: Keys.backgroundStyle),
+           let style = BackdropStyle(rawValue: raw) {
+            backgroundStyle = style
+        }
+        if defaults.object(forKey: Keys.backgroundBlurRadius) != nil {
+            let storedRadius = defaults.double(forKey: Keys.backgroundBlurRadius)
+            backgroundBlurRadius = min(max(storedRadius, Self.backgroundBlurRadiusRange.lowerBound), Self.backgroundBlurRadiusRange.upperBound)
         }
         if defaults.object(forKey: Keys.backgroundDim) != nil {
             let storedDim = defaults.double(forKey: Keys.backgroundDim)

@@ -222,6 +222,73 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func backgroundStartsAsABlurredWallpaperAndKeepsAnEarlierDim() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(0.4, forKey: "backgroundDim")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.backgroundStyle == .wallpaper)
+        #expect(config.backgroundBlurRadius == 48)
+        #expect(config.backgroundDim == 0.4)
+    }
+
+    @Test
+    func legacyBlurBecomesDimNotABlurRadius() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(60.0, forKey: "backgroundBlur")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.backgroundBlurRadius == 48)
+        #expect(defaults.object(forKey: "backgroundBlurRadius") == nil)
+    }
+
+    @Test
+    func backgroundStyleAndBlurRadiusPersist() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+
+        config.backgroundStyle = .glass
+        config.backgroundBlurRadius = 20
+
+        #expect(defaults.string(forKey: "backgroundStyle") == "Glass")
+        let reloaded = ConfigStore(defaults: defaults)
+        #expect(reloaded.backgroundStyle == .glass)
+        #expect(reloaded.backgroundBlurRadius == 20)
+    }
+
+    @Test
+    func unknownBackgroundStyleAndOutOfRangeBlurAreNormalized() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Aurora", forKey: "backgroundStyle")
+        defaults.set(200.0, forKey: "backgroundBlurRadius")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.backgroundStyle == .wallpaper)
+        #expect(config.backgroundBlurRadius == ConfigStore.backgroundBlurRadiusRange.upperBound)
+        #expect(defaults.double(forKey: "backgroundBlurRadius") == ConfigStore.backgroundBlurRadiusRange.upperBound)
+
+        defaults.set(-5.0, forKey: "backgroundBlurRadius")
+
+        #expect(ConfigStore(defaults: defaults).backgroundBlurRadius == 0)
+    }
+
+    @Test
+    func wallpaperSettingsReportTheirChanges() {
+        let config = ConfigStore(defaults: InMemoryKeyValueStore())
+        var changes = 0
+        config.onWallpaperSettingsChange = { changes += 1 }
+
+        config.backgroundStyle = .solid
+        config.backgroundBlurRadius = 60
+        config.backgroundDim = 0.3
+
+        #expect(changes == 2)
+    }
+
+    @Test
     func popupAppearanceFollowsTheSystemByDefaultAndPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

@@ -27,6 +27,26 @@ enum FrequentlyUsedPlacement: String, CaseIterable, Sendable {
     var showsInFullScreen: Bool { self == .popupAndFullScreen }
 }
 
+/// What full screen draws behind its content.
+enum BackdropStyle: String, CaseIterable, Sendable {
+    /// The desktop picture, blurred.
+    case wallpaper = "Wallpaper"
+    /// The material that blurs the windows and desktop behind full screen.
+    case glass = "Glass"
+    case solid = "Solid"
+
+    /// What full screen draws for this choice. The rendered wallpaper is opaque, so it stays
+    /// under Reduce Transparency; Glass does not. Without a usable wallpaper, Wallpaper falls
+    /// back as Glass does.
+    func resolved(reduceTransparency: Bool, wallpaperAvailable: Bool) -> BackdropStyle {
+        switch self {
+        case .wallpaper where wallpaperAvailable: .wallpaper
+        case .wallpaper, .glass: reduceTransparency ? .solid : .glass
+        case .solid: .solid
+        }
+    }
+}
+
 enum LaunchpadSortOrder: Sendable {
     case ascending
     case descending

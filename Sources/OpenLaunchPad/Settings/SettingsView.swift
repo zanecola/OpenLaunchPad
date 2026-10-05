@@ -199,7 +199,23 @@ private struct AppearanceSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section("Background") {
+            Section("Full-Screen Background") {
+                Picker("Style", selection: $config.backgroundStyle) {
+                    ForEach(BackdropStyle.allCases, id: \.self) { style in
+                        Text(style.rawValue).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                HStack {
+                    Text("Blur radius")
+                    Slider(value: $config.backgroundBlurRadius, in: ConfigStore.backgroundBlurRadiusRange, step: 4)
+                    Text("\(Int(config.backgroundBlurRadius))pt")
+                        .monospacedDigit()
+                        .frame(width: 40)
+                }
+                .disabled(config.backgroundStyle != .wallpaper)
+
                 HStack {
                     Text("Dim")
                     Slider(value: $config.backgroundDim, in: ConfigStore.backgroundDimRange)
@@ -207,15 +223,11 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 36)
                 }
-                .disabled(reduceTransparency)
+                .disabled(drawnBackground == .solid)
 
-                Text(
-                    reduceTransparency
-                        ? "Reduce Transparency is on, so full screen uses a solid dark background."
-                        : "Darkens the blurred background behind the full-screen launcher."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(backgroundDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Animation") {
@@ -232,6 +244,26 @@ private struct AppearanceSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// Settings can't tell whether the wallpaper can be read, so they assume it can.
+    private var drawnBackground: BackdropStyle {
+        config.backgroundStyle.resolved(reduceTransparency: reduceTransparency, wallpaperAvailable: true)
+    }
+
+    private var backgroundDescription: String {
+        switch drawnBackground {
+        case .wallpaper:
+            reduceTransparency
+                ? "Your desktop picture, blurred and dimmed. When it can't be read, the background is solid dark."
+                : "Your desktop picture, blurred and dimmed. When it can't be read, Glass is used instead."
+        case .glass:
+            "Blurs and dims the windows and desktop behind the launcher."
+        case .solid:
+            config.backgroundStyle == .solid
+                ? "A solid dark background."
+                : "Reduce Transparency is on, so Glass is replaced by a solid dark background."
+        }
     }
 
     private var popupColumnCount: Int {

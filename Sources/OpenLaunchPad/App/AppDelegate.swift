@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Shared ViewModel and config — single instances for the whole app lifetime
     let config = ConfigStore.shared
     let viewModel: LaunchpadViewModel
+    private let wallpaperProvider = WallpaperProvider()
 
     private let fullScreenWindow = FullScreenWindow()
     /// The insets the full-screen content was last given, for the screen the window covers.
@@ -40,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     private var localeObserver: NSObjectProtocol?
     private var screenParametersObserver: NSObjectProtocol?
+    private var activeSpaceObserver: NSObjectProtocol?
     /// Set while full screen auto-hides the Dock and menu bar, to restore on hide.
     private var presentationOptionsBeforeFullScreen: NSApplication.PresentationOptions?
 
@@ -78,9 +80,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             viewModel.pageCapacity = config.pageCapacity
         }
+        config.onWallpaperSettingsChange = { [weak self] in
+            // A dragged slider changes in steps; render once it settles.
+            self?.refreshWallpaper(delay: .milliseconds(300))
+        }
         registerHotkey()
         updateStatusItemVisibility()
         installLauncherSurfaces()
+        refreshWallpaper()
         screenParametersObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -88,6 +95,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refitFullScreen()
+                self?.refreshWallpaper()
+            }
+        }
+        // Each Space can have its own wallpaper.
+        activeSpaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshWallpaper()
             }
         }
         databaseWatcher.start()
@@ -118,10 +136,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let screenParametersObserver {
             NotificationCenter.default.removeObserver(screenParametersObserver)
         }
+        if let activeSpaceObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activeSpaceObserver)
+        }
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
         config.onMenuBarVisibilityChange = nil
         config.onPageCapacityChange = nil
+        config.onWallpaperSettingsChange = nil
     }
 
     func applicationDidResignActive(_ notification: Notification) {
@@ -250,6 +272,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
             .environment(viewModel)
             .environment(config)
+            .environment(wallpaperProvider)
+    }
+
+    /// Renders the wallpaper of the screen full screen opens on, when it changed, so a show finds
+    /// it ready. Each show calls this too, and keeps the previous render up until a new one arrives.
+    private func refreshWallpaper(delay: Duration = .zero) {
+        guard config.backgroundStyle == .wallpaper, let screen = NSScreen.main else { return }
+        wallpaperProvider.refresh(for: WallpaperScreen(screen), blurRadius: config.backgroundBlurRadius, delay: delay)
     }
 
     /// Fits the window and its content insets to the screen full screen opens on, reapplying each
@@ -277,6 +307,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         unhideIfNeeded()
         refitFullScreen()
+        refreshWallpaper()
         viewModel.beginPresentation()
         fullScreenWindow.show()
     }

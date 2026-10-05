@@ -58,7 +58,7 @@ struct FrequentlyUsedShelf: View {
         .padding(.vertical, FrequentlyUsedShelfLayout.verticalPadding)
         .background {
             if reduceTransparency {
-                // A solid step above the solid backdrop full screen draws then.
+                // Opaque, a step above the solid backdrop.
                 shape.fill(Color(red: 44 / 255, green: 44 / 255, blue: 46 / 255))
             } else {
                 Color.clear.glassEffect(.regular, in: shape)

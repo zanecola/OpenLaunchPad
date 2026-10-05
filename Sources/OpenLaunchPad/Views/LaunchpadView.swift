@@ -107,7 +107,7 @@ struct FullScreenPageLayout {
     }
 }
 
-/// Full-screen Launchpad overlay — blur backdrop, search, grid, page dots.
+/// Full-screen Launchpad overlay — backdrop, search, grid, page dots.
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
@@ -371,7 +371,23 @@ struct LaunchpadView: View {
 
     @ViewBuilder
     private var backdrop: some View {
-        LaunchpadBackdropView(mode: .fullScreen, dim: config.backgroundDim)
+        FullScreenBackdrop()
             .ignoresSafeArea()
+    }
+}
+
+/// Reads the background settings and the wallpaper itself, so a new render redraws only the backdrop.
+private struct FullScreenBackdrop: View {
+    @Environment(ConfigStore.self) private var config
+    @Environment(WallpaperProvider.self) private var wallpapers
+
+    var body: some View {
+        LaunchpadBackdropView(
+            mode: .fullScreen,
+            style: config.backgroundStyle,
+            wallpaper: wallpapers.status,
+            dim: config.backgroundDim,
+            wallpaperFade: config.animationDuration(0.18).map { .easeOut(duration: $0) }
+        )
     }
 }
