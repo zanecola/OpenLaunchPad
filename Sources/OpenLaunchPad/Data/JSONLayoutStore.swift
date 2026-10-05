@@ -47,7 +47,7 @@ final class JSONLayoutStore: LayoutStoring {
         }
         // A corrupt file would be replaced by the next save, so keep it as a backup first.
         // Pruning skips this prefix.
-        isReadOnly = !moveToBackups(prefix: "unreadable-layout")
+        isReadOnly = moveToBackups(prefix: "unreadable-layout") == nil
         return nil
     }
 
@@ -92,8 +92,8 @@ final class JSONLayoutStore: LayoutStoring {
     /// If the move fails, the layout stays in place rather than being deleted.
     func clearCustomLayout() {
         guard FileManager.default.fileExists(atPath: fileURL.path),
-              moveToBackups(prefix: "layout") else { return }
-        pruneBackups(prefix: "layout", keeping: Self.maxResetBackups)
+              let backup = moveToBackups(prefix: "layout") else { return }
+        pruneBackups(prefix: "layout", keeping: Self.maxResetBackups, sparing: backup)
     }
 
     // MARK: - Backups
@@ -101,18 +101,22 @@ final class JSONLayoutStore: LayoutStoring {
     private static let timestampFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        // UTC, so names keep sorting by time across time-zone changes and DST.
+        formatter.timeZone = TimeZone(identifier: "UTC")
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         return formatter
     }()
 
-    private func moveToBackups(prefix: String) -> Bool {
+    /// The backup's URL, or nil when the move failed.
+    private func moveToBackups(prefix: String) -> URL? {
         let fileManager = FileManager.default
         do {
             try fileManager.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
-            try fileManager.moveItem(at: fileURL, to: newBackupURL(prefix: prefix))
-            return true
+            let backup = newBackupURL(prefix: prefix)
+            try fileManager.moveItem(at: fileURL, to: backup)
+            return backup
         } catch {
-            return false
+            return nil
         }
     }
 
@@ -128,14 +132,15 @@ final class JSONLayoutStore: LayoutStoring {
         return url
     }
 
-    private func pruneBackups(prefix: String, keeping limit: Int) {
+    /// Keeps `newest` whatever its name: if the clock went back, it would sort before older ones.
+    private func pruneBackups(prefix: String, keeping limit: Int, sparing newest: URL) {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: backupDirectory.path)) ?? []
         // Timestamped names sort oldest first once the extension is dropped.
         let backups = names
-            .filter { $0.hasPrefix("\(prefix)-") && $0.hasSuffix(".json") }
+            .filter { $0.hasPrefix("\(prefix)-") && $0.hasSuffix(".json") && $0 != newest.lastPathComponent }
             .map { String($0.dropLast(".json".count)) }
             .sorted()
-        for stem in backups.dropLast(limit) {
+        for stem in backups.dropLast(limit - 1) {
             try? FileManager.default.removeItem(at: backupDirectory.appendingPathComponent("\(stem).json"))
         }
     }

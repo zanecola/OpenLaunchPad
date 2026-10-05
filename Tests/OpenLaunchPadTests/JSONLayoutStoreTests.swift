@@ -233,6 +233,39 @@ struct JSONLayoutStoreTests {
     }
 
     @Test
+    func backupNamesUseUTC() throws {
+        try withStore(now: { Date(timeIntervalSince1970: 0) }) { store, fileURL in
+            store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+            store.clearCustomLayout()
+
+            let names = try Self.backupNames(for: fileURL)
+            #expect(names == ["layout-19700101-000000.json"])
+        }
+    }
+
+    @Test
+    func clearKeepsTheNewBackupWhenTheClockWentBack() throws {
+        var date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
+            for _ in 0..<JSONLayoutStore.maxResetBackups {
+                store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+                store.clearCustomLayout()
+                date += 1
+            }
+            // For example after the clock is corrected backwards.
+            date = Date(timeIntervalSince1970: 1_800_000_000 - 3_600)
+            let newest = StoredLayout(pageIDs: [[UUID()]])
+            store.saveCustomLayout(newest)
+            store.clearCustomLayout()
+
+            let names = try Self.backupNames(for: fileURL)
+            #expect(names.count == JSONLayoutStore.maxResetBackups)
+            #expect(names.first == "layout-\(Self.timestamp(date)).json")
+            #expect(!names.contains("layout-\(Self.timestamp(Date(timeIntervalSince1970: 1_800_000_000))).json"))
+        }
+    }
+
+    @Test
     func clearInTheSameSecondKeepsBothBackups() throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         try withStore(now: { date }) { store, fileURL in
@@ -287,6 +320,7 @@ struct JSONLayoutStoreTests {
     private static func timestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         return formatter.string(from: date)
     }
