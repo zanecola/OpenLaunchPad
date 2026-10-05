@@ -103,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Dock icon click: reopen → show Launchpad (ADR, dock-click behavior)
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if isLaunchpadVisible {
-            hideLaunchpad()
+            dismissLaunchpad()
         } else {
             showLaunchpad(popupAnchor: NSEvent.mouseLocation)
         }
@@ -114,7 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func toggleLaunchpad() {
         if isLaunchpadVisible {
-            hideLaunchpad()
+            dismissLaunchpad()
         } else {
             showLaunchpad()
         }
@@ -140,15 +140,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.expandedFolderID = nil
     }
 
-    private func stepBackOrHide() {
-        if !viewModel.stepBack() { hideLaunchpad() }
+    /// Closes the launcher without launching anything. Opening it may have activated this app
+    /// (full screen, or a Dock click), which would otherwise keep the menu bar and keyboard with
+    /// no window showing. Hiding the app hands activation to the app underneath, as Launchpad did.
+    func dismissLaunchpad() {
+        hideLaunchpad()
+        let showsOtherWindow = NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) }
+        if NSApp.isActive && !showsOtherWindow {
+            NSApp.hide(nil)
+        }
+    }
+
+    /// Windows of a hidden app stay off screen, so undo dismissLaunchpad's hide before showing one.
+    private func unhideIfNeeded() {
+        if NSApp.isHidden {
+            NSApp.unhideWithoutActivation()
+        }
+    }
+
+    private func stepBackOrDismiss() {
+        if !viewModel.stepBack() { dismissLaunchpad() }
     }
 
     // MARK: - Full-screen mode
 
     private func showFullScreen() {
         let root = LaunchpadView(
-            onDismiss: hideLaunchpad,
+            onDismiss: dismissLaunchpad,
+            onAppLaunched: hideLaunchpad,
             onOpenSettings: openSettings
         )
             .environment(viewModel)
@@ -156,7 +175,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let controller = NSHostingController(rootView: root)
         visibleSurface = .fullScreen
-        fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrHide() }
+        fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrDismiss() }
+        unhideIfNeeded()
         fullScreenWindow.show(hostingView: controller)
     }
 
@@ -167,6 +187,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popupPanel = panel
 
         let root = MenuBarPanelView(onDismissRequested: { [weak self] in
+            self?.dismissLaunchpad()
+        }, onAppLaunched: { [weak self] in
             self?.hideLaunchpad()
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
@@ -175,8 +197,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(config)
 
         let controller = NSHostingController(rootView: root)
-        panel.onCancel = { [weak self] in self?.stepBackOrHide() }
+        panel.onCancel = { [weak self] in self?.stepBackOrDismiss() }
         panel.onResignKey = { [weak self] in self?.popupDidResignKey() }
+        unhideIfNeeded()
         panel.show(
             anchorPoint: anchorPoint,
             hostingView: controller,
@@ -225,7 +248,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if isLaunchpadVisible {
-            hideLaunchpad()
+            dismissLaunchpad()
         } else {
             let anchorPoint = statusItemAnchor(for: sender)
             DispatchQueue.main.async { [weak self] in
@@ -246,7 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.visibleSurface == .popup, let panel = self.popupPanel,
                   !panel.isKeyWindow, panel.attachedSheet == nil else { return }
-            self.hideLaunchpad()
+            self.dismissLaunchpad()
         }
     }
 
@@ -257,7 +280,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard self?.visibleSurface == .popup else { return }
-                self?.hideLaunchpad()
+                self?.dismissLaunchpad()
             }
         }
     }
@@ -295,6 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func openSettings() {
         hideLaunchpad()
+        unhideIfNeeded()
         settingsWindowController.present()
     }
 
@@ -303,6 +327,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showAboutPanel() {
+        unhideIfNeeded()
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(nil)
     }

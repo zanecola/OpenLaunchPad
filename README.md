@@ -89,7 +89,7 @@ Building from source additionally requires Xcode with the macOS 26 SDK and Swift
 | Press your configured global shortcut | Toggles the launcher from any app |
 | Click the gear beside Search | Opens Settings |
 
-Launching an app automatically closes OpenLaunchPad so it stays out of your way.
+Launching an app automatically closes OpenLaunchPad so it stays out of your way. Closing it without launching anything returns you to the app you were using.
 
 ### Navigate
 

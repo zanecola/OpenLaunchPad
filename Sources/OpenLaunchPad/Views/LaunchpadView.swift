@@ -4,7 +4,9 @@ import SwiftUI
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
+    /// Closes without launching anything.
     var onDismiss: () -> Void = {}
+    var onAppLaunched: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
     @State private var missingApp: AppItem?
@@ -118,7 +120,7 @@ struct LaunchpadView: View {
     /// Stays open when the app can't be found, so the user can see why nothing opened.
     private func launch(_ app: AppItem) {
         if vm.launch(app) {
-            onDismiss()
+            onAppLaunched()
         } else {
             missingApp = app
         }

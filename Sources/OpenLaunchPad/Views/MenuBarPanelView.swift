@@ -6,7 +6,9 @@ struct MenuBarPanelView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
     @Environment(\.dismiss) private var dismiss
+    /// Closes without launching anything.
     var onDismissRequested: () -> Void = {}
+    var onAppLaunched: () -> Void = {}
     var onOpenSettings: () -> Void = {}
     @State private var dragState = LaunchpadDragState()
     @State private var missingApp: AppItem?
@@ -134,7 +136,7 @@ struct MenuBarPanelView: View {
         }
         vm.searchQuery = ""
         vm.closeFolder()
-        onDismissRequested()
+        onAppLaunched()
         dismiss()
     }
 
