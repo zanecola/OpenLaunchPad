@@ -96,6 +96,8 @@ Building from source additionally requires Xcode with the macOS 26 SDK and Swift
 
 Launching an app automatically closes OpenLaunchPad so it stays out of your way. Closing it without launching anything returns you to the app you were using.
 
+Both launchers are built once when OpenLaunchPad starts and kept ready, so opening one only brings it on screen. Each open still starts fresh: Search has focus, no folder is open, and the popup is scrolled back to the top. Full screen reopens on the page you left.
+
 ### Navigate
 
 - Start typing as soon as the launcher opens: Search already has focus, in the popup too. It ignores case and accents, and finds apps by the name Finder shows, their bundle name, or their file name, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
