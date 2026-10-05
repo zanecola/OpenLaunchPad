@@ -15,6 +15,7 @@ struct LaunchpadDragPreviewView: View {
                 .shadow(color: .black.opacity(0.35), radius: 18, y: 10)
                 .position(active.location)
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
                 .transition(.scale(scale: 0.92).combined(with: .opacity))
                 .zIndex(100)
         }

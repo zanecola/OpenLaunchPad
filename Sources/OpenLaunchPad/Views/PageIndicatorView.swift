@@ -21,6 +21,7 @@ struct PageIndicatorView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Page \(index + 1)")
+                .accessibilityAddTraits(index == currentPage ? .isSelected : [])
             }
 
             pageButton(systemName: "chevron.right", page: currentPage + 1)

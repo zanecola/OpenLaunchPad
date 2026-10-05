@@ -111,6 +111,11 @@ struct AppIconView: View {
         .onChange(of: isEditMode) { _, editing in
             if editing { startWiggle() } else { wiggleAngle = 0 }
         }
+        // One named button per tile, even with labels hidden; the context menu stays available.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(app.title)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default, onTap)
     }
 
     private func startWiggle() {

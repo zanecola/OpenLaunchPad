@@ -50,6 +50,7 @@ struct MenuBarPanelView: View {
                 Color.black.opacity(0.35)
                     .contentShape(Rectangle())
                     .onTapGesture(perform: vm.closeFolder)
+                    .accessibilityHidden(true)
 
                 FolderExpandedView(
                     folder: folder,

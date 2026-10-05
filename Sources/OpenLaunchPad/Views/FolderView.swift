@@ -42,6 +42,12 @@ struct FolderView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
         .onHover { isHovered = $0 }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(folder.title)
+        .accessibilityValue(folder.apps.count == 1 ? "1 app" : "\(folder.apps.count) apps")
+        .accessibilityHint("Opens folder")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default, onOpen)
     }
 
     /// A 3×3 preview in an iconSize slot. The tile is 0.805 of the slot, the visible body of a macOS
@@ -70,6 +76,7 @@ struct FolderView: View {
         .background { tileFill(shape) }
         .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
         .frame(width: slot, height: slot)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -189,6 +196,7 @@ struct FolderExpandedView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Close folder")
+                    .accessibilityLabel("Close Folder")
                 }
 
             ScrollView(.vertical) {

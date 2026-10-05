@@ -138,6 +138,7 @@ struct LaunchpadView: View {
                             onDismiss()
                         }
                     })
+                    .accessibilityHidden(true)
 
                 VStack(spacing: 0) {
                     // The field is centered on its own; the gear sits in the corner, clear of it.
@@ -195,6 +196,7 @@ struct LaunchpadView: View {
                     Color.black.opacity(0.25)
                         .ignoresSafeArea()
                         .onTapGesture { vm.closeFolder() }
+                        .accessibilityHidden(true)
 
                     FolderExpandedView(
                         folder: folder,
