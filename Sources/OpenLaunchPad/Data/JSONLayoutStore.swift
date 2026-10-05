@@ -8,7 +8,8 @@ final class JSONLayoutStore: LayoutStoring {
     private let fileURL: URL
     private let backupDirectory: URL
     private let now: () -> Date
-    /// Set when an unreadable layout.json could not be moved aside; saving would destroy it.
+    /// Set when layout.json was written by a newer version, or is unreadable and could not be
+    /// moved aside; saving would destroy it.
     private var isReadOnly = false
 
     /// Backups default to a `Backups` folder beside `fileURL`, so a store on a temporary file
@@ -34,13 +35,27 @@ final class JSONLayoutStore: LayoutStoring {
     func loadCustomLayout() -> StoredLayout? {
         isReadOnly = false
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-        if let data = try? Data(contentsOf: fileURL), let layout = Self.decodeLayout(from: data) {
+        let data = try? Data(contentsOf: fileURL)
+        if let data, let layout = Self.decodeLayout(from: data) {
             return layout
         }
-        // A corrupt or newer-version file would be replaced by the next save, so keep it as a
-        // backup first. Pruning skips this prefix.
+        // A newer OpenLaunchPad can still read its own layout, so leave it where it is and
+        // don't save over it.
+        if let data, Self.isNewerVersion(data) {
+            isReadOnly = true
+            return nil
+        }
+        // A corrupt file would be replaced by the next save, so keep it as a backup first.
+        // Pruning skips this prefix.
         isReadOnly = !moveToBackups(prefix: "unreadable-layout")
         return nil
+    }
+
+    private static func isNewerVersion(_ data: Data) -> Bool {
+        guard let version = try? JSONDecoder().decode(LayoutVersionMarker.self, from: data).version else {
+            return false
+        }
+        return version > VersionedStoredLayout.currentVersion
     }
 
     private static func decodeLayout(from data: Data) -> StoredLayout? {
@@ -128,6 +143,8 @@ final class JSONLayoutStore: LayoutStoring {
 
 private struct LayoutVersionMarker: Decodable {
     let isVersioned: Bool
+    /// nil when the version is missing or not a number.
+    let version: Int?
 
     private enum CodingKeys: String, CodingKey {
         case version
@@ -136,6 +153,7 @@ private struct LayoutVersionMarker: Decodable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         isVersioned = container.contains(.version)
+        version = try? container.decode(Int.self, forKey: .version)
     }
 }
 

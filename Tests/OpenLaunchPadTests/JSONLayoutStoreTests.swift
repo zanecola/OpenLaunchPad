@@ -45,9 +45,8 @@ struct JSONLayoutStoreTests {
     }
 
     @Test
-    func unsupportedFutureVersionIsKeptAsBackupBeforeNextSave() throws {
-        let date = Date(timeIntervalSince1970: 1_800_000_000)
-        try withStore(now: { date }) { store, fileURL in
+    func newerVersionIsLeftInPlaceAndNeverOverwritten() throws {
+        try withStore { store, fileURL in
             let fixture = VersionedLayoutFixture(
                 version: 2,
                 pageIDs: [[UUID()]],
@@ -57,13 +56,10 @@ struct JSONLayoutStoreTests {
             try futureData.write(to: fileURL)
 
             #expect(store.loadCustomLayout() == nil)
-            let replacement = StoredLayout(pageIDs: [[UUID()]])
-            store.saveCustomLayout(replacement)
+            store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
 
-            let backupURL = Self.backupDirectory(for: fileURL)
-                .appendingPathComponent("unreadable-layout-\(Self.timestamp(date)).json")
-            #expect(try Data(contentsOf: backupURL) == futureData)
-            #expect(store.loadCustomLayout() == replacement)
+            #expect(try Data(contentsOf: fileURL) == futureData)
+            #expect(!FileManager.default.fileExists(atPath: Self.backupDirectory(for: fileURL).path))
         }
     }
 
