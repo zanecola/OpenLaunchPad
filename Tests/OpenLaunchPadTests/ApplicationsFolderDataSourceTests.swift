@@ -11,6 +11,7 @@ struct ApplicationsFolderDataSourceTests {
         try fixture.addApp(name: "Mail Copy", bundleID: "com.example.mail", under: fixture.secondRoot)
         let utilities = fixture.firstRoot.appendingPathComponent("Utilities", isDirectory: true)
         try fixture.addApp(name: "Terminal", bundleID: "com.example.terminal", under: utilities)
+        try fixture.addApp(name: "Console", bundleID: "com.example.console", under: utilities)
 
         let source = ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path],
@@ -31,7 +32,7 @@ struct ApplicationsFolderDataSourceTests {
             return
         }
         #expect(folder.title == "Utilities")
-        #expect(folder.apps.map(\.title) == ["Terminal"])
+        #expect(folder.apps.map(\.title) == ["Console", "Terminal"])
     }
 
     @Test
@@ -75,6 +76,25 @@ struct ApplicationsFolderDataSourceTests {
             .loadPages().flatMap { $0 }
 
         #expect(items.map(\.title) == ["Chrome Apps"])
+    }
+
+    @Test
+    func directoryWithOneAppShowsTheAppAtTopLevel() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        try fixture.addApp(name: "Mail", bundleID: "com.example.mail", under: fixture.firstRoot)
+        let vendor = fixture.firstRoot.appendingPathComponent("Vendor", isDirectory: true)
+        try fixture.addApp(name: "Reader", bundleID: "com.example.reader", under: vendor)
+        // Its second app is a duplicate, so this directory is left with one app too.
+        let tools = fixture.firstRoot.appendingPathComponent("Tools", isDirectory: true)
+        try fixture.addApp(name: "Mail Copy", bundleID: "com.example.mail", under: tools)
+        try fixture.addApp(name: "Notes", bundleID: "com.example.notes", under: tools)
+
+        let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+            .loadPages().flatMap { $0 }
+
+        #expect(items.map(\.title) == ["Mail", "Notes", "Reader"])
+        #expect(items.allSatisfy { if case .app = $0 { true } else { false } })
     }
 
     @Test

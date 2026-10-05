@@ -36,8 +36,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
                 let fullPath = (path as NSString).appendingPathComponent(entry)
                 if entry.hasSuffix(".app"), let app = appItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
                     items.append(.app(app))
-                } else if let folder = folderItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
-                    items.append(.folder(folder))
+                } else if let item = folderItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
+                    items.append(item)
                 }
             }
         }
@@ -50,10 +50,12 @@ final class ApplicationsFolderDataSource: AppDataSource {
         }
     }
 
+    /// A directory of apps becomes a folder; a lone app is shown at top level,
+    /// because a one-app folder is one the app cannot be dragged out of.
     private func folderItem(
         at path: String,
         seenBundleIDs: inout Set<String>
-    ) -> FolderItem? {
+    ) -> LaunchpadItem? {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue,
               let entries = try? FileManager.default.contentsOfDirectory(atPath: path) else {
@@ -65,14 +67,17 @@ final class ApplicationsFolderDataSource: AppDataSource {
             let appPath = (path as NSString).appendingPathComponent(entry)
             return appItem(at: appPath, seenBundleIDs: &seenBundleIDs)
         }
-        guard !apps.isEmpty else { return nil }
-
-        return FolderItem(
-            id: stableUUID(for: "folder:\(path)"),
-            // displayName drops ".localized" and localizes system folders such as Utilities.
-            title: FileManager.default.displayName(atPath: path),
-            apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
-        )
+        switch apps.count {
+        case 0: return nil
+        case 1: return .app(apps[0])
+        default:
+            return .folder(FolderItem(
+                id: stableUUID(for: "folder:\(path)"),
+                // displayName drops ".localized" and localizes system folders such as Utilities.
+                title: FileManager.default.displayName(atPath: path),
+                apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
+            ))
+        }
     }
 
     private func appItem(at path: String, seenBundleIDs: inout Set<String>) -> AppItem? {
