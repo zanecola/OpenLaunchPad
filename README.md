@@ -139,7 +139,7 @@ Your custom pages, folders, and ordering are stored separately:
 ~/Library/Application Support/OpenLaunchPad/layout.json
 ```
 
-Reset Layout in Settings asks first and saves the current layout to the `Backups` folder next to `layout.json`. The 10 most recent backups are kept.
+Reset Layout in Settings asks first and saves the current layout to the `Backups` folder next to `layout.json`. The 10 most recent backups are kept. A `layout.json` that OpenLaunchPad cannot read, for example one written by a newer version, is also moved there instead of being overwritten.
 
 Settings and frequently used app history are stored locally in the `com.openlaunchpad` UserDefaults suite. Usage history contains only bundle IDs, launch counts, and last-launch timestamps for apps opened through OpenLaunchPad. There are no network services, accounts, analytics, or telemetry.
 

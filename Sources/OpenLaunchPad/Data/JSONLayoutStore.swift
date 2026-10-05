@@ -8,6 +8,8 @@ final class JSONLayoutStore: LayoutStoring {
     private let fileURL: URL
     private let backupDirectory: URL
     private let now: () -> Date
+    /// Set when an unreadable layout.json could not be moved aside; saving would destroy it.
+    private var isReadOnly = false
 
     /// Backups default to a `Backups` folder beside `fileURL`, so a store on a temporary file
     /// never writes into the real Application Support folder.
@@ -30,7 +32,18 @@ final class JSONLayoutStore: LayoutStoring {
     }
 
     func loadCustomLayout() -> StoredLayout? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        isReadOnly = false
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        if let data = try? Data(contentsOf: fileURL), let layout = Self.decodeLayout(from: data) {
+            return layout
+        }
+        // A corrupt or newer-version file would be replaced by the next save, so keep it as a
+        // backup first. Pruning skips this prefix.
+        isReadOnly = !moveToBackups(prefix: "unreadable-layout")
+        return nil
+    }
+
+    private static func decodeLayout(from data: Data) -> StoredLayout? {
         let decoder = JSONDecoder()
         if let marker = try? decoder.decode(LayoutVersionMarker.self, from: data), marker.isVersioned {
             guard let envelope = try? decoder.decode(VersionedStoredLayout.self, from: data),
@@ -52,6 +65,7 @@ final class JSONLayoutStore: LayoutStoring {
     }
 
     func saveCustomLayout(_ layout: StoredLayout) {
+        guard !isReadOnly else { return }
         let dir = fileURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         if let data = try? JSONEncoder().encode(VersionedStoredLayout(layout: layout)) {

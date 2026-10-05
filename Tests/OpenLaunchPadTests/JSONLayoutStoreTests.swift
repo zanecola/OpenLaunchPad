@@ -45,16 +45,25 @@ struct JSONLayoutStoreTests {
     }
 
     @Test
-    func unsupportedFutureVersionReturnsNil() throws {
-        try withStore { store, fileURL in
+    func unsupportedFutureVersionIsKeptAsBackupBeforeNextSave() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
             let fixture = VersionedLayoutFixture(
                 version: 2,
                 pageIDs: [[UUID()]],
                 folders: [StoredFolder(id: UUID(), title: "Future", appIDs: [UUID()])]
             )
-            try JSONEncoder().encode(fixture).write(to: fileURL)
+            let futureData = try JSONEncoder().encode(fixture)
+            try futureData.write(to: fileURL)
 
             #expect(store.loadCustomLayout() == nil)
+            let replacement = StoredLayout(pageIDs: [[UUID()]])
+            store.saveCustomLayout(replacement)
+
+            let backupURL = Self.backupDirectory(for: fileURL)
+                .appendingPathComponent("unreadable-layout-\(Self.timestamp(date)).json")
+            #expect(try Data(contentsOf: backupURL) == futureData)
+            #expect(store.loadCustomLayout() == replacement)
         }
     }
 
@@ -132,16 +141,63 @@ struct JSONLayoutStoreTests {
             try JSONEncoder().encode(pageIDs).write(to: fileURL)
 
             #expect(store.loadCustomLayout() == StoredLayout(pageIDs: pageIDs))
+            #expect(FileManager.default.fileExists(atPath: fileURL.path))
+            #expect(!FileManager.default.fileExists(atPath: Self.backupDirectory(for: fileURL).path))
         }
     }
 
     @Test
-    func malformedLayoutReturnsNil() throws {
-        try withStore { store, fileURL in
+    func malformedLayoutIsKeptAsBackupBeforeNextSave() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
             try Data("not json".utf8).write(to: fileURL)
 
             #expect(store.loadCustomLayout() == nil)
+            store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+
+            let backupURL = Self.backupDirectory(for: fileURL)
+                .appendingPathComponent("unreadable-layout-\(Self.timestamp(date)).json")
+            #expect(try Data(contentsOf: backupURL) == Data("not json".utf8))
         }
+    }
+
+    @Test
+    func unreadableLayoutBackupIsNotPrunedByResets() throws {
+        var date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
+            try Data("not json".utf8).write(to: fileURL)
+            _ = store.loadCustomLayout()
+
+            for _ in 0..<(JSONLayoutStore.maxResetBackups + 2) {
+                date += 1
+                store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+                store.clearCustomLayout()
+            }
+
+            let names = try Self.backupNames(for: fileURL)
+            #expect(names.filter { $0.hasPrefix("unreadable-layout-") }.count == 1)
+            #expect(names.filter { $0.hasPrefix("layout-") }.count == JSONLayoutStore.maxResetBackups)
+        }
+    }
+
+    @Test
+    func unreadableLayoutThatCannotBeMovedIsNeverOverwritten() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLaunchPadLayoutTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = directory.appendingPathComponent("layout.json")
+        // A regular file where the backup folder should be makes every move fail.
+        let blockedBackups = directory.appendingPathComponent("Backups")
+        try Data().write(to: blockedBackups)
+        let store = JSONLayoutStore(fileURL: fileURL, backupDirectory: blockedBackups)
+        try Data("not json".utf8).write(to: fileURL)
+
+        #expect(store.loadCustomLayout() == nil)
+        store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+        store.clearCustomLayout()
+
+        #expect(try Data(contentsOf: fileURL) == Data("not json".utf8))
     }
 
     @Test
