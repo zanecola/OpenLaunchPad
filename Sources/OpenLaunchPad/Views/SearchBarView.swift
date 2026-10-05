@@ -59,12 +59,27 @@ struct SettingsButton: View {
     var body: some View {
         let diameter: CGFloat = backdrop == .fullScreen ? 30 : 28
         Button(action: action) {
-            Image(systemName: "gearshape.fill")
+            let symbol = Image(systemName: "gearshape.fill")
                 .font(.system(size: diameter / 2, weight: .medium))
                 .symbolRenderingMode(.hierarchical)
                 .frame(width: diameter, height: diameter)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .contentShape(Circle())
+            switch backdrop {
+            case .fullScreen:
+                symbol
+                    .glassEffect(.regular.interactive(), in: .circle)
+                    .contentShape(Circle())
+            case .popup:
+                // Glass draws the symbol white, which vanishes on the light popup, so it matches
+                // the search field beside it instead.
+                symbol
+                    .foregroundStyle(isHovered ? .primary : .secondary)
+                    .background {
+                        Circle()
+                            .fill(.quaternary)
+                            .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
+                    }
+                    .contentShape(Circle())
+            }
         }
         .buttonStyle(.plain)
         .opacity(backdrop == .fullScreen && !isHovered ? 0.55 : 1)
