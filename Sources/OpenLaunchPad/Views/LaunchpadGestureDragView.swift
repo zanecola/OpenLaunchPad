@@ -35,11 +35,13 @@ struct LaunchpadDragGestureModifier: ViewModifier {
     var onDragChanged: (LaunchpadDragPayload, CGPoint) -> Void
     var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void
     @Environment(LaunchpadDragState.self) private var dragState
+    @GestureState private var isDragging = false
 
     func body(content: Content) -> some View {
         if let payload, let item {
             content.highPriorityGesture(
                 DragGesture(minimumDistance: 8, coordinateSpace: .global)
+                    .updating($isDragging) { _, isDragging, _ in isDragging = true }
                     .onChanged { value in
                         if dragState.active?.payload != payload {
                             dragState.begin(payload: payload, item: item, at: value.location)
@@ -53,8 +55,20 @@ struct LaunchpadDragGestureModifier: ViewModifier {
                         onDragEnded(payload, value.location)
                     }
             )
+            // A cancelled drag never reaches onEnded: its gesture state just resets, and a view
+            // removed mid-drag, for example by a page change, gets neither. End it without a drop.
+            .onChange(of: isDragging) { _, isDragging in
+                if !isDragging { endDragWithoutDrop(payload) }
+            }
+            .onDisappear { endDragWithoutDrop(payload) }
         } else {
             content
+        }
+    }
+
+    private func endDragWithoutDrop(_ payload: LaunchpadDragPayload) {
+        if dragState.active?.payload == payload {
+            dragState.end()
         }
     }
 }
