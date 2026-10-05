@@ -5,6 +5,8 @@ import Foundation
 protocol ApplicationManaging {
     /// The bundle Uninstall would move to the Trash, or nil when it can't be uninstalled.
     func uninstallURL(for app: AppItem) -> URL?
+    /// The app's other installed copies, which Uninstall leaves in place.
+    func otherCopyURLs(of app: AppItem) -> [URL]
     func launch(_ app: AppItem) throws
     func revealInFinder(_ app: AppItem) throws
     func showInfo(_ app: AppItem) throws
@@ -58,6 +60,19 @@ final class SystemApplicationManager: ApplicationManaging {
 
     func uninstallURL(for app: AppItem) -> URL? {
         try? uninstallTarget(for: app)
+    }
+
+    func otherCopyURLs(of app: AppItem) -> [URL] {
+        guard let target = try? uninstallTarget(for: app) else { return [] }
+        var seenPaths: Set<String> = [target.path]
+        return registeredURLs(app.bundleID)
+            .map { $0.resolvingSymlinksInPath() }
+            .filter { copy in
+                // LaunchServices still lists copies that were deleted or moved to the Trash.
+                !copy.pathComponents.contains(".Trash")
+                    && fileManager.fileExists(atPath: copy.path)
+                    && seenPaths.insert(copy.path).inserted
+            }
     }
 
     func launch(_ app: AppItem) throws {

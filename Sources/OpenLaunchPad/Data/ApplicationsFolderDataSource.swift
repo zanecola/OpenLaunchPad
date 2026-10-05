@@ -7,6 +7,7 @@ import CryptoKit
 final class ApplicationsFolderDataSource: AppDataSource {
     private let searchPaths: [String]
     private let itemsPerPage: Int
+    private let preferredURL: (String) -> URL?
 
     static var defaultSearchPaths: [String] {
         [
@@ -16,31 +17,36 @@ final class ApplicationsFolderDataSource: AppDataSource {
         ]
     }
 
+    /// `preferredURL` is LaunchServices' preferred copy of a bundle ID, asked only for duplicates.
     init(
         searchPaths: [String] = ApplicationsFolderDataSource.defaultSearchPaths,
-        itemsPerPage: Int = 35  // 5×7 default grid
+        itemsPerPage: Int = 35,  // 5×7 default grid
+        preferredURL: @escaping (String) -> URL? = { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) }
     ) {
         self.searchPaths = searchPaths
         self.itemsPerPage = itemsPerPage
+        self.preferredURL = preferredURL
     }
 
     func loadPages() throws -> [[LaunchpadItem]] {
         let fm = FileManager.default
-        var items: [LaunchpadItem] = []
-        var seenBundleIDs = Set<String>()
-
-        // Scan order only decides which copy of a duplicate bundle ID wins.
+        var entries: [ScannedEntry] = []
         for path in searchPaths {
-            guard let entries = try? fm.contentsOfDirectory(atPath: path) else { continue }
-            for entry in entries.sorted() {
-                let fullPath = (path as NSString).appendingPathComponent(entry)
-                if entry.hasSuffix(".app"), let app = appItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
-                    items.append(.app(app))
-                } else if let item = folderItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
-                    items.append(item)
+            guard let names = try? fm.contentsOfDirectory(atPath: path) else { continue }
+            for name in names.sorted() {
+                let fullPath = (path as NSString).appendingPathComponent(name)
+                if name.hasSuffix(".app") {
+                    if let app = appItem(at: fullPath) {
+                        entries.append(ScannedEntry(directory: nil, apps: [app]))
+                    }
+                } else if let apps = appsInDirectory(at: fullPath) {
+                    entries.append(ScannedEntry(directory: fullPath, apps: apps))
                 }
             }
         }
+
+        let chosenPaths = chosenCopyPaths(among: entries.flatMap(\.apps))
+        var items = entries.compactMap { item(for: $0, chosenPaths: chosenPaths) }
         items.sort { Self.isOrderedBefore($0.title, $1.title) }
 
         // Chunk into pages
@@ -50,43 +56,59 @@ final class ApplicationsFolderDataSource: AppDataSource {
         }
     }
 
-    /// A directory of apps becomes a folder; a lone app is shown at top level,
-    /// because a one-app folder is one the app cannot be dragged out of.
-    private func folderItem(
-        at path: String,
-        seenBundleIDs: inout Set<String>
-    ) -> LaunchpadItem? {
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue,
-              let entries = try? FileManager.default.contentsOfDirectory(atPath: path) else {
-            return nil
-        }
+    /// A top-level app, or a directory's apps, before duplicate bundle IDs are resolved.
+    private struct ScannedEntry {
+        let directory: String?
+        let apps: [AppItem]
+    }
 
-        let apps = entries.sorted().compactMap { entry -> AppItem? in
-            guard entry.hasSuffix(".app") else { return nil }
-            let appPath = (path as NSString).appendingPathComponent(entry)
-            return appItem(at: appPath, seenBundleIDs: &seenBundleIDs)
-        }
-        switch apps.count {
-        case 0: return nil
-        case 1: return .app(apps[0])
-        default:
-            return .folder(FolderItem(
-                id: stableUUID(for: "folder:\(path)"),
-                // displayName drops ".localized" and localizes system folders such as Utilities.
-                title: FileManager.default.displayName(atPath: path),
-                apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
-            ))
+    /// The copy each bundle ID shows, launches and uninstalls. For duplicates that is the copy
+    /// LaunchServices prefers, which `open -b` would launch, when the scan found it; otherwise
+    /// the highest CFBundleVersion, then the first in search-path order.
+    private func chosenCopyPaths(among apps: [AppItem]) -> [String: String] {
+        Dictionary(grouping: apps, by: \.bundleID).compactMapValues { copies in
+            guard copies.count > 1 else { return copies[0].bundleURL?.path }
+            let preferredPath = preferredURL(copies[0].bundleID)?.resolvingSymlinksInPath().path
+            let chosen = copies.first { $0.bundleURL?.resolvingSymlinksInPath().path == preferredPath }
+                ?? copies.max { lhs, rhs in
+                    (lhs.bundleVersion ?? "").compare(rhs.bundleVersion ?? "", options: .numeric) == .orderedAscending
+                }
+            return chosen?.bundleURL?.path
         }
     }
 
-    private func appItem(at path: String, seenBundleIDs: inout Set<String>) -> AppItem? {
+    /// A directory of apps becomes a folder; a lone app is shown at top level,
+    /// because a one-app folder is one the app cannot be dragged out of.
+    private func item(for entry: ScannedEntry, chosenPaths: [String: String]) -> LaunchpadItem? {
+        let apps = entry.apps.filter { chosenPaths[$0.bundleID] == $0.bundleURL?.path }
+        guard let directory = entry.directory, apps.count > 1 else {
+            return apps.first.map { .app($0) }
+        }
+        return .folder(FolderItem(
+            id: stableUUID(for: "folder:\(directory)"),
+            // displayName drops ".localized" and localizes system folders such as Utilities.
+            title: FileManager.default.displayName(atPath: directory),
+            apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
+        ))
+    }
+
+    private func appsInDirectory(at path: String) -> [AppItem]? {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue,
+              let names = try? FileManager.default.contentsOfDirectory(atPath: path) else {
+            return nil
+        }
+        return names.sorted().compactMap { name in
+            name.hasSuffix(".app") ? appItem(at: (path as NSString).appendingPathComponent(name)) : nil
+        }
+    }
+
+    private func appItem(at path: String) -> AppItem? {
         // Read Info.plist directly: Bundle(path:) caches per path for the process lifetime,
         // so an app scanned mid-install would stay hidden after the install finished.
         let bundleURL = URL(fileURLWithPath: path, isDirectory: true)
         guard let info = CFBundleCopyInfoDictionaryInDirectory(bundleURL as CFURL) as? [String: Any],
-              let bundleID = info["CFBundleIdentifier"] as? String,
-              seenBundleIDs.insert(bundleID).inserted else {
+              let bundleID = info["CFBundleIdentifier"] as? String else {
             return nil
         }
         // Finder's name (localized, e.g. 计算器), not the internal CFBundleName ("Code").

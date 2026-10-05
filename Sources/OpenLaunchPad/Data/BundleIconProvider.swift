@@ -9,7 +9,11 @@ final class BundleIconProvider: AppIconProviding {
         self.workspace = workspace
     }
 
-    func icon(for bundleID: String) -> NSImage {
+    /// Prefers the tile's own copy, so a duplicate shows the icon of the bundle it opens.
+    func icon(for bundleID: String, at bundleURL: URL?) -> NSImage {
+        if let bundleURL, FileManager.default.fileExists(atPath: bundleURL.path) {
+            return workspace.icon(forFile: bundleURL.path)
+        }
         guard let url = workspace.urlForApplication(withBundleIdentifier: bundleID) else {
             return NSWorkspace.shared.icon(for: .applicationBundle)
         }

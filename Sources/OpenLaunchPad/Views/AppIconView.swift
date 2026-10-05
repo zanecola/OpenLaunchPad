@@ -14,7 +14,7 @@ struct AppIconView: View {
 
     @State private var isHovered = false
     @State private var wiggleAngle: Double = 0
-    @State private var uninstallTarget: URL?
+    @State private var uninstallRequest: UninstallRequest?
     @State private var actionError: String?
     @Environment(LaunchpadDragState.self) private var dragState
     @Environment(LaunchpadViewModel.self) private var vm
@@ -32,15 +32,15 @@ struct AppIconView: View {
             .confirmationDialog(
                 "Uninstall \(app.title)?",
                 isPresented: Binding(
-                    get: { uninstallTarget != nil },
-                    set: { if !$0 { uninstallTarget = nil } }
+                    get: { uninstallRequest != nil },
+                    set: { if !$0 { uninstallRequest = nil } }
                 ),
-                presenting: uninstallTarget
+                presenting: uninstallRequest
             ) { _ in
                 Button("Move to Trash", role: .destructive, action: uninstall)
                 Button("Cancel", role: .cancel) {}
-            } message: { url in
-                Text("\((url.path as NSString).abbreviatingWithTildeInPath) will be moved to the Trash. Your documents and app data will not be removed.")
+            } message: { request in
+                Text(request.message)
             }
             .alert(
                 "Couldn’t Complete Action",
@@ -73,7 +73,8 @@ struct AppIconView: View {
 
         let uninstallURL = vm.uninstallURL(for: app)
         Button("Uninstall…", role: .destructive) {
-            uninstallTarget = uninstallURL
+            // Asked only here: it is a LaunchServices query, and menus rebuild with every render.
+            uninstallRequest = uninstallURL.map { UninstallRequest(url: $0, otherCopies: vm.otherCopyURLs(of: app)) }
         }
         .disabled(uninstallURL == nil)
     }
@@ -125,5 +126,23 @@ struct AppIconView: View {
         withAnimation(.linear(duration: 0.12).repeatForever(autoreverses: true).delay(phase * 0.04)) {
             wiggleAngle = amplitude
         }
+    }
+}
+
+/// The bundle Uninstall moves to the Trash, and the copies it leaves installed.
+private struct UninstallRequest {
+    let url: URL
+    let otherCopies: [URL]
+
+    var message: String {
+        var message = "\(Self.displayPath(url)) will be moved to the Trash. Your documents and app data will not be removed."
+        if !otherCopies.isEmpty {
+            message += "\n\nThese copies stay installed:\n" + otherCopies.map(Self.displayPath).joined(separator: "\n")
+        }
+        return message
+    }
+
+    private static func displayPath(_ url: URL) -> String {
+        (url.path as NSString).abbreviatingWithTildeInPath
     }
 }

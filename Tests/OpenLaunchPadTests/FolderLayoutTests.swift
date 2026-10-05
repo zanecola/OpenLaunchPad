@@ -115,7 +115,7 @@ private struct EmptyLayoutStore: LayoutStoring {
 }
 
 private struct BlankIconProvider: AppIconProviding {
-    func icon(for bundleID: String) -> NSImage { NSImage(size: NSSize(width: 1, height: 1)) }
+    func icon(for bundleID: String, at bundleURL: URL?) -> NSImage { NSImage(size: NSSize(width: 1, height: 1)) }
 }
 
 private struct EmptyUsageStore: AppUsageStoring {

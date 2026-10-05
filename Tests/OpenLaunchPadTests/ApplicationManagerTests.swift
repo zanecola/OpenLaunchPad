@@ -59,6 +59,22 @@ struct ApplicationManagerTests {
     }
 
     @Test
+    func otherCopiesAreTheExistingRegisteredOnesBesidesTheUninstallTarget() throws {
+        let fixture = try BundleFixture()
+        defer { fixture.remove() }
+        let scanned = try fixture.addBundle("Applications/Foo 2.app", bundleID: "com.example.foo")
+        let other = try fixture.addBundle("Applications/Foo.app", bundleID: "com.example.foo")
+        let trashed = try fixture.addBundle(".Trash/Foo.app", bundleID: "com.example.foo")
+        let deleted = fixture.root.appendingPathComponent("Downloads/Foo.app", isDirectory: true)
+        let manager = fixture.manager(registeredURLs: [other, scanned, trashed, deleted, other])
+
+        #expect(manager.otherCopyURLs(of: Self.app("Foo", "com.example.foo", at: scanned))
+            == [other.resolvingSymlinksInPath()])
+        #expect(fixture.manager(registeredURLs: [scanned])
+            .otherCopyURLs(of: Self.app("Foo", "com.example.foo", at: scanned)).isEmpty)
+    }
+
+    @Test
     func protectsSystemAppsIncludingSymlinksIntoSystemLocations() throws {
         let fixture = try BundleFixture()
         defer { fixture.remove() }

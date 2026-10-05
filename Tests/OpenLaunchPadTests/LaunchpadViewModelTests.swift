@@ -235,6 +235,40 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func uninstallKeepsTheTileInPlaceWhileAnotherCopyStaysInstalled() async throws {
+        let scanned = URL(fileURLWithPath: "/Applications/Mail 2.app", isDirectory: true)
+        let remaining = URL(fileURLWithPath: "/Applications/Mail.app", isDirectory: true)
+        var mail = Self.app("Mail")
+        mail.bundleURL = scanned
+        let calendar = Self.app("Calendar")
+        let dataSource = StubDataSource(pages: [[.app(mail), .app(calendar)]])
+        let store = StubLayoutStore(customLayout: [[calendar.id, mail.id]])
+        let usageStore = StubAppUsageStore(history: AppUsageHistory(records: [
+            AppUsageRecord(bundleID: mail.bundleID, launchCount: 3, lastLaunchedAt: Date(timeIntervalSince1970: 100))
+        ]))
+        let applicationManager = StubApplicationManager(otherCopies: [remaining])
+        let viewModel = LaunchpadViewModel(
+            dataSource: dataSource,
+            layoutStore: store,
+            iconProvider: StubIconProvider(),
+            applicationManager: applicationManager,
+            appUsageStore: usageStore
+        )
+        await viewModel.load()
+
+        // After the trash, the scan finds the remaining copy under the same ID.
+        var remainingMail = mail
+        remainingMail.bundleURL = remaining
+        dataSource.pages = [[.app(remainingMail), .app(calendar)]]
+        try viewModel.uninstall(mail)
+
+        #expect(applicationManager.uninstalledApps == [mail])
+        #expect(viewModel.pages == [[.app(calendar), .app(remainingMail)]])
+        #expect(store.savedLayouts.isEmpty)
+        #expect(usageStore.savedHistories.isEmpty)
+    }
+
+    @Test
     func failedUninstallLeavesLayoutUntouched() {
         let mail = Self.app("Mail")
         let applicationManager = StubApplicationManager(uninstallError: TestApplicationError.failed)
@@ -1008,6 +1042,24 @@ struct LaunchpadViewModelTests {
         #expect(icons.requests.count == 4)
     }
 
+    @Test
+    func iconsComeFromTheCopyTheTileOpens() async {
+        var mail = Self.app("Mail")
+        mail.bundleURL = URL(fileURLWithPath: "/Applications/Mail.app", isDirectory: true)
+        let icons = CountingIconProvider()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: [[.app(mail)]]),
+            layoutStore: StubLayoutStore(),
+            iconProvider: icons,
+            appUsageStore: StubAppUsageStore()
+        )
+
+        await viewModel.load()
+        _ = viewModel.icon(for: mail.bundleID)
+
+        #expect(icons.requestedURLs == [mail.bundleURL])
+    }
+
     private static func viewModel(
         pages: [[LaunchpadItem]],
         store: StubLayoutStore
@@ -1071,16 +1123,18 @@ private final class StubLayoutStore: LayoutStoring {
 }
 
 private final class StubIconProvider: AppIconProviding {
-    func icon(for bundleID: String) -> NSImage {
+    func icon(for bundleID: String, at bundleURL: URL?) -> NSImage {
         NSImage(size: NSSize(width: 1, height: 1))
     }
 }
 
 private final class CountingIconProvider: AppIconProviding {
     var requests: [String] = []
+    var requestedURLs: [URL?] = []
 
-    func icon(for bundleID: String) -> NSImage {
+    func icon(for bundleID: String, at bundleURL: URL?) -> NSImage {
         requests.append(bundleID)
+        requestedURLs.append(bundleURL)
         return NSImage(size: NSSize(width: 1, height: 1))
     }
 }
@@ -1113,13 +1167,16 @@ private final class StubApplicationManager: ApplicationManaging {
     var launchedApps: [AppItem] = []
     let uninstallError: Error?
     let missingBundleIDs: Set<String>
+    let otherCopies: [URL]
 
-    init(uninstallError: Error? = nil, missingBundleIDs: Set<String> = []) {
+    init(uninstallError: Error? = nil, missingBundleIDs: Set<String> = [], otherCopies: [URL] = []) {
         self.uninstallError = uninstallError
         self.missingBundleIDs = missingBundleIDs
+        self.otherCopies = otherCopies
     }
 
     func uninstallURL(for app: AppItem) -> URL? { app.bundleURL }
+    func otherCopyURLs(of app: AppItem) -> [URL] { otherCopies }
 
     func launch(_ app: AppItem) throws {
         if missingBundleIDs.contains(app.bundleID) {

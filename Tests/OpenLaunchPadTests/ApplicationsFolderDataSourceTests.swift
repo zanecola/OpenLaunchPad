@@ -15,7 +15,8 @@ struct ApplicationsFolderDataSourceTests {
 
         let source = ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path],
-            itemsPerPage: 35
+            itemsPerPage: 35,
+            preferredURL: { _ in nil }
         )
         let firstLoad = try source.loadPages().flatMap { $0 }
         let secondLoad = try source.loadPages().flatMap { $0 }
@@ -46,10 +47,12 @@ struct ApplicationsFolderDataSourceTests {
         try fixture.addApp(name: "Terminal", bundleID: "com.example.terminal", under: tools)
 
         let items = try ApplicationsFolderDataSource(
-            searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path]
+            searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path],
+            preferredURL: { _ in nil }
         ).loadPages().flatMap { $0 }
 
-        // The first search path wins a duplicate bundle ID, and the item keeps that copy's path.
+        // Without a preferred copy or versions, the first search path wins a duplicate bundle ID,
+        // and the item keeps that copy's path.
         guard items.count == 2, case .app(let mail) = items[0], case .folder(let folder) = items[1] else {
             Issue.record("Expected Mail Copy and the Tools folder, got \(items.map(\.title))")
             return
@@ -59,6 +62,53 @@ struct ApplicationsFolderDataSourceTests {
             tools.appendingPathComponent("Notes.app").path,
             tools.appendingPathComponent("Terminal.app").path
         ])
+    }
+
+    @Test
+    func duplicateShowsTheCopyLaunchServicesPrefersWhereverTheScanFoundIt() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        // Byte order puts "Foo 2.app", a leftover from Finder's Keep Both, ahead of Foo.app.
+        try fixture.addApp(name: "Foo 2", bundleID: "com.example.foo", version: "1", under: fixture.firstRoot)
+        let tools = fixture.firstRoot.appendingPathComponent("Tools", isDirectory: true)
+        try fixture.addApp(name: "Foo", bundleID: "com.example.foo", version: "2", under: tools)
+        try fixture.addApp(name: "Notes", bundleID: "com.example.notes", under: tools)
+        let preferred = tools.appendingPathComponent("Foo.app", isDirectory: true)
+
+        let items = try ApplicationsFolderDataSource(
+            searchPaths: [fixture.firstRoot.path],
+            preferredURL: { $0 == "com.example.foo" ? preferred : nil }
+        ).loadPages().flatMap { $0 }
+
+        // The preferred copy keeps its place in its folder, and the other copy has no tile.
+        guard items.count == 1, case .folder(let folder) = items[0] else {
+            Issue.record("Expected only the Tools folder, got \(items.map(\.title))")
+            return
+        }
+        #expect(folder.apps.map(\.title) == ["Foo", "Notes"])
+        #expect(folder.apps[0].bundleURL?.path == preferred.path)
+    }
+
+    @Test
+    func duplicateWithoutAScannedPreferredCopyShowsTheHighestVersion() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        try fixture.addApp(name: "Foo 2", bundleID: "com.example.foo", version: "1.9", under: fixture.firstRoot)
+        try fixture.addApp(name: "Foo", bundleID: "com.example.foo", version: "1.10", under: fixture.firstRoot)
+        // Say LaunchServices prefers a build outside the Applications folders.
+        let elsewhere = fixture.root.appendingPathComponent("DerivedData/Foo.app", isDirectory: true)
+
+        let items = try ApplicationsFolderDataSource(
+            searchPaths: [fixture.firstRoot.path],
+            preferredURL: { _ in elsewhere }
+        ).loadPages().flatMap { $0 }
+
+        guard items.count == 1, case .app(let foo) = items[0] else {
+            Issue.record("Expected one Foo tile, got \(items.map(\.title))")
+            return
+        }
+        #expect(foo.title == "Foo")
+        #expect(foo.bundleVersion == "1.10")
     }
 
     @Test
@@ -131,7 +181,7 @@ struct ApplicationsFolderDataSourceTests {
         try fixture.addApp(name: "Mail Copy", bundleID: "com.example.mail", under: tools)
         try fixture.addApp(name: "Notes", bundleID: "com.example.notes", under: tools)
 
-        let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+        let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path], preferredURL: { _ in nil })
             .loadPages().flatMap { $0 }
 
         #expect(items.map(\.title) == ["Mail", "Notes", "Reader"])

@@ -125,6 +125,8 @@ final class LaunchpadViewModel {
     /// Filled from view bodies, so it isn't observed: a miss would otherwise re-render every
     /// view that shows an icon.
     @ObservationIgnored private var iconCache: [String: NSImage] = [:]
+    /// The copy each loaded app opens, so its icon comes from the same bundle.
+    @ObservationIgnored private var bundleURLs: [String: URL] = [:]
 
     // MARK: - Init
 
@@ -150,6 +152,10 @@ final class LaunchpadViewModel {
     // MARK: - Loading
 
     func load() async {
+        reload()
+    }
+
+    private func reload() {
         isLoading = true
         loadError = nil
         defer { isLoading = false }
@@ -164,6 +170,7 @@ final class LaunchpadViewModel {
             iconCache = iconCache.filter { bundleID, _ in
                 loadedApps[bundleID] != nil && loadedApps[bundleID] == previousApps[bundleID]
             }
+            bundleURLs = loadedApps.compactMapValues(\.bundleURL)
             if expandedFolderID != nil, expandedFolder == nil {
                 closeFolder()
             }
@@ -322,7 +329,7 @@ final class LaunchpadViewModel {
 
     func icon(for bundleID: String) -> NSImage {
         if let cached = iconCache[bundleID] { return cached }
-        let image = iconProvider.icon(for: bundleID)
+        let image = iconProvider.icon(for: bundleID, at: bundleURLs[bundleID])
         iconCache[bundleID] = image
         return image
     }
@@ -355,6 +362,10 @@ final class LaunchpadViewModel {
         applicationManager.uninstallURL(for: app)
     }
 
+    func otherCopyURLs(of app: AppItem) -> [URL] {
+        applicationManager.otherCopyURLs(of: app)
+    }
+
     func revealInFinder(_ app: AppItem) throws {
         try applicationManager.revealInFinder(app)
     }
@@ -363,9 +374,16 @@ final class LaunchpadViewModel {
         try applicationManager.showInfo(app)
     }
 
+    /// While another copy stays installed the app keeps its tile, place and usage: the reload
+    /// points the tile at a copy the scan still finds, or leaves it out of the grid until one is.
     func uninstall(_ app: AppItem) throws {
+        let keepsTile = !applicationManager.otherCopyURLs(of: app).isEmpty
         try applicationManager.uninstall(app)
-        removeFromLayout(app)
+        if keepsTile {
+            reload()
+        } else {
+            removeFromLayout(app)
+        }
     }
 
     /// Removes every tile and the usage record of an app; its bundle is left alone.
