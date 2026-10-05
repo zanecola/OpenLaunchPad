@@ -2,18 +2,23 @@ import SwiftUI
 
 @Observable
 final class LaunchpadDragState {
+    /// Changes only when a drag begins or ends, so the tiles that read it to dim the dragged item
+    /// don't re-render on every pointer move.
     var active: ActiveLaunchpadDrag?
+    /// Changes on every pointer move; only the drag preview reads it.
+    private(set) var location: CGPoint = .zero
 
     var isDragging: Bool {
         active != nil
     }
 
     func begin(payload: LaunchpadDragPayload, item: LaunchpadItem, at location: CGPoint) {
-        active = ActiveLaunchpadDrag(payload: payload, item: item, location: location)
+        self.location = location
+        active = ActiveLaunchpadDrag(payload: payload, item: item)
     }
 
     func move(to location: CGPoint) {
-        active?.location = location
+        self.location = location
     }
 
     func end() {
@@ -24,7 +29,6 @@ final class LaunchpadDragState {
 struct ActiveLaunchpadDrag: Identifiable {
     let payload: LaunchpadDragPayload
     let item: LaunchpadItem
-    var location: CGPoint
 
     var id: UUID { payload.itemID }
 }
