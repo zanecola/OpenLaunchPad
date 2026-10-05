@@ -69,24 +69,19 @@ final class SystemApplicationManager: ApplicationManaging {
         workspace.activateFileViewerSelecting([url])
     }
 
+    /// Uses Finder's Show Info service rather than an Apple Event: services need no
+    /// Automation permission, so there is no consent prompt to block on or be denied.
     func showInfo(_ app: AppItem) throws {
         let url = try requiredApplicationURL(for: app)
-        let path = url.path
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        let source = """
-        set targetItem to POSIX file "\(path)" as alias
-        tell application "Finder"
-            activate
-            open information window of targetItem
-        end tell
-        """
-        var error: NSDictionary?
-        NSAppleScript(source: source)?.executeAndReturnError(&error)
-        if let error {
-            let message = error[NSAppleScript.errorMessage] as? String ?? "Unknown error"
-            throw ApplicationManagerError.finderRequestFailed(message)
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("com.openlaunchpad.show-info"))
+        pasteboard.declareTypes([.fileURL, .string], owner: nil)
+        pasteboard.setString(url.absoluteString, forType: .fileURL)
+        pasteboard.setString(url.path, forType: .string)
+        guard NSPerformService("Finder/Show Info", pasteboard) else {
+            throw ApplicationManagerError.finderRequestFailed("The Show Info service is unavailable.")
         }
+        // As the old script did, bring Finder forward so the window isn't left behind the launcher.
+        _ = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first?.activate()
     }
 
     func uninstall(_ app: AppItem) throws {
