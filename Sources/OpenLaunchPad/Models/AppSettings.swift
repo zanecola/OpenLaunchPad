@@ -17,6 +17,16 @@ enum IconSizeMode: String, CaseIterable, Sendable {
     case custom = "Custom"
 }
 
+/// Where the Frequently Used apps appear.
+enum FrequentlyUsedPlacement: String, CaseIterable, Sendable {
+    case off = "Off"
+    case popupOnly = "Popup Only"
+    case popupAndFullScreen = "Popup and Full Screen"
+
+    var showsInPopup: Bool { self != .off }
+    var showsInFullScreen: Bool { self == .popupAndFullScreen }
+}
+
 enum LaunchpadSortOrder: Sendable {
     case ascending
     case descending

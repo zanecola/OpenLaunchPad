@@ -245,7 +245,7 @@ struct LaunchpadView: View {
             rows: config.gridRows,
             showsLabels: config.iconLabelVisible,
             showsPageIndicator: vm.pages.count > 1,
-            wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps.isEmpty
+            wantsFrequentlyUsed: config.frequentlyUsedPlacement.showsInFullScreen && !vm.frequentlyUsedApps.isEmpty
         )
     }
 

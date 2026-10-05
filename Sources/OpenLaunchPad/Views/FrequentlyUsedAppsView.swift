@@ -80,7 +80,7 @@ struct FrequentlyUsedSection: View {
     let onLaunch: (AppItem) -> Void
 
     var body: some View {
-        if config.showFrequentlyUsedApps, !vm.frequentlyUsedApps.isEmpty {
+        if config.frequentlyUsedPlacement.showsInPopup, !vm.frequentlyUsedApps.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 header("Frequently Used")
                     .help("Apps you open from OpenLaunchPad, ranked by how often and how recently you use them. Choose where they appear in Settings.")

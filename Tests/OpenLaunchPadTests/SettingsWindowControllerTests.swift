@@ -19,7 +19,10 @@ struct SettingsWindowControllerTests {
         let tabs = try #require(window.contentViewController as? NSTabViewController)
         let general = try #require(tabs.tabViewItems.first?.viewController).preferredContentSize
 
-        #expect(window.contentRect(forFrameRect: window.frame).size == general)
+        let content = window.contentRect(forFrameRect: window.frame).size
+        // The window keeps its frame on whole points, and the pane's height can be fractional.
+        #expect(content.width == general.width)
+        #expect(abs(content.height - general.height) < 1)
         #expect(general.width == SettingsWindowController.paneWidth)
         // Below the cap, so the pane shows its last caption instead of scrolling.
         #expect(general.height < SettingsWindowController.maxPaneHeight)

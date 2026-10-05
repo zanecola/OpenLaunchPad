@@ -265,13 +265,48 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func frequentlyUsedAppsVisibilityPersists() {
+    func frequentlyUsedShowsOnBothSurfacesByDefaultAndPlacementPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)
+        #expect(config.frequentlyUsedPlacement == .popupAndFullScreen)
 
-        config.showFrequentlyUsedApps = false
+        config.frequentlyUsedPlacement = .popupOnly
 
-        #expect(defaults.bool(forKey: "showFrequentlyUsedApps") == false)
-        #expect(ConfigStore(defaults: defaults).showFrequentlyUsedApps == false)
+        #expect(defaults.string(forKey: "frequentlyUsedPlacement") == "Popup Only")
+        #expect(ConfigStore(defaults: defaults).frequentlyUsedPlacement == .popupOnly)
+    }
+
+    @Test(arguments: [(true, FrequentlyUsedPlacement.popupAndFullScreen), (false, .off)])
+    func legacyFrequentlyUsedSwitchIsMigratedOnce(shown: Bool, expected: FrequentlyUsedPlacement) {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(shown, forKey: "showFrequentlyUsedApps")
+
+        #expect(ConfigStore(defaults: defaults).frequentlyUsedPlacement == expected)
+        #expect(defaults.string(forKey: "frequentlyUsedPlacement") == expected.rawValue)
+        #expect(defaults.object(forKey: "showFrequentlyUsedApps") == nil)
+    }
+
+    @Test
+    func storedPlacementWinsOverTheLegacySwitchAndAnUnknownOneFallsBackToTheDefault() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Popup Only", forKey: "frequentlyUsedPlacement")
+        defaults.set(false, forKey: "showFrequentlyUsedApps")
+
+        #expect(ConfigStore(defaults: defaults).frequentlyUsedPlacement == .popupOnly)
+
+        let unknown = InMemoryKeyValueStore()
+        unknown.set("Everywhere", forKey: "frequentlyUsedPlacement")
+
+        #expect(ConfigStore(defaults: unknown).frequentlyUsedPlacement == .popupAndFullScreen)
+    }
+
+    @Test
+    func placementChoosesTheSurfaces() {
+        #expect(!FrequentlyUsedPlacement.off.showsInPopup)
+        #expect(!FrequentlyUsedPlacement.off.showsInFullScreen)
+        #expect(FrequentlyUsedPlacement.popupOnly.showsInPopup)
+        #expect(!FrequentlyUsedPlacement.popupOnly.showsInFullScreen)
+        #expect(FrequentlyUsedPlacement.popupAndFullScreen.showsInPopup)
+        #expect(FrequentlyUsedPlacement.popupAndFullScreen.showsInFullScreen)
     }
 }

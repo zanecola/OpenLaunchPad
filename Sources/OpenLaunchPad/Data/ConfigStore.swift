@@ -83,8 +83,8 @@ final class ConfigStore {
             onMenuBarVisibilityChange?()
         }
     }
-    var showFrequentlyUsedApps: Bool = true {
-        didSet { save(showFrequentlyUsedApps, forKey: Keys.showFrequentlyUsedApps) }
+    var frequentlyUsedPlacement: FrequentlyUsedPlacement = .popupAndFullScreen {
+        didSet { defaults.set(frequentlyUsedPlacement.rawValue, forKey: Keys.frequentlyUsedPlacement) }
     }
     var dockClickMode: DockClickMode = .fullScreen {
         didSet { defaults.set(dockClickMode.rawValue, forKey: Keys.dockClickMode) }
@@ -128,7 +128,8 @@ final class ConfigStore {
         static let backgroundDim = "backgroundDim"
         static let legacyBackgroundBlur = "backgroundBlur"
         static let showMenuBarIcon = "showMenuBarIcon"
-        static let showFrequentlyUsedApps = "showFrequentlyUsedApps"
+        static let frequentlyUsedPlacement = "frequentlyUsedPlacement"
+        static let legacyShowFrequentlyUsedApps = "showFrequentlyUsedApps"
         static let dockClickMode = "dockClickMode"
         static let globalShortcut = "globalShortcut"
         static let animationSpeed = "animationSpeed"
@@ -188,8 +189,13 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.showMenuBarIcon) != nil {
             showMenuBarIcon = defaults.bool(forKey: Keys.showMenuBarIcon)
         }
-        if defaults.object(forKey: Keys.showFrequentlyUsedApps) != nil {
-            showFrequentlyUsedApps = defaults.bool(forKey: Keys.showFrequentlyUsedApps)
+        if let raw = defaults.string(forKey: Keys.frequentlyUsedPlacement),
+           let placement = FrequentlyUsedPlacement(rawValue: raw) {
+            frequentlyUsedPlacement = placement
+        } else if defaults.object(forKey: Keys.legacyShowFrequentlyUsedApps) != nil {
+            // The old on/off switch showed the row on both surfaces.
+            frequentlyUsedPlacement = defaults.bool(forKey: Keys.legacyShowFrequentlyUsedApps) ? .popupAndFullScreen : .off
+            defaults.removeObject(forKey: Keys.legacyShowFrequentlyUsedApps)
         }
         if let raw = defaults.string(forKey: Keys.dockClickMode),
            let mode = DockClickMode(rawValue: raw) {

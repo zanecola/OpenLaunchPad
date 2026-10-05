@@ -57,18 +57,15 @@ private struct GeneralSettingsTab: View {
             }
 
             Section("Suggestions") {
-                Toggle(
-                    "Show Frequently Used row",
-                    isOn: $config.showFrequentlyUsedApps
-                )
+                Picker("Frequently Used", selection: $config.frequentlyUsedPlacement) {
+                    ForEach(FrequentlyUsedPlacement.allCases, id: \.self) { placement in
+                        Text(placement.rawValue).tag(placement)
+                    }
+                }
 
-                Text(
-                    config.showFrequentlyUsedApps
-                        ? "Shows a shortcut row above your apps, ranked by launch frequency and recency. Full screen leaves it out when your apps would not fit beside it."
-                        : "The shortcut row is hidden. Existing usage history remains stored until cleared."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(frequentlyUsedDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Button("Clear Usage History") {
                     vm.clearAppUsageHistory()
@@ -95,6 +92,17 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var frequentlyUsedDescription: LocalizedStringKey {
+        switch config.frequentlyUsedPlacement {
+        case .off:
+            "Hidden. Existing usage history remains stored until cleared."
+        case .popupOnly:
+            "A row above the popup's apps. They are ranked by launch frequency and recency when the launcher opens."
+        case .popupAndFullScreen:
+            "A row above the popup's apps, and a compact shelf below the full-screen search field when your apps fit beside it. They are ranked by launch frequency and recency when the launcher opens."
+        }
     }
 }
 
