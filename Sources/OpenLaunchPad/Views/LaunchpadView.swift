@@ -191,14 +191,19 @@ struct LaunchpadView: View {
 
                 // Folder expanded overlay
                 if let folder = vm.expandedFolder {
-                    Color.black.opacity(0.001)  // captures taps to close folder
+                    // Dims the page behind the folder; a click on it closes the folder.
+                    Color.black.opacity(0.25)
                         .ignoresSafeArea()
                         .onTapGesture { vm.closeFolder() }
 
                     FolderExpandedView(
                         folder: folder,
-                        iconSize: config.iconSize,
+                        iconSize: pageLayout.grid.iconSize,
                         showLabel: config.iconLabelVisible,
+                        availableSize: CGSize(
+                            width: proxy.size.width - folderInsets.leading - folderInsets.trailing,
+                            height: proxy.size.height - folderInsets.top - folderInsets.bottom
+                        ),
                         iconProvider: { vm.icon(for: $0) },
                         onLaunch: launch,
                         onRename: { vm.renameFolder(folder.id, to: $0) },
@@ -211,6 +216,8 @@ struct LaunchpadView: View {
                         onClose: vm.closeFolder
                     )
                     .animation(.spring(duration: config.animationDuration(0.3)), value: folder.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(folderInsets)
                 }
 
                 LaunchpadDragPreviewView(iconSize: pageLayout.grid.iconSize)
@@ -247,6 +254,17 @@ struct LaunchpadView: View {
             largestPageItemCount: vm.pages.map(\.count).max() ?? 0,
             showsPageIndicator: vm.pages.count > 1,
             wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps(limit: 1).isEmpty
+        )
+    }
+
+    /// Keeps the open folder below the search bar and inside the safe area.
+    private var folderInsets: EdgeInsets {
+        EdgeInsets(
+            top: contentInsets.top + FullScreenPageLayout.searchTopPadding
+                + FullScreenPageLayout.searchBarHeight + FullScreenPageLayout.searchBottomPadding,
+            leading: contentInsets.leading + 24,
+            bottom: contentInsets.bottom + FullScreenPageLayout.bottomPadding,
+            trailing: contentInsets.trailing + 24
         )
     }
 

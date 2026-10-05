@@ -87,12 +87,59 @@ struct FolderView: View {
     }
 }
 
+/// Sizes an open folder to its apps: three to five columns, fewer when the space is narrower, and
+/// up to three rows before the grid scrolls.
+struct FolderPanelLayout {
+    static let minimumColumns = 3
+    static let maximumColumns = 5
+    static let maximumVisibleRows = 3
+    static let columnSpacing: CGFloat = 24
+    static let rowSpacing: CGFloat = 20
+    static let horizontalPadding: CGFloat = 32
+    static let verticalPadding: CGFloat = 28
+    static let titleHeight: CGFloat = 28
+    static let titleSpacing: CGFloat = 12
+
+    let iconSize: CGFloat
+    let columnCount: Int
+    let cellWidth: CGFloat
+    let cellHeight: CGFloat
+    let gridWidth: CGFloat
+    /// The grid's viewport; more rows scroll.
+    let gridHeight: CGFloat
+
+    /// `availableSize` is the space the whole panel, padding and title included, may take.
+    init(appCount: Int, iconSize: CGFloat, showsLabels: Bool, availableSize: CGSize) {
+        // The same cells as the launcher grid (AppGridLayout).
+        let cellWidth = iconSize + 40
+        let cellHeight = LaunchpadIconMetrics.cellHeight(for: iconSize, showsLabel: showsLabels)
+        let gridSpace = CGSize(
+            width: availableSize.width - Self.horizontalPadding * 2,
+            height: availableSize.height - Self.verticalPadding * 2 - Self.titleHeight - Self.titleSpacing
+        )
+        let fittingColumns = Int((gridSpace.width + Self.columnSpacing) / (cellWidth + Self.columnSpacing))
+        let columnCount = max(1, min(max(appCount, Self.minimumColumns), Self.maximumColumns, fittingColumns))
+        let rowCount = (max(appCount, 1) + columnCount - 1) / columnCount
+        let visibleRows = CGFloat(min(rowCount, Self.maximumVisibleRows))
+
+        self.iconSize = iconSize
+        self.columnCount = columnCount
+        self.cellWidth = cellWidth
+        self.cellHeight = cellHeight
+        gridWidth = CGFloat(columnCount) * cellWidth + CGFloat(columnCount - 1) * Self.columnSpacing
+        gridHeight = max(0, min(visibleRows * cellHeight + (visibleRows - 1) * Self.rowSpacing, gridSpace.height))
+    }
+}
+
 // MARK: - Expanded folder overlay
 
 struct FolderExpandedView: View {
     let folder: FolderItem
+    /// The launcher grid's icon size, so apps look the same inside the folder.
     let iconSize: Double
     let showLabel: Bool
+    /// The space the panel may take; it is sized to its apps within it.
+    let availableSize: CGSize
     let iconProvider: (String) -> NSImage
     var onLaunch: (AppItem) -> Void = { _ in }
     var onRename: (String) -> Void = { _ in }
@@ -100,7 +147,6 @@ struct FolderExpandedView: View {
     var onAppDraggedOut: (LaunchpadDragPayload) -> Bool = { _ in false }
     var onClose: () -> Void = {}
 
-    private let columns = 5
     @State private var draftTitle = ""
     @State private var appFrames: [UUID: CGRect] = [:]
     @State private var panelFrame: CGRect = .zero
@@ -108,36 +154,50 @@ struct FolderExpandedView: View {
     @State private var isDraggingOutside = false
     @FocusState private var isRenaming: Bool
 
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "pencil")
-                    .foregroundStyle(.secondary)
-                TextField("Folder Name", text: $draftTitle)
-                    .font(.headline)
-                    .textFieldStyle(.plain)
-                    .focused($isRenaming)
-                    .onSubmit(commitRename)
-                Spacer()
-                Button {
-                    commitRename()
-                    onClose()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Close folder")
-            }
+    private static let panelShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
 
-            let gridColumns = Array(repeating: GridItem(.fixed(iconSize + 20), spacing: 12), count: columns)
+    var body: some View {
+        let layout = FolderPanelLayout(
+            appCount: folder.apps.count,
+            iconSize: iconSize,
+            showsLabels: showLabel,
+            availableSize: availableSize
+        )
+        let gridColumns = Array(
+            repeating: GridItem(.fixed(layout.cellWidth), spacing: FolderPanelLayout.columnSpacing, alignment: .top),
+            count: layout.columnCount
+        )
+
+        VStack(spacing: FolderPanelLayout.titleSpacing) {
+            // As in Launchpad, the title is the rename field: clicking it starts editing.
+            TextField("Folder Name", text: $draftTitle)
+                .font(.headline)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.center)
+                .focused($isRenaming)
+                .onSubmit(commitRename)
+                // Equal insets keep the title centered clear of the close button.
+                .padding(.horizontal, 28)
+                .frame(height: FolderPanelLayout.titleHeight)
+                .overlay(alignment: .trailing) {
+                    Button {
+                        commitRename()
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Close folder")
+                }
+
             ScrollView(.vertical) {
-                LazyVGrid(columns: gridColumns, spacing: 16) {
+                LazyVGrid(columns: gridColumns, spacing: FolderPanelLayout.rowSpacing) {
                     ForEach(folder.apps) { app in
                         AppIconView(
                             app: app,
                             icon: iconProvider(app.bundleID),
-                            iconSize: iconSize * 0.7,
+                            iconSize: layout.iconSize,
                             showLabel: showLabel,
                             isEditMode: false,
                             dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
@@ -145,32 +205,25 @@ struct FolderExpandedView: View {
                             onDragEnded: handleDragEnded,
                             onTap: { onLaunch(app) }
                         )
+                        .frame(width: layout.cellWidth, height: layout.cellHeight, alignment: .top)
                         .overlay(alignment: activeTarget?.alignment(for: app.id) ?? .center) {
                             folderDragTargetIndicator(for: app.id)
                         }
                         .launchpadItemFrame(id: app.id)
                     }
                 }
-                .padding(.bottom, 18)
             }
-            .frame(maxHeight: 420)
+            .frame(height: layout.gridHeight)
             .scrollIndicators(.hidden)
             .launchpadScrollAppearance()
-            .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.16)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 26)
-                .allowsHitTesting(false)
-            }
         }
-        .padding(24)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .frame(width: layout.gridWidth)
+        .padding(.horizontal, FolderPanelLayout.horizontalPadding)
+        .padding(.vertical, FolderPanelLayout.verticalPadding)
+        .background(.regularMaterial, in: Self.panelShape)
         .overlay {
             if isDraggingOutside {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                Self.panelShape
                     .stroke(Color.primary.opacity(0.58), style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
             }
         }
@@ -223,7 +276,7 @@ struct FolderExpandedView: View {
             case .center:
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.primary.opacity(0.52), lineWidth: 2)
-                    .frame(width: iconSize * 0.7 + 20, height: iconSize * 0.7 + 20)
+                    .frame(width: iconSize + 20, height: iconSize + 20)
             case nil:
                 EmptyView()
             }

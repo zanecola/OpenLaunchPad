@@ -55,6 +55,10 @@ struct MenuBarPanelView: View {
                     folder: folder,
                     iconSize: config.iconSize,
                     showLabel: config.iconLabelVisible,
+                    availableSize: CGSize(
+                        width: config.paneWidth - Self.folderInsets.leading - Self.folderInsets.trailing,
+                        height: config.paneHeight - Self.folderInsets.top - Self.folderInsets.bottom
+                    ),
                     iconProvider: { vm.icon(for: $0) },
                     onLaunch: launchAndDismiss,
                     onRename: { vm.renameFolder(folder.id, to: $0) },
@@ -66,7 +70,8 @@ struct MenuBarPanelView: View {
                     },
                     onClose: vm.closeFolder
                 )
-                .padding(28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(Self.folderInsets)
                 .transition(.scale(scale: 0.94).combined(with: .opacity))
             }
 
@@ -88,6 +93,9 @@ struct MenuBarPanelView: View {
         }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
     }
+
+    /// Keeps the open folder below the search header.
+    private static let folderInsets = EdgeInsets(top: 64, leading: 16, bottom: 16, trailing: 16)
 
     @ViewBuilder
     private func compactGrid(_ results: [LaunchpadItem]) -> some View {

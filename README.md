@@ -108,7 +108,7 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 - Drop an app onto an existing folder to add it.
 - Open a folder and drag apps to reorder them.
 - Drag an app outside the expanded folder to move it back to the launcher.
-- Edit the folder name directly in its header.
+- Click an open folder's title to rename it.
 
 Changes are saved immediately and survive relaunches. Search results are launch-only, so filtering cannot accidentally change your layout.
 
