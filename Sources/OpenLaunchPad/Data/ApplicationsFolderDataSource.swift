@@ -35,7 +35,7 @@ final class ApplicationsFolderDataSource: AppDataSource {
                 let fullPath = (path as NSString).appendingPathComponent(entry)
                 if entry.hasSuffix(".app"), let app = appItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
                     items.append(.app(app))
-                } else if let folder = folderItem(at: fullPath, title: entry, seenBundleIDs: &seenBundleIDs) {
+                } else if let folder = folderItem(at: fullPath, seenBundleIDs: &seenBundleIDs) {
                     items.append(.folder(folder))
                 }
             }
@@ -50,7 +50,6 @@ final class ApplicationsFolderDataSource: AppDataSource {
 
     private func folderItem(
         at path: String,
-        title: String,
         seenBundleIDs: inout Set<String>
     ) -> FolderItem? {
         var isDirectory: ObjCBool = false
@@ -68,7 +67,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
 
         return FolderItem(
             id: stableUUID(for: "folder:\(path)"),
-            title: title,
+            // displayName drops ".localized" and localizes system folders such as Utilities.
+            title: FileManager.default.displayName(atPath: path),
             apps: apps
         )
     }
@@ -82,13 +82,21 @@ final class ApplicationsFolderDataSource: AppDataSource {
               seenBundleIDs.insert(bundleID).inserted else {
             return nil
         }
-        let filename = (path as NSString).lastPathComponent
-        let name = info["CFBundleName"] as? String
-            ?? (filename as NSString).deletingPathExtension
+        // Finder's name (localized, e.g. 计算器), not the internal CFBundleName ("Code").
+        // displayName keeps ".app" when the extension is shown.
+        var title = FileManager.default.displayName(atPath: path)
+        if title.hasSuffix(".app") { title.removeLast(4) }
+        let fileStem = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+        var aliases: [String] = []
+        for alias in [info["CFBundleName"] as? String, fileStem].compactMap({ $0 })
+        where alias != title && !aliases.contains(alias) {
+            aliases.append(alias)
+        }
         return AppItem(
             id: stableUUID(for: "app:\(bundleID)"),
             bundleID: bundleID,
-            title: name
+            title: title,
+            aliases: aliases
         )
     }
 

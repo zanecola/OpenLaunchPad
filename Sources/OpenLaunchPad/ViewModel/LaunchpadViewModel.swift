@@ -25,12 +25,15 @@ final class LaunchpadViewModel {
     var searchResults: [LaunchpadItem]? {
         guard !searchQuery.isEmpty else { return nil }
         let q = searchQuery.lowercased()
+        func matches(_ app: AppItem) -> Bool {
+            ([app.title] + app.aliases).contains { $0.lowercased().contains(q) }
+        }
         return pages.flatMap { $0 }.filter { item in
             switch item {
-            case .app(let a): return a.title.lowercased().contains(q)
+            case .app(let a): return matches(a)
             case .folder(let f):
                 return f.title.lowercased().contains(q)
-                    || f.apps.contains { $0.title.lowercased().contains(q) }
+                    || f.apps.contains(where: matches)
             }
         }
     }

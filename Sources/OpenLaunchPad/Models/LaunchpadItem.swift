@@ -6,6 +6,8 @@ struct AppItem: Identifiable, Hashable, Codable, Sendable {
     let id: UUID
     let bundleID: String
     let title: String
+    /// Other names search matches, such as CFBundleName and the file name.
+    var aliases: [String] = []
 }
 
 struct FolderItem: Identifiable, Hashable, Codable, Sendable {

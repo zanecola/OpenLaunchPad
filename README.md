@@ -131,7 +131,7 @@ It reads the legacy Launchpad database in read-only mode when available:
 ~/Library/Application Support/Dock/desktopproperties.db
 ```
 
-If the database is unavailable, it scans `/Applications`, `~/Applications`, and `/System/Applications`. Existing filesystem folders are preserved and duplicate bundle identifiers are removed. These folders are watched, so newly installed or removed apps show up within about a second without restarting OpenLaunchPad.
+If the database is unavailable, it scans `/Applications`, `~/Applications`, and `/System/Applications`. Apps use the same localized names as Finder. Existing filesystem folders are preserved and duplicate bundle identifiers are removed. These folders are watched, so newly installed or removed apps show up within about a second without restarting OpenLaunchPad.
 
 Your custom pages, folders, and ordering are stored separately:
 

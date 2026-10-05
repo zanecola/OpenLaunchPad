@@ -35,6 +35,49 @@ struct ApplicationsFolderDataSourceTests {
     }
 
     @Test
+    func titlesUseTheFinderNameWhileIDsFollowTheBundleID() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        try fixture.addApp(
+            name: "Visual Studio Code",
+            bundleName: "Code",
+            bundleID: "com.example.code",
+            under: fixture.firstRoot
+        )
+        let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+
+        let first = try #require(source.loadPages().flatMap { $0 }.first)
+        guard case .app(let app) = first else {
+            Issue.record("Expected a top-level app")
+            return
+        }
+        #expect(app.title == "Visual Studio Code")
+        #expect(app.aliases == ["Code"])
+
+        try FileManager.default.moveItem(
+            at: fixture.firstRoot.appendingPathComponent("Visual Studio Code.app"),
+            to: fixture.firstRoot.appendingPathComponent("VS Code.app")
+        )
+        let renamed = try #require(source.loadPages().flatMap { $0 }.first)
+        #expect(renamed.title == "VS Code")
+        #expect(renamed.id == app.id)
+    }
+
+    @Test
+    func localizedDirectoryIsTitledWithoutItsSuffix() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        let webApps = fixture.firstRoot.appendingPathComponent("Chrome Apps.localized", isDirectory: true)
+        try fixture.addApp(name: "Docs", bundleID: "com.example.docs", under: webApps)
+        try fixture.addApp(name: "Sheets", bundleID: "com.example.sheets", under: webApps)
+
+        let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+            .loadPages().flatMap { $0 }
+
+        #expect(items.map(\.title) == ["Chrome Apps"])
+    }
+
+    @Test
     func appScannedMidInstallAppearsOnceItsInfoPlistIsWritten() throws {
         let fixture = try ApplicationsFixture()
         defer { fixture.remove() }
@@ -64,14 +107,14 @@ private final class ApplicationsFixture {
         try FileManager.default.createDirectory(at: secondRoot, withIntermediateDirectories: true)
     }
 
-    func addApp(name: String, bundleID: String, under directory: URL) throws {
+    func addApp(name: String, bundleName: String? = nil, bundleID: String, under directory: URL) throws {
         let contents = directory
             .appendingPathComponent("\(name).app", isDirectory: true)
             .appendingPathComponent("Contents", isDirectory: true)
         try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
         let plist: [String: Any] = [
             "CFBundleIdentifier": bundleID,
-            "CFBundleName": name,
+            "CFBundleName": bundleName ?? name,
             "CFBundlePackageType": "APPL"
         ]
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)

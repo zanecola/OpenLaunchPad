@@ -778,6 +778,22 @@ struct LaunchpadViewModelTests {
         #expect(store.savedLayouts.count == 1)
     }
 
+    @Test
+    func searchMatchesAppAliases() {
+        let calendar = AppItem(id: UUID(), bundleID: "com.example.calendar", title: "日历", aliases: ["Calendar"])
+        let code = AppItem(id: UUID(), bundleID: "com.example.code", title: "Visual Studio Code", aliases: ["Code"])
+        let mail = Self.app("Mail")
+        let folder = FolderItem(id: UUID(), title: "Tools", apps: [code, mail])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.app(calendar), .folder(folder)]]
+
+        viewModel.searchQuery = "calendar"
+        #expect(viewModel.searchResults?.map(\.id) == [calendar.id])
+
+        viewModel.searchQuery = "CODE"
+        #expect(viewModel.searchResults?.map(\.id) == [folder.id])
+    }
+
     private static func viewModel(
         pages: [[LaunchpadItem]],
         store: StubLayoutStore

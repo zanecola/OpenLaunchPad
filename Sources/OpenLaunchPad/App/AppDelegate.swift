@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await self?.viewModel.load()
         }
     }
+    private var localeObserver: NSObjectProtocol?
 
     private var visibleSurface = VisibleSurface.none
 
@@ -68,6 +69,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatusItemVisibility()
         databaseWatcher.start()
         applicationsWatcher.start()
+        // App and folder names are localized and sorted for the current locale.
+        localeObserver = NotificationCenter.default.addObserver(
+            forName: NSLocale.currentLocaleDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.viewModel.load()
+            }
+        }
         Task { await viewModel.load() }
     }
 
@@ -75,6 +86,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         removePopupDismissMonitor()
         databaseWatcher.stop()
         applicationsWatcher.stop()
+        if let localeObserver {
+            NotificationCenter.default.removeObserver(localeObserver)
+        }
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
         config.onMenuBarVisibilityChange = nil
