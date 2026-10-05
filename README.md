@@ -26,11 +26,11 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size, labels, full-screen columns, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, the Frequently Used row, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, the Frequently Used row, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including the Frequently Used row, apps that appear and disappear as you install and remove them, Return and Escape in search, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including the Frequently Used row, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -111,7 +111,7 @@ Both launchers are built once when OpenLaunchPad starts and kept ready, so openi
 
 ### Organize apps
 
-- Drag to the left or right edge of another icon to reorder.
+- Drag to the left or right edge of another icon to reorder. Dropping onto a full page moves that page's last app to the start of the next page.
 - Drop an app onto the center of another app to create a folder.
 - Drop an app onto an existing folder to add it.
 - Open a folder and drag apps to reorder them.
@@ -143,9 +143,9 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Show menu bar icon | On | |
 | Show Frequently Used row | On | **Clear Usage History** erases the launch history behind it |
 | Reset Layout… | | Removes all folders and custom order after you confirm; the old layout is backed up first (see [Data and Privacy](#data-and-privacy)) |
-| Icon size | 80 pt | 48–128 pt. Full screen draws icons smaller, down to 48 pt, when a page would not fit |
+| Icon size | Automatic | Automatic sizes full-screen icons to fill the grid, up to 144 pt, and keeps the popup at 80 pt. Custom is 48–160 pt for both; full screen draws it smaller, down to 48 pt, only where the grid has no room for it. A size set in an earlier version becomes Custom |
 | Show app labels | On | |
-| Preferred columns | 7 | Full screen only; Automatic or 4–12, fewer when the display is too narrow |
+| Columns × rows | 7 × 5 | Full screen; 4–12 columns and 4–7 rows. Each page holds columns × rows apps, and the rows spread evenly between Search and the page dots. Fewer slots move the apps that no longer fit onto the next pages; more slots leave existing pages as they are. Automatic columns from an earlier version become 7 |
 | While open | Keep Dock and menu bar | Or auto-hide both while full screen is open. Either way, the grid is laid out between the menu bar and the Dock |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
 | Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
@@ -239,7 +239,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 
 - Releases are not yet Developer ID signed or notarized.
 - Dragging to a page edge does not automatically switch pages yet.
-- Pages have no item limit yet. Full screen shrinks icons down to 48 pt so a page fits, but a page that needs more rows than that, for example with 4 preferred columns, still runs past the page dots.
+- Giving pages more slots does not pull apps back from later pages, so pages arranged for a smaller grid keep their free slots until you rearrange them.
 - Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
