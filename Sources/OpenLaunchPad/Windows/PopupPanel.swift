@@ -92,6 +92,7 @@ final class PopupPanel: NSPanel {
     /// Escape that no view handled, for example when nothing in the window has focus.
     var onCancel: () -> Void = {}
     var onResignKey: () -> Void = {}
+    private lazy var transitions = LauncherWindowAnimator(window: self)
 
     override func cancelOperation(_ sender: Any?) {
         onCancel()
@@ -100,6 +101,11 @@ final class PopupPanel: NSPanel {
     override func resignKey() {
         super.resignKey()
         onResignKey()
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        if transitions.ignores(event) { return }
+        super.sendEvent(event)
     }
 
     /// Installs the content once; it stays for the app's lifetime.
@@ -118,7 +124,8 @@ final class PopupPanel: NSPanel {
     }
 
     /// The content stays installed between shows, so this only places the panel and orders it in.
-    func show(anchorPoint: NSPoint?) {
+    /// It grows from `anchorPoint`, and a show during a hide turns the hide back.
+    func show(anchorPoint: NSPoint?, transition: WindowTransition?) {
         let size = frame.size
         if let anchorPoint,
            let screen = NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) }) ?? NSScreen.main {
@@ -138,13 +145,29 @@ final class PopupPanel: NSPanel {
         // Applies what the show reset, such as search focus, before the panel appears rather
         // than a frame later.
         contentView?.layoutSubtreeIfNeeded()
-        orderFrontRegardless()
-        // A non-activating panel can be key without activating the app, so typing reaches
-        // the search field instead of the app the user was in.
-        makeKey()
+        transitions.show(transition, content: contentView, pivot: growthPoint(for: anchorPoint)) {
+            orderFrontRegardless()
+            // A non-activating panel can be key without activating the app, so typing reaches
+            // the search field instead of the app the user was in.
+            makeKey()
+        }
     }
 
-    func hide() {
-        orderOut(nil)
+    /// `completion` runs once the panel is ordered out; never if a show comes first.
+    func hide(_ transition: WindowTransition?, then completion: @escaping () -> Void = {}) {
+        transitions.hide(transition, content: contentView, pivot: growthPoint(for: nil), completion: completion)
+    }
+
+    /// The point of the content nearest `anchorPoint`, in the content's coordinates; its center
+    /// without one.
+    func growthPoint(for anchorPoint: NSPoint?) -> CGPoint {
+        guard let contentView else { return .zero }
+        let bounds = contentView.bounds
+        guard let anchorPoint else { return CGPoint(x: bounds.midX, y: bounds.midY) }
+        let point = contentView.convert(convertPoint(fromScreen: anchorPoint), from: nil)
+        return CGPoint(
+            x: min(max(point.x, bounds.minX), bounds.maxX),
+            y: min(max(point.y, bounds.minY), bounds.maxY)
+        )
     }
 }

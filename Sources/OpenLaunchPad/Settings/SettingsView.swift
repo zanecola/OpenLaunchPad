@@ -111,6 +111,7 @@ private struct GeneralSettingsTab: View {
 private struct AppearanceSettingsTab: View {
     @Environment(ConfigStore.self) private var config
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var config = config
@@ -243,7 +244,7 @@ private struct AppearanceSettingsTab: View {
             }
 
             Section("Animation") {
-                Toggle("Animate page and folder transitions", isOn: $config.animatesTransitions)
+                Toggle("Animate transitions", isOn: $config.animatesTransitions)
 
                 HStack {
                     Text("Speed")
@@ -253,6 +254,10 @@ private struct AppearanceSettingsTab: View {
                         .frame(width: 36)
                 }
                 .disabled(!config.animatesTransitions)
+
+                Text(animationDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -276,6 +281,15 @@ private struct AppearanceSettingsTab: View {
                 ? "A solid dark background."
                 : "Reduce Transparency is on, so Glass is replaced by a solid dark background."
         }
+    }
+
+    private var animationDescription: String {
+        guard config.animatesTransitions else {
+            return "The launcher opens, closes and turns pages at once."
+        }
+        return reduceMotion
+            ? "Opening and closing the launcher, launching an app and turning pages. Reduce Motion is on, so they fade without zooming or sliding."
+            : "Opening and closing the launcher, launching an app and turning pages."
     }
 
     private var popupColumnCount: Int {

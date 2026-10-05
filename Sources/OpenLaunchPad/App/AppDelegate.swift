@@ -10,6 +10,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case popup
     }
 
+    enum LauncherExit {
+        /// Escape, a background click, a toggle, or another app or window taking over.
+        case close
+        /// An app is opening.
+        case launch
+    }
+
     // Shared ViewModel and config — single instances for the whole app lifetime
     let config = ConfigStore.shared
     let viewModel: LaunchpadViewModel
@@ -19,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The insets the full-screen content was last given, for the screen the window covers.
     private var fullScreenInsets = EdgeInsets()
     /// Type-erased so new insets can replace the root; it always wraps the same view, which keeps its state.
-    private lazy var fullScreenHost = NSHostingController(rootView: AnyView(fullScreenRoot(contentInsets: fullScreenInsets)))
+    private lazy var fullScreenHost = NSHostingView(rootView: AnyView(fullScreenRoot(contentInsets: fullScreenInsets)))
     private lazy var popupPanel = PopupPanel(width: config.paneWidth, height: config.paneHeight)
     private lazy var settingsWindowController = SettingsWindowController(
         viewModel: viewModel,
@@ -186,27 +193,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func hideLaunchpad() {
+    /// The launcher counts as closed at once, so a click or the hotkey during the fade opens it
+    /// again, which turns the fade back. What it shows is reset only once it has faded out.
+    func hideLaunchpad(_ exit: LauncherExit = .close) {
         visibleSurface = .none
         removePopupDismissMonitor()
         if let options = presentationOptionsBeforeFullScreen {
             NSApp.presentationOptions = options
             presentationOptionsBeforeFullScreen = nil
         }
-        fullScreenWindow.hide()
-        popupPanel.hide()
-        viewModel.endPresentation()
+        let presentation = viewModel.presentationID
+        let endPresentation = { [weak self] in
+            // A show since then keeps what it found.
+            guard let self, viewModel.presentationID == presentation,
+                  !fullScreenWindow.isVisible, !popupPanel.isVisible else { return }
+            viewModel.endPresentation()
+        }
+        let motion = launcherMotion
+        fullScreenWindow.hide(exit == .launch ? motion.fullScreenLaunch : motion.fullScreenClose, then: endPresentation)
+        popupPanel.hide(motion.popupClose, then: endPresentation)
     }
 
     /// Closes the launcher without launching anything. Opening it may have activated this app
     /// (full screen, or a Dock click), which would otherwise keep the menu bar and keyboard with
-    /// no window showing. Hiding the app hands activation to the app underneath, as Launchpad did.
+    /// no window showing. Hiding the app hands activation to the app underneath, as Launchpad did,
+    /// at once, while the launcher fades out above it.
     func dismissLaunchpad() {
         hideLaunchpad()
         let showsOtherWindow = NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) }
         if NSApp.isActive && !showsOtherWindow {
+            fullScreenWindow.staysInFrontWhileHiding()
             NSApp.hide(nil)
         }
+    }
+
+    /// The animation settings and Reduce Motion, for the launcher windows' own transitions.
+    private var launcherMotion: LaunchpadMotion {
+        LaunchpadMotion(config: config, reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
     /// Windows of a hidden app stay off screen, so undo dismissLaunchpad's hide before showing one.
@@ -227,14 +250,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installLauncherSurfaces() {
         // Each window sets its own size, so the content needn't be measured for size constraints.
         fullScreenHost.sizingOptions = []
-        fullScreenWindow.contentViewController = fullScreenHost
+        let backdropHost = NSHostingView(rootView: FullScreenBackdrop()
+            .launchpadMotion()
+            .environment(config)
+            .environment(wallpaperProvider))
+        backdropHost.sizingOptions = []
+        fullScreenWindow.setContent(backdrop: backdropHost, content: fullScreenHost)
         fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrDismiss() }
         refitFullScreen()
 
         let popupHost = NSHostingController(rootView: MenuBarPanelView(onDismissRequested: { [weak self] in
             self?.dismissLaunchpad()
         }, onAppLaunched: { [weak self] in
-            self?.hideLaunchpad()
+            self?.hideLaunchpad(.launch)
         }, onOpenSettings: { [weak self] in
             self?.openSettings()
         })
@@ -268,13 +296,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LaunchpadView(
             contentInsets: contentInsets,
             onDismiss: dismissLaunchpad,
-            onAppLaunched: hideLaunchpad,
+            onAppLaunched: { [weak self] in self?.hideLaunchpad(.launch) },
             onOpenSettings: openSettings
         )
             .launchpadMotion()
             .environment(viewModel)
             .environment(config)
-            .environment(wallpaperProvider)
     }
 
     /// Renders the wallpaper of the screen full screen opens on, when it changed, so a show finds
@@ -311,7 +338,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refitFullScreen()
         refreshWallpaper()
         viewModel.beginPresentation()
-        fullScreenWindow.show()
+        fullScreenWindow.show(launcherMotion.fullScreenShow)
     }
 
     // MARK: - Popup mode
@@ -321,7 +348,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popupPanel.fit(to: popupSize)
         unhideIfNeeded()
         viewModel.beginPresentation()
-        popupPanel.show(anchorPoint: anchorPoint)
+        popupPanel.show(anchorPoint: anchorPoint, transition: launcherMotion.popupShow)
         visibleSurface = .popup
         installPopupDismissMonitor()
     }

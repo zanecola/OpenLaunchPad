@@ -107,7 +107,7 @@ struct FullScreenPageLayout {
     }
 }
 
-/// Full-screen Launchpad overlay — backdrop, search, grid, page dots.
+/// Full-screen Launchpad content — search, grid, page dots — over `FullScreenBackdrop`.
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
@@ -214,7 +214,6 @@ struct LaunchpadView: View {
                 LaunchpadDragPreviewView(iconSize: pageLayout.grid.iconSize)
             }
         }
-        .background(backdrop)
         .environment(dragState)
         .environment(\.launchpadLabelStyle, .onDarkBackdrop)
         .ignoresSafeArea()
@@ -367,18 +366,12 @@ struct LaunchpadView: View {
             })
             .accessibilityHidden(true)
     }
-
-    // MARK: - Backdrop
-
-    @ViewBuilder
-    private var backdrop: some View {
-        FullScreenBackdrop()
-            .ignoresSafeArea()
-    }
 }
 
-/// Reads the background settings and the wallpaper itself, so a new render redraws only the backdrop.
-private struct FullScreenBackdrop: View {
+/// Full screen's background, in a view of its own behind `LaunchpadView`, so the window's
+/// transitions scale the content without it. It reads the background settings and the wallpaper
+/// itself, so a new render redraws only the backdrop.
+struct FullScreenBackdrop: View {
     @Environment(ConfigStore.self) private var config
     @Environment(WallpaperProvider.self) private var wallpapers
     @Environment(\.launchpadMotion) private var motion
@@ -391,5 +384,6 @@ private struct FullScreenBackdrop: View {
             dim: config.backgroundDim,
             wallpaperFade: motion.animation(0.18) { .easeOut(duration: $0) }
         )
+        .ignoresSafeArea()
     }
 }

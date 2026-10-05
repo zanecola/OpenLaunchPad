@@ -137,8 +137,7 @@ struct MenuBarPanelView: View {
             missingApp = app
             return
         }
-        vm.searchQuery = ""
-        vm.closeFolder()
+        // Hiding clears the search and closes the folder once the panel has faded out.
         onAppLaunched()
         dismiss()
     }
