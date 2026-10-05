@@ -56,6 +56,14 @@ struct LaunchpadMotion: Equatable, Sendable {
         animation(0.22) { .easeOut(duration: $0) }
     }
 
+    /// A tile going down as it is pressed, and springing back. Reduce Motion keeps it, because
+    /// under it a pressed tile only darkens (`TileFeedback`).
+    func tilePress(isPressed: Bool) -> Animation? {
+        isPressed
+            ? animation(0.08) { .easeOut(duration: $0) }
+            : animation(0.25) { .spring(response: $0) }
+    }
+
     // MARK: - Launcher windows
 
     /// Full screen fades in while its content settles from 1.06x, as Launchpad zoomed its icons into place.

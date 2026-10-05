@@ -12,7 +12,6 @@ struct AppIconView: View {
     var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onTap: () -> Void = {}
 
-    @State private var hover = LauncherHover()
     @State private var wiggleAngle: Double = 0
     @State private var uninstallRequest: UninstallRequest?
     @State private var actionError: String?
@@ -28,6 +27,7 @@ struct AppIconView: View {
                 onDragChanged: onDragChanged,
                 onDragEnded: onDragEnded
             )
+            .launchpadTile(action: onTap)
             .contextMenu { appContextMenu }
             .confirmationDialog(
                 "Uninstall \(app.title)?",
@@ -92,24 +92,22 @@ struct AppIconView: View {
     }
 
     private var content: some View {
-        let isHovered = hover.isActive(in: vm.presentationID)
-        return VStack(spacing: 6) {
+        VStack(spacing: 6) {
             Image(nsImage: icon)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: iconSize, height: iconSize)
                 .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                 .rotationEffect(.degrees(isEditMode ? wiggleAngle : 0))
-                .scaleEffect(isHovered && !isEditMode ? 1.08 : 1.0)
 
             if showLabel {
                 LaunchpadIconLabel(title: app.title, iconSize: CGFloat(iconSize))
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture(perform: onTap)
-        .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
-        .animation(.spring(duration: 0.15), value: hover)
+        // Names a truncated or hidden label. Inside the accessibility element, which ignores its
+        // children, so VoiceOver does not read the name again as a hint.
+        .help(app.title)
         .onChange(of: isEditMode) { _, editing in
             if editing { startWiggle() } else { wiggleAngle = 0 }
         }

@@ -288,7 +288,7 @@ private struct AppearanceSettingsTab: View {
             return "The launcher and folders open and close at once, and pages turn at once."
         }
         return reduceMotion
-            ? "Opening and closing the launcher and folders, launching an app and turning pages. Reduce Motion is on, so the launcher and folders fade without zooming, and pages turn at once."
+            ? "Opening and closing the launcher and folders, launching an app and turning pages. Reduce Motion is on, so the launcher and folders fade without zooming, pages turn at once, and a pressed app darkens without shrinking."
             : "Opening and closing the launcher and folders, launching an app and turning pages."
     }
 

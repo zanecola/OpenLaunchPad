@@ -51,7 +51,6 @@ struct FrequentlyUsedShelf: View {
                     isEditMode: false,
                     onTap: { onLaunch(app) }
                 )
-                .help(app.title)
             }
         }
         .padding(.horizontal, FrequentlyUsedShelfLayout.horizontalPadding)

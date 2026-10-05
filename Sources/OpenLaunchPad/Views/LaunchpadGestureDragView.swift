@@ -34,6 +34,9 @@ struct ActiveLaunchpadDrag: Identifiable {
 }
 
 struct LaunchpadDragGestureModifier: ViewModifier {
+    /// How far the pointer moves before a press becomes a drag.
+    static let minimumDistance: CGFloat = 8
+
     let payload: LaunchpadDragPayload?
     let item: LaunchpadItem?
     var onDragChanged: (LaunchpadDragPayload, CGPoint) -> Void
@@ -44,7 +47,7 @@ struct LaunchpadDragGestureModifier: ViewModifier {
     func body(content: Content) -> some View {
         if let payload, let item {
             content.highPriorityGesture(
-                DragGesture(minimumDistance: 8, coordinateSpace: .global)
+                DragGesture(minimumDistance: Self.minimumDistance, coordinateSpace: .global)
                     .updating($isDragging) { _, isDragging, _ in isDragging = true }
                     .onChanged { value in
                         if dragState.active?.payload != payload {
