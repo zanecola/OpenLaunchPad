@@ -144,7 +144,70 @@ struct JSONLayoutStoreTests {
         }
     }
 
+    @Test
+    func clearMovesLayoutIntoTimestampedBackup() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
+            let layout = StoredLayout(pageIDs: [[UUID()]])
+            store.saveCustomLayout(layout)
+            let savedData = try Data(contentsOf: fileURL)
+
+            store.clearCustomLayout()
+
+            #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+            #expect(store.loadCustomLayout() == nil)
+            let backupURL = Self.backupDirectory(for: fileURL)
+                .appendingPathComponent("layout-\(Self.timestamp(date)).json")
+            #expect(try Data(contentsOf: backupURL) == savedData)
+        }
+    }
+
+    @Test
+    func clearKeepsOnlyTheNewestTenBackups() throws {
+        var date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
+            for _ in 0..<12 {
+                store.saveCustomLayout(StoredLayout(pageIDs: [[UUID()]]))
+                store.clearCustomLayout()
+                date += 1
+            }
+
+            let expected = (2..<12).map {
+                "layout-\(Self.timestamp(Date(timeIntervalSince1970: 1_800_000_000 + Double($0)))).json"
+            }
+            let names = try Self.backupNames(for: fileURL)
+            #expect(names == expected)
+        }
+    }
+
+    @Test
+    func clearInTheSameSecondKeepsBothBackups() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        try withStore(now: { date }) { store, fileURL in
+            let first = StoredLayout(pageIDs: [[UUID()]])
+            let second = StoredLayout(pageIDs: [[UUID()]])
+            store.saveCustomLayout(first)
+            store.clearCustomLayout()
+            store.saveCustomLayout(second)
+            store.clearCustomLayout()
+
+            let stem = "layout-\(Self.timestamp(date))"
+            let names = try Self.backupNames(for: fileURL)
+            #expect(names == ["\(stem)-2.json", "\(stem).json"])
+        }
+    }
+
+    @Test
+    func clearWithoutLayoutCreatesNoBackup() throws {
+        try withStore { store, fileURL in
+            store.clearCustomLayout()
+
+            #expect(!FileManager.default.fileExists(atPath: Self.backupDirectory(for: fileURL).path))
+        }
+    }
+
     private func withStore(
+        now: @escaping () -> Date = Date.init,
         _ operation: (JSONLayoutStore, URL) throws -> Void
     ) throws {
         let directory = FileManager.default.temporaryDirectory
@@ -153,7 +216,27 @@ struct JSONLayoutStoreTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        try operation(JSONLayoutStore(fileURL: fileURL), fileURL)
+        let store = JSONLayoutStore(
+            fileURL: fileURL,
+            backupDirectory: Self.backupDirectory(for: fileURL),
+            now: now
+        )
+        try operation(store, fileURL)
+    }
+
+    private static func backupDirectory(for fileURL: URL) -> URL {
+        fileURL.deletingLastPathComponent().appendingPathComponent("Backups", isDirectory: true)
+    }
+
+    private static func backupNames(for fileURL: URL) throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: backupDirectory(for: fileURL).path).sorted()
+    }
+
+    private static func timestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: date)
     }
 }
 

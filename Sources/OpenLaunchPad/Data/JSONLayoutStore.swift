@@ -3,10 +3,23 @@ import Foundation
 /// Persists user-customized ordering as JSON under ~/Library/Application Support/OpenLaunchPad/.
 /// Completely separate from the Dock DB — never touches it. (ADR-2)
 final class JSONLayoutStore: LayoutStoring {
-    private let fileURL: URL
+    static let maxResetBackups = 10
 
-    init(fileURL: URL = JSONLayoutStore.defaultURL) {
+    private let fileURL: URL
+    private let backupDirectory: URL
+    private let now: () -> Date
+
+    /// Backups default to a `Backups` folder beside `fileURL`, so a store on a temporary file
+    /// never writes into the real Application Support folder.
+    init(
+        fileURL: URL = JSONLayoutStore.defaultURL,
+        backupDirectory: URL? = nil,
+        now: @escaping () -> Date = Date.init
+    ) {
         self.fileURL = fileURL
+        self.backupDirectory = backupDirectory
+            ?? fileURL.deletingLastPathComponent().appendingPathComponent("Backups", isDirectory: true)
+        self.now = now
     }
 
     static var defaultURL: URL {
@@ -46,8 +59,56 @@ final class JSONLayoutStore: LayoutStoring {
         }
     }
 
+    /// Moves layout.json to `Backups/layout-<timestamp>.json` and keeps the newest backups.
+    /// If the move fails, the layout stays in place rather than being deleted.
     func clearCustomLayout() {
-        try? FileManager.default.removeItem(at: fileURL)
+        guard FileManager.default.fileExists(atPath: fileURL.path),
+              moveToBackups(prefix: "layout") else { return }
+        pruneBackups(prefix: "layout", keeping: Self.maxResetBackups)
+    }
+
+    // MARK: - Backups
+
+    private static let timestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter
+    }()
+
+    private func moveToBackups(prefix: String) -> Bool {
+        let fileManager = FileManager.default
+        do {
+            try fileManager.createDirectory(at: backupDirectory, withIntermediateDirectories: true)
+            try fileManager.moveItem(at: fileURL, to: newBackupURL(prefix: prefix))
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Never reuses a name, so a second backup in the same second cannot replace the first.
+    private func newBackupURL(prefix: String) -> URL {
+        let stem = "\(prefix)-\(Self.timestampFormatter.string(from: now()))"
+        var url = backupDirectory.appendingPathComponent("\(stem).json")
+        var counter = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = backupDirectory.appendingPathComponent("\(stem)-\(counter).json")
+            counter += 1
+        }
+        return url
+    }
+
+    private func pruneBackups(prefix: String, keeping limit: Int) {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: backupDirectory.path)) ?? []
+        // Timestamped names sort oldest first once the extension is dropped.
+        let backups = names
+            .filter { $0.hasPrefix("\(prefix)-") && $0.hasSuffix(".json") }
+            .map { String($0.dropLast(".json".count)) }
+            .sorted()
+        for stem in backups.dropLast(limit) {
+            try? FileManager.default.removeItem(at: backupDirectory.appendingPathComponent("\(stem).json"))
+        }
     }
 }
 

@@ -28,6 +28,7 @@ struct SettingsView: View {
 private struct GeneralSettingsTab: View {
     @Environment(ConfigStore.self) private var config
     @Environment(LaunchpadViewModel.self) private var vm
+    @State private var isConfirmingReset = false
 
     var body: some View {
         @Bindable var config = config
@@ -71,10 +72,17 @@ private struct GeneralSettingsTab: View {
             }
 
             Section("Layout") {
-                Button("Reset to Launchpad Order") {
-                    Task { await vm.resetToDefault() }
+                Button("Reset Layout…", role: .destructive) {
+                    isConfirmingReset = true
                 }
                 .foregroundStyle(.red)
+                .confirmationDialog("Reset Layout?", isPresented: $isConfirmingReset) {
+                    Button("Reset Layout", role: .destructive) {
+                        Task { await vm.resetToDefault() }
+                    }
+                } message: {
+                    Text("Removes all folders and custom order. A backup is saved first.")
+                }
             }
         }
         .formStyle(.grouped)
