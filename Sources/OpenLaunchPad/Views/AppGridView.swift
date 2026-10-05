@@ -80,22 +80,25 @@ struct AppGridLayout {
 struct AppGridView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    @Environment(\.launchpadMotion) private var motion
     let mode: AppGridMode
     /// Geometry fitted by the full-screen page; without it the grid sizes itself to its frame.
     private let fittedLayout: AppGridLayout?
     private let onLaunch: ((AppItem) -> Void)?
+    /// A click on empty space on a page, which the page's scroll view would otherwise take.
+    private let onEmptySpaceClick: () -> Void
     @State private var itemFrames: [UUID: CGRect] = [:]
     @State private var activeTarget: DragHoverTarget?
 
     init(
         mode: AppGridMode = .paged,
         layout: AppGridLayout? = nil,
-        onLaunch: ((AppItem) -> Void)? = nil
+        onLaunch: ((AppItem) -> Void)? = nil,
+        onEmptySpaceClick: @escaping () -> Void = {}
     ) {
         self.mode = mode
         self.fittedLayout = layout
         self.onLaunch = onLaunch
+        self.onEmptySpaceClick = onEmptySpaceClick
     }
 
     var body: some View {
@@ -124,28 +127,47 @@ struct AppGridView: View {
                 } else {
                     switch mode {
                     case .paged:
-                        pagedGrid(layout: layout)
+                        pagedGrid(layout: layout, pageSize: proxy.size)
                     case .scrolling:
                         scrollingGrid(layout: layout)
                     }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(motion.animation(0.22) { .easeInOut(duration: $0) }, value: vm.currentPage)
-            // Turning the page cancels a drag on the old page without a drop.
-            .onChange(of: vm.currentPage) { activeTarget = nil }
         }
     }
 
-    private func pagedGrid(layout: AppGridLayout) -> some View {
-        ZStack {
-            // Top-anchored, so a partly filled page keeps its rows where the other pages have them.
-            itemGrid(items: currentPageItems, layout: layout)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .id(currentPageIndex)
-                .transition(motion.transition(.opacity.combined(with: .scale(scale: 0.98))))
-
-            HorizontalPageScrollMonitor(
+    /// Pages side by side in a scroll view, which follows the fingers with momentum and rubber
+    /// banding. The mouse wheel, arrow keys and dots scroll it to the current page.
+    private func pagedGrid(layout: AppGridLayout, pageSize: CGSize) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(vm.pages.indices, id: \.self) { index in
+                    // Top-anchored, so a partly filled page keeps its rows where the other pages have them.
+                    itemGrid(items: vm.pages[index], layout: layout)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .background { EmptySpaceClickTarget(action: onEmptySpaceClick) }
+                        // Not containerRelativeFrame: after a resize, the lazy stack kept the
+                        // pages it wasn't showing at their old width.
+                        .frame(width: pageSize.width, height: pageSize.height)
+                        .modifier(OffPageAccessibility(index: index))
+                }
+            }
+            .scrollTargetLayout()
+            // Collected here: on each page, every page would replace the others' frames.
+            .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
+                itemFrames = frames
+            }
+        }
+        // Aligned to the page-wide views, not .paging, which offers no limit, so a flick turns one page.
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
+        .scrollIndicators(.never)
+        // Turning the page clears the drop indicator on the old page.
+        .modifier(FollowsCurrentPage(onTurn: { activeTarget = nil }))
+        .background {
+            PageWheelMonitor(
+                // The open folder scrolls with the wheel itself.
+                isEnabled: { [vm] in vm.expandedFolderID == nil },
                 onPrevious: vm.showPreviousPage,
                 onNext: vm.showNextPage
             )
@@ -158,6 +180,9 @@ struct AppGridView: View {
             VStack(spacing: 0) {
                 FrequentlyUsedSection(layout: layout, onLaunch: launch)
                 itemGrid(items: vm.pages.flatMap { $0 }, layout: layout)
+                    .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
+                        itemFrames = frames
+                    }
             }
             .padding(.top, 24)
             .padding(.bottom, 34)
@@ -202,9 +227,6 @@ struct AppGridView: View {
 
         }
         .frame(width: layout.contentWidth)
-        .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
-            itemFrames = frames
-        }
     }
 
     @ViewBuilder
@@ -334,6 +356,62 @@ struct AppGridView: View {
         }
     }
 
+}
+
+/// Keeps full screen's page scroll and the current page in step. The arrow keys, the dots and the
+/// wheel change the page, and the scroll follows on the page-turn spring; a swipe that comes to
+/// rest makes its page current. A modifier of its own, so a page turn doesn't re-render the grid.
+private struct FollowsCurrentPage: ViewModifier {
+    @Environment(LaunchpadViewModel.self) private var vm
+    @Environment(\.launchpadMotion) private var motion
+    let onTurn: () -> Void
+    @State private var position = ScrollPosition(idType: Int.self)
+    @State private var settling = PageScrollSettling()
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onScrollGeometryChange(for: Double.self) { geometry in
+                geometry.contentOffset.x / max(geometry.containerSize.width, 1)
+            } action: { _, pagePosition in
+                vm.pagePosition = pagePosition
+            }
+            // A resize keeps the offset, which then falls on another page.
+            .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.width } action: { _, _ in
+                position.scrollTo(id: currentPage)
+            }
+            .onScrollPhaseChange { _, phase in
+                if settling.phaseChanged(to: phase) {
+                    vm.settlePageScroll()
+                }
+            }
+            // Rebuilt after a search, so it starts on the page that was showing.
+            .onAppear { position.scrollTo(id: currentPage) }
+            .onChange(of: vm.currentPage) {
+                onTurn()
+                // A swipe that settled is already there.
+                guard vm.pagePosition != Double(currentPage) else { return }
+                withAnimation(motion.movement(0.38) { .spring(response: $0, dampingFraction: 0.9) }) {
+                    position.scrollTo(id: currentPage)
+                }
+            }
+    }
+
+    private var currentPage: Int {
+        min(max(vm.currentPage, 0), max(vm.pages.count - 1, 0))
+    }
+}
+
+/// VoiceOver reads only the current page, as before the pages were side by side, and the page
+/// control turns them. Without this it could focus a tile on a page kept built off screen and
+/// scroll there without making it current. A modifier of its own, so a page turn redraws no tiles.
+private struct OffPageAccessibility: ViewModifier {
+    @Environment(LaunchpadViewModel.self) private var vm
+    let index: Int
+
+    func body(content: Content) -> some View {
+        content.accessibilityHidden(index != vm.currentPage)
+    }
 }
 
 /// The popup stays alive between shows, so each show starts back at the top. Only this modifier

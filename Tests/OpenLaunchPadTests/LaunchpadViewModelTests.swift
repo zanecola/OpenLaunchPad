@@ -161,6 +161,27 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func aSettledSwipeMakesTheNearestPageCurrent() {
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
+        )
+        viewModel.pages = [
+            [.app(Self.app("Mail"))],
+            [.app(Self.app("Calendar"))],
+            [.app(Self.app("Notes"))]
+        ]
+
+        for (position, page) in [(1.0, 1), (1.4, 1), (1.6, 2), (-0.3, 0), (2.7, 2)] {
+            viewModel.pagePosition = position
+            viewModel.settlePageScroll()
+            #expect(viewModel.currentPage == page, "position \(position)")
+        }
+    }
+
+    @Test
     func sortByNamePreservesPageSizesSortsFolderAppsAndPersists() {
         let mail = Self.app("Mail")
         let calendar = Self.app("Calendar")

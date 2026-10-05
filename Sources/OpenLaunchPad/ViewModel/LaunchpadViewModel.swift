@@ -23,6 +23,9 @@ final class LaunchpadViewModel {
     var expandedFolderID: UUID? = nil
     var isEditMode: Bool = false
     var currentPage: Int = 0
+    /// Where full screen's pages are scrolled to, in pages: 1.5 is halfway from the second page
+    /// to the third.
+    var pagePosition: Double = 0
     var isLoading: Bool = false
     var loadError: String? = nil
     /// How many items a page holds: the full-screen grid's columns × rows. A change reloads, so
@@ -613,6 +616,13 @@ final class LaunchpadViewModel {
 
     func showPreviousPage() {
         currentPage = max(currentPage - 1, 0)
+    }
+
+    /// A swipe came to rest: the page nearest `pagePosition` becomes current.
+    func settlePageScroll() {
+        let page = min(max(Int(pagePosition.rounded()), 0), max(pages.count - 1, 0))
+        // A swipe that sprang back, such as a rubber band at either end, redraws nothing.
+        if page != currentPage { currentPage = page }
     }
 
     func sortByName(_ order: LaunchpadSortOrder) {

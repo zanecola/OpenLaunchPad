@@ -128,9 +128,8 @@ struct LaunchpadView: View {
         GeometryReader { proxy in
             let pageLayout = fittedPageLayout(for: proxy.size)
             ZStack {
-                // Backdrop — clicks on empty space, including between icons, close the folder,
-                // leave edit mode or dismiss
-                emptySpaceClickTarget
+                // Backdrop — clicks on empty space close the folder, leave edit mode or dismiss
+                EmptySpaceClickTarget(action: emptySpaceClicked)
 
                 VStack(spacing: 0) {
                     // The field is centered on its own; the gear sits in the corner, clear of it.
@@ -163,7 +162,8 @@ struct LaunchpadView: View {
                         AppGridView(
                             mode: .paged,
                             layout: pageLayout.grid,
-                            onLaunch: launch
+                            onLaunch: launch,
+                            onEmptySpaceClick: emptySpaceClicked
                         )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -341,7 +341,7 @@ struct LaunchpadView: View {
                     // The scroll view takes clicks from the backdrop behind it, so empty space
                     // around the results catches them itself, down to the bottom of the viewport.
                     .frame(maxWidth: .infinity, minHeight: viewport.size.height, alignment: .top)
-                    .background { emptySpaceClickTarget }
+                    .background { EmptySpaceClickTarget(action: emptySpaceClicked) }
                 }
                 .scrollIndicators(.hidden)
                 .launchpadScrollAppearance()
@@ -349,20 +349,29 @@ struct LaunchpadView: View {
         }
     }
 
-    /// A click, not the end of a drag or a slipped press, closes the open folder, leaves edit
+    /// A click on empty space, including between icons, closes the open folder, leaves edit
     /// mode or dismisses.
-    private var emptySpaceClickTarget: some View {
+    private func emptySpaceClicked() {
+        if vm.expandedFolderID != nil {
+            vm.closeFolder()
+        } else if vm.isEditMode {
+            vm.toggleEditMode()
+        } else {
+            onDismiss()
+        }
+    }
+}
+
+/// Runs `action` for a click on empty space, not for the end of a drag or a slipped press.
+struct EmptySpaceClickTarget: View {
+    let action: () -> Void
+
+    var body: some View {
         Color.clear
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0).onEnded { value in
                 guard hypot(value.translation.width, value.translation.height) < 6 else { return }
-                if vm.expandedFolderID != nil {
-                    vm.closeFolder()
-                } else if vm.isEditMode {
-                    vm.toggleEditMode()
-                } else {
-                    onDismiss()
-                }
+                action()
             })
             .accessibilityHidden(true)
     }
