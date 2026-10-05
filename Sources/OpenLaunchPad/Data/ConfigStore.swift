@@ -33,8 +33,15 @@ final class ConfigStore {
     var paneHeight: Double = 620 {
         didSet { save(paneHeight, forKey: Keys.paneHeight) }
     }
-    var backgroundBlur: Double = 20 {
-        didSet { save(backgroundBlur, forKey: Keys.backgroundBlur) }
+    /// Opacity of the black layer over the full-screen blur.
+    var backgroundDim: Double = 0.25 {
+        didSet { save(backgroundDim, forKey: Keys.backgroundDim) }
+    }
+    static let backgroundDimRange: ClosedRange<Double> = 0...0.6
+
+    /// The dim that the old 0-60 "Blur intensity" value drew over its faded blur.
+    static func backgroundDim(fromLegacyBlur blur: Double) -> Double {
+        0.14 + 0.12 * min(max(blur / 60, 0), 1)
     }
     var showMenuBarIcon: Bool = true {
         didSet {
@@ -75,7 +82,8 @@ final class ConfigStore {
         static let gridColumns = "gridColumns"
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
-        static let backgroundBlur = "backgroundBlur"
+        static let backgroundDim = "backgroundDim"
+        static let legacyBackgroundBlur = "backgroundBlur"
         static let showMenuBarIcon = "showMenuBarIcon"
         static let showFrequentlyUsedApps = "showFrequentlyUsedApps"
         static let dockClickMode = "dockClickMode"
@@ -104,8 +112,12 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.paneHeight) != nil {
             paneHeight = defaults.double(forKey: Keys.paneHeight)
         }
-        if defaults.object(forKey: Keys.backgroundBlur) != nil {
-            backgroundBlur = defaults.double(forKey: Keys.backgroundBlur)
+        if defaults.object(forKey: Keys.backgroundDim) != nil {
+            let storedDim = defaults.double(forKey: Keys.backgroundDim)
+            backgroundDim = min(max(storedDim, Self.backgroundDimRange.lowerBound), Self.backgroundDimRange.upperBound)
+        } else if defaults.object(forKey: Keys.legacyBackgroundBlur) != nil {
+            backgroundDim = Self.backgroundDim(fromLegacyBlur: defaults.double(forKey: Keys.legacyBackgroundBlur))
+            defaults.removeObject(forKey: Keys.legacyBackgroundBlur)
         }
         if defaults.object(forKey: Keys.showMenuBarIcon) != nil {
             showMenuBarIcon = defaults.bool(forKey: Keys.showMenuBarIcon)

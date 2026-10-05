@@ -94,6 +94,7 @@ private struct GeneralSettingsTab: View {
 
 private struct AppearanceSettingsTab: View {
     @Environment(ConfigStore.self) private var config
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         @Bindable var config = config
@@ -153,16 +154,21 @@ private struct AppearanceSettingsTab: View {
 
             Section("Background") {
                 HStack {
-                    Text("Blur intensity")
-                    Slider(value: $config.backgroundBlur, in: 0...60)
-                    Text("\(Int(config.backgroundBlur))")
+                    Text("Dim")
+                    Slider(value: $config.backgroundDim, in: ConfigStore.backgroundDimRange)
+                    Text("\(Int((config.backgroundDim * 100).rounded()))%")
                         .monospacedDigit()
-                        .frame(width: 28)
+                        .frame(width: 36)
                 }
+                .disabled(reduceTransparency)
 
-                Text("Applies to both full-screen and popup backgrounds.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    reduceTransparency
+                        ? "Reduce Transparency is on, so full screen uses a solid dark background."
+                        : "Darkens the blurred background behind the full-screen launcher."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section("Animation") {

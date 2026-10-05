@@ -75,7 +75,7 @@ struct MenuBarPanelView: View {
         }
         .frame(width: config.paneWidth, height: config.paneHeight)
         .background {
-            LaunchpadBackdropView(mode: .popup, blurAmount: config.backgroundBlur)
+            LaunchpadBackdropView(mode: .popup)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {

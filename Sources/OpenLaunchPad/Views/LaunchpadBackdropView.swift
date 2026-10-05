@@ -6,35 +6,28 @@ enum LaunchpadBackdropMode {
     case popup
 }
 
-enum LaunchpadBackdropMetrics {
-    static func intensity(for blurAmount: Double) -> Double {
-        min(max(blurAmount / 60, 0), 1)
-    }
-}
-
 struct LaunchpadBackdropView: View {
     let mode: LaunchpadBackdropMode
-    let blurAmount: Double
-
-    private var intensity: Double {
-        LaunchpadBackdropMetrics.intensity(for: blurAmount)
-    }
+    /// Black over the full-screen blur; the popup follows the system appearance and is not dimmed.
+    var dim: Double = 0
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         ZStack {
-            VisualEffectBlur(
-                material: mode == .fullScreen ? .underWindowBackground : .popover,
-                blendingMode: .behindWindow
-            )
-            .opacity(intensity)
-
             switch mode {
             case .fullScreen:
-                Color.black.opacity(0.14 + intensity * 0.12)
+                if reduceTransparency {
+                    Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255)
+                } else {
+                    // The material stays at full opacity: fading it shows the desktop through unblurred.
+                    VisualEffectBlur(material: .fullScreenUI, blendingMode: .behindWindow)
+                    Color.black.opacity(dim)
+                }
             case .popup:
+                // NSVisualEffectView turns opaque by itself under Reduce Transparency.
+                VisualEffectBlur(material: .popover, blendingMode: .behindWindow)
                 Color(nsColor: .windowBackgroundColor)
-                    .opacity(1 - intensity * 0.58)
-                Color.black.opacity(intensity * 0.08)
+                    .opacity(0.35)
             }
         }
     }

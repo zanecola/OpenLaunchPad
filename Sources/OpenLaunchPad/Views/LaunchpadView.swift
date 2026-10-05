@@ -199,7 +199,7 @@ struct LaunchpadView: View {
 
     @ViewBuilder
     private var backdrop: some View {
-        LaunchpadBackdropView(mode: .fullScreen, blurAmount: config.backgroundBlur)
+        LaunchpadBackdropView(mode: .fullScreen, dim: config.backgroundDim)
             .ignoresSafeArea()
     }
 }

@@ -97,6 +97,38 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func backgroundDimDefaultsToAQuarter() {
+        #expect(ConfigStore(defaults: InMemoryKeyValueStore()).backgroundDim == 0.25)
+    }
+
+    @Test(arguments: [
+        (-10.0, 0.14),
+        (0.0, 0.14),
+        (30.0, 0.20),
+        (60.0, 0.26),
+        (90.0, 0.26)
+    ])
+    func legacyBlurIsMigratedOnceToTheDimItDrew(blur: Double, expectedDim: Double) {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(blur, forKey: "backgroundBlur")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(abs(config.backgroundDim - expectedDim) < 0.000_001)
+        #expect(abs(defaults.double(forKey: "backgroundDim") - expectedDim) < 0.000_001)
+        #expect(defaults.object(forKey: "backgroundBlur") == nil)
+    }
+
+    @Test
+    func storedDimWinsOverLegacyBlurAndIsClamped() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(60.0, forKey: "backgroundBlur")
+        defaults.set(0.9, forKey: "backgroundDim")
+
+        #expect(ConfigStore(defaults: defaults).backgroundDim == ConfigStore.backgroundDimRange.upperBound)
+    }
+
+    @Test
     func frequentlyUsedAppsVisibilityPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)
