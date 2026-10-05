@@ -113,7 +113,8 @@ final class ConfigStore {
         }
         if let data = defaults.data(forKey: Keys.globalShortcut),
            let sc = try? JSONDecoder().decode(KeyCombo.self, from: data) {
-            globalShortcut = sc
+            // Drops a Shift- or Option-only combo saved before validation existed.
+            globalShortcut = sc.isAllowedGlobalShortcut ? sc : nil
         }
         if defaults.object(forKey: Keys.animationSpeed) != nil {
             animationSpeed = defaults.double(forKey: Keys.animationSpeed)

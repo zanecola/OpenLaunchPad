@@ -46,7 +46,7 @@ final class ShortcutRecorderButton: NSButton {
 
     private var isRecording = false
 
-    override var acceptsFirstResponder: Bool { true }
+    override var acceptsFirstResponder: Bool { isRecording || super.acceptsFirstResponder }
 
     func beginRecording() {
         isRecording = true
@@ -55,18 +55,26 @@ final class ShortcutRecorderButton: NSButton {
     }
 
     override func keyDown(with event: NSEvent) {
+        // Outside recording, behave like a normal button so Tab and Space keep working.
+        guard isRecording else {
+            super.keyDown(with: event)
+            return
+        }
         if event.keyCode == UInt16(kVK_Escape) {
             finishRecording()
             return
         }
 
-        let modifiers = Self.carbonModifiers(from: event.modifierFlags)
-        guard modifiers != 0 || Self.isFunctionKey(event.keyCode) else {
+        let combo = KeyCombo(
+            keyCode: UInt32(event.keyCode),
+            modifiers: Self.carbonModifiers(from: event.modifierFlags)
+        )
+        guard combo.isAllowedGlobalShortcut else {
             NSSound.beep()
             return
         }
 
-        onShortcut(KeyCombo(keyCode: UInt32(event.keyCode), modifiers: modifiers))
+        onShortcut(combo)
         finishRecording()
     }
 
@@ -93,15 +101,5 @@ final class ShortcutRecorderButton: NSButton {
         if flags.contains(.control) { result |= UInt32(controlKey) }
         if flags.contains(.shift) { result |= UInt32(shiftKey) }
         return result
-    }
-
-    private static func isFunctionKey(_ keyCode: UInt16) -> Bool {
-        switch Int(keyCode) {
-        case kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6,
-             kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12:
-            return true
-        default:
-            return false
-        }
     }
 }

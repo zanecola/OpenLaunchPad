@@ -53,6 +53,27 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func storedShortcutThatWouldTypeIsDroppedOnLoad() throws {
+        let defaults = InMemoryKeyValueStore()
+        let shiftL = KeyCombo(keyCode: UInt32(kVK_ANSI_L), modifiers: UInt32(shiftKey))
+        defaults.set(try JSONEncoder().encode(shiftL), forKey: "globalShortcut")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.globalShortcut == nil)
+        #expect(defaults.data(forKey: "globalShortcut") == nil)
+    }
+
+    @Test
+    func storedValidShortcutIsKeptOnLoad() throws {
+        let defaults = InMemoryKeyValueStore()
+        let commandShiftL = KeyCombo(keyCode: UInt32(kVK_ANSI_L), modifiers: UInt32(cmdKey | shiftKey))
+        defaults.set(try JSONEncoder().encode(commandShiftL), forKey: "globalShortcut")
+
+        #expect(ConfigStore(defaults: defaults).globalShortcut == commandShiftL)
+    }
+
+    @Test
     func frequentlyUsedAppsVisibilityPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

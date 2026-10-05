@@ -24,6 +24,23 @@ struct KeyCombo: Codable, Hashable, Sendable {
         parts.append(keyCode.keyDisplayName)
         return parts.joined()
     }
+
+    /// A global hotkey swallows its keystroke in every app, so it must not be something people
+    /// type: Shift- or Option-only combos produce text. Require Command or Control, except for
+    /// function keys, which never type.
+    var isAllowedGlobalShortcut: Bool {
+        Self.isFunctionKey(keyCode) || modifiers & UInt32(cmdKey | controlKey) != 0
+    }
+
+    static func isFunctionKey(_ keyCode: UInt32) -> Bool {
+        switch Int(keyCode) {
+        case kVK_F1, kVK_F2, kVK_F3, kVK_F4, kVK_F5, kVK_F6,
+             kVK_F7, kVK_F8, kVK_F9, kVK_F10, kVK_F11, kVK_F12:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 private extension UInt32 {
