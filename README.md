@@ -24,10 +24,13 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Two ways to launch.** Use a paginated full-screen grid or a non-activating popup from the menu bar or Dock.
 - **Recent favorites up front.** Apps launched most often through OpenLaunchPad appear in a responsive first row, with recent use breaking frequency ties.
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
-- **Fast navigation.** Search instantly, use horizontal mouse or trackpad gestures, click page controls, or navigate with the keyboard.
+- **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size, labels, full-screen columns, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size, labels, full-screen columns, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, the Frequently Used row, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
+
+> [!NOTE]
+> v0.1.0, the latest release, predates much of this README, including the Frequently Used row, apps that appear and disappear as you install and remove them, Return and Escape in search, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -46,7 +49,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
   </tr>
 </table>
 
-Screenshots are rendered from the current SwiftUI views with curated macOS system apps.
+Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, and blurred background.
 
 ## Install
 
@@ -58,9 +61,11 @@ Screenshots are rendered from the current SwiftUI views with curated macOS syste
 
 ### First launch on macOS
 
-Current releases are ad-hoc signed, not notarized with an Apple Developer ID. Gatekeeper may block the first launch.
+Current releases are ad-hoc signed, not notarized with an Apple Developer ID, so Gatekeeper blocks the first launch. Control-clicking the app and choosing **Open** no longer gets past it on current macOS. Instead:
 
-Try Control-clicking OpenLaunchPad in Applications and choosing **Open**. If macOS still blocks it, go to **System Settings > Privacy & Security** and choose **Open Anyway** for OpenLaunchPad.
+1. Open OpenLaunchPad from Applications. When macOS says it can't verify the app, click **Done**.
+2. Go to **System Settings > Privacy & Security**, scroll to **Security**, and click **Open Anyway** next to the message about OpenLaunchPad. The button stays there for about an hour after the blocked launch.
+3. Confirm with **Open Anyway** and your password or Touch ID. macOS remembers this, so later launches open normally.
 
 As a Terminal alternative:
 
@@ -72,8 +77,8 @@ Only use the command for a copy downloaded from this repository's official Relea
 
 ## Requirements
 
-- macOS 26.0 or newer
-- A non-sandboxed installation for Launchpad database access and global shortcuts
+- macOS 26.0 or newer, on an Apple silicon or Intel Mac (releases after v0.1.0 are universal; v0.1.0 runs on Apple silicon only)
+- Runs unsandboxed: it reads every Applications folder, including `~/Applications`, and moves apps you uninstall to the Trash
 
 Building from source additionally requires Xcode with the macOS 26 SDK and SwiftPM.
 
@@ -93,13 +98,14 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 
 ### Navigate
 
-- Start typing as soon as the launcher opens: Search already has focus, in the popup too. It finds apps, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
-- A labeled **Frequently Used** row shows up to seven apps and updates after each launch. Turn the row on or off, or clear its local history, under **Settings > General > Suggestions**.
-- Use Left/Right (while Search is empty), Command-[ / Command-], the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode.
+- Start typing as soon as the launcher opens: Search already has focus, in the popup too. It ignores case and accents, and finds apps by the name Finder shows, their bundle name, or their file name, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
+- A labeled **Frequently Used** row shows up to seven apps and updates after each launch. Full screen leaves it out when your apps would not fit beside it. Turn the row on or off, or clear its local history, under **Settings > General > Suggestions**.
+- Use Left/Right (while Search is empty), Command-[ / Command-], the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode. One trackpad flick turns one page.
 - Scroll vertically in popup mode and inside large folders.
 - Press Return to open the top search result.
 - Press Escape to step back one level: close an open folder, then clear the search, then close the launcher.
 - Click empty space, including the space between icons, to close an open folder or the full-screen launcher.
+- With VoiceOver, every app and folder is a button named after it, and folders also say how many apps they hold.
 
 ### Organize apps
 
@@ -108,7 +114,7 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 - Drop an app onto an existing folder to add it.
 - Open a folder and drag apps to reorder them.
 - Drag an app outside the expanded folder to move it back to the launcher.
-- Click an open folder's title to rename it.
+- Click an open folder's title to rename it. The name is saved when you press Return or close the folder.
 
 Changes are saved immediately and survive relaunches. Search results are launch-only, so filtering cannot accidentally change your layout.
 
@@ -118,22 +124,38 @@ Right-click an app for:
 
 - Open
 - Show in Finder
-- Get Info
-- Uninstall (Move to Trash, with confirmation)
+- Get Info (opens Finder's info window; no Automation permission needed)
+- Uninstall… (moves the copy of the app that the tile shows to the Trash, after a confirmation that shows its path)
 
-OpenLaunchPad protects system apps and itself from uninstall. Moving an app to Trash does not remove that app's documents or support files.
+OpenLaunchPad protects system apps and every copy of itself from uninstall. Moving an app to Trash does not remove that app's documents or support files.
+
+If an app was moved or deleted since OpenLaunchPad last looked, opening it says the app can't be found and offers **Remove from Layout**, instead of failing silently.
+
+### Settings
+
+Open Settings from the gear, the menu-bar icon's right-click menu, or Command-comma. Changes apply immediately.
+
+| Setting | Default | Notes |
+|---|---|---|
+| Dock icon click action | Full Screen | Or Popup |
+| Show menu bar icon | On | |
+| Show Frequently Used row | On | **Clear Usage History** erases the launch history behind it |
+| Reset Layout… | | Removes all folders and custom order after you confirm; the old layout is backed up first (see [Data and Privacy](#data-and-privacy)) |
+| Icon size | 80 pt | 48–128 pt. Full screen draws icons smaller, down to 48 pt, when a page would not fit |
+| Show app labels | On | |
+| Preferred columns | 7 | Full screen only; Automatic or 4–12, fewer when the display is too narrow |
+| While open | Keep Dock and menu bar | Or auto-hide both while full screen is open. Either way, the grid is laid out between the menu bar and the Dock |
+| Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
+| Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
+| Dim | 25% | 0–60% black over the blurred full-screen background. With Reduce Transparency on, the background is solid dark and Dim is unavailable |
+| Animation speed | 1.0× | 0.2–2.0×; higher is faster |
+| Global shortcut | None | Must use Command or Control, or be a function key (F1–F12), so it can't capture ordinary typing. A Shift- or Option-only shortcut saved by an older version is cleared |
 
 ## Data and Privacy
 
-OpenLaunchPad does not write to Apple's Dock database.
+OpenLaunchPad builds its app list by scanning `/Applications`, `~/Applications`, and `/System/Applications`. Apps use the same localized names as Finder and are sorted by name. Filesystem folders that hold two or more apps are preserved, and duplicate bundle identifiers are removed. These folders are watched, so newly installed or removed apps show up within about a second without restarting OpenLaunchPad, and an updated app shows its new icon.
 
-It reads the legacy Launchpad database in read-only mode when available:
-
-```text
-~/Library/Application Support/Dock/desktopproperties.db
-```
-
-If the database is unavailable, it scans `/Applications`, `~/Applications`, and `/System/Applications`. Apps use the same localized names as Finder and are sorted by name. Filesystem folders that hold two or more apps are preserved, and duplicate bundle identifiers are removed. These folders are watched, so newly installed or removed apps show up within about a second without restarting OpenLaunchPad.
+It does not import your old Launchpad layout or folders. It first looks for a Dock database at `~/Library/Application Support/Dock/desktopproperties.db` and reads it read-only if one exists, but that file does not exist on macOS 26, so in practice the scan is the only source. OpenLaunchPad never writes to Apple's Dock database.
 
 Your custom pages, folders, and ordering are stored separately:
 
@@ -187,7 +209,8 @@ env HOME="$PWD/.build" CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache" swift t
 OpenLaunchPad is a SwiftUI and AppKit application with deliberately small boundaries:
 
 ```text
-Launchpad database or Applications folders
+Applications folders, scanned and watched
+(a legacy Dock database first, if present)
                     |
                     v
             CompositeDataSource
@@ -208,14 +231,14 @@ Launchpad database or Applications folders
 - AppKit handles windows, the status item, system services, and the Carbon global hotkey.
 - JSON persistence is versioned and migrates earlier layout formats.
 
-The test suite covers layout invariants, persistence migrations, data sources, view-model orchestration, settings, popup placement, paging input, app actions, and full-screen layout fitting.
+The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, popup placement, paging input, drag state, app actions, and full-screen and folder layout fitting.
 
 ## Known Limitations
 
 - Releases are not yet Developer ID signed or notarized.
 - Dragging to a page edge does not automatically switch pages yet.
 - Pages have no item limit yet. Full screen shrinks icons down to 48 pt so a page fits, but a page that needs more rows than that, for example with 4 preferred columns, still runs past the page dots.
-- Legacy user-created Launchpad folders cannot be recovered when macOS no longer provides `desktopproperties.db`.
+- Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
 
