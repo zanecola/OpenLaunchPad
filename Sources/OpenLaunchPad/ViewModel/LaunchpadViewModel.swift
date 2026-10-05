@@ -24,7 +24,7 @@ final class LaunchpadViewModel {
     var isEditMode: Bool = false
     var currentPage: Int = 0
     /// Where full screen's pages are scrolled to, in pages: 1.5 is halfway from the second page
-    /// to the third.
+    /// to the third. The current page dot follows it.
     var pagePosition: Double = 0
     var isLoading: Bool = false
     var loadError: String? = nil

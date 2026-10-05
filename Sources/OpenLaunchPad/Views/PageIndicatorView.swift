@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Full screen's page control: bare white dots on the dark backdrop, as Launchpad drew them. With
-/// Dots + Arrows, pointing at it fades in a capsule with previous and next arrows. VoiceOver reads
-/// it as one adjustable element, "Page, N of M".
+/// Full screen's page control: bare white dots on the dark backdrop, as Launchpad drew them. The
+/// current one follows the pages as they scroll. With Dots + Arrows, pointing at it fades in a
+/// capsule with previous and next arrows. VoiceOver reads it as one adjustable element,
+/// "Page, N of M".
 struct PageIndicatorView: View {
     static let dotDiameter: CGFloat = 7
     /// Side by side, the dots' hit boxes leave 9 pt between dots.
@@ -11,9 +12,7 @@ struct PageIndicatorView: View {
 
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    @Environment(\.launchpadMotion) private var motion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Namespace private var dotNamespace
     @State private var hover = LauncherHover()
 
     var body: some View {
@@ -29,20 +28,21 @@ struct PageIndicatorView: View {
                     .opacity(showsArrows ? 1 : 0)
             }
 
-            ForEach(0..<pageCount, id: \.self) { index in
-                Button {
-                    vm.currentPage = index
-                } label: {
-                    ZStack {
-                        dot.opacity(0.35)
-                        if index == currentPage {
-                            dot.matchedGeometryEffect(id: "current", in: dotNamespace)
-                        }
+            HStack(spacing: 0) {
+                ForEach(0..<pageCount, id: \.self) { index in
+                    Button {
+                        vm.currentPage = index
+                    } label: {
+                        Self.dot
+                            .opacity(0.35)
+                            .frame(width: Self.dotBoxSize.width, height: Self.dotBoxSize.height)
+                            .contentShape(Rectangle())
                     }
-                    .frame(width: Self.dotBoxSize.width, height: Self.dotBoxSize.height)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+            .overlay(alignment: .leading) {
+                CurrentPageDot(pageCount: pageCount)
             }
 
             if style == .dotsAndArrows {
@@ -52,7 +52,6 @@ struct PageIndicatorView: View {
         }
         .padding(.horizontal, style == .dotsAndArrows ? 4 : 0)
         .background { arrowsBackground(isVisible: showsArrows) }
-        .animation(dotSlide, value: currentPage)
         .animation(.easeOut(duration: 0.15), value: showsArrows)
         .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
         .accessibilityElement(children: .ignore)
@@ -67,15 +66,16 @@ struct PageIndicatorView: View {
         }
     }
 
-    private var dot: some View {
+    static var dot: some View {
         Circle()
             .fill(.white)
-            .frame(width: Self.dotDiameter, height: Self.dotDiameter)
+            .frame(width: dotDiameter, height: dotDiameter)
     }
 
-    /// The current dot slides along with the page turn; Reduce Motion moves it at once.
-    private var dotSlide: Animation? {
-        motion.movement(0.3) { .spring(response: $0, dampingFraction: 0.8) }
+    /// How far the current dot sits from the first one at a scroll `position` in pages. It stays
+    /// on the end dots while the pages rubber-band past them.
+    static func currentDotOffset(position: Double, pageCount: Int) -> CGFloat {
+        CGFloat(min(max(position, 0), Double(max(pageCount - 1, 0)))) * dotBoxSize.width
     }
 
     private func arrow(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
@@ -100,5 +100,20 @@ struct PageIndicatorView: View {
         } else {
             Color.clear.glassEffect(isVisible ? .regular : .identity, in: .capsule)
         }
+    }
+}
+
+/// The only part of the page control that reads the scroll position, so a swipe redraws just
+/// this dot. It moves with the pages: with the fingers, and with a page turn's spring, which is
+/// instant under Reduce Motion.
+private struct CurrentPageDot: View {
+    @Environment(LaunchpadViewModel.self) private var vm
+    let pageCount: Int
+
+    var body: some View {
+        PageIndicatorView.dot
+            .frame(width: PageIndicatorView.dotBoxSize.width, height: PageIndicatorView.dotBoxSize.height)
+            .offset(x: PageIndicatorView.currentDotOffset(position: vm.pagePosition, pageCount: pageCount))
+            .allowsHitTesting(false)
     }
 }

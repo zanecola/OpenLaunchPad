@@ -95,6 +95,19 @@ struct PageScrollingTests {
         #expect(Self.settles([.tracking, .idle]) == [false, false])
     }
 
+    @Test
+    func currentDotFollowsTheScrollPositionBetweenTheEndDots() {
+        let box = PageIndicatorView.dotBoxSize.width
+
+        #expect(PageIndicatorView.currentDotOffset(position: 0, pageCount: 3) == 0)
+        #expect(PageIndicatorView.currentDotOffset(position: 1.5, pageCount: 3) == 1.5 * box)
+        #expect(PageIndicatorView.currentDotOffset(position: 2, pageCount: 3) == 2 * box)
+        // Rubber-banding past either end.
+        #expect(PageIndicatorView.currentDotOffset(position: -0.3, pageCount: 3) == 0)
+        #expect(PageIndicatorView.currentDotOffset(position: 2.4, pageCount: 3) == 2 * box)
+        #expect(PageIndicatorView.currentDotOffset(position: 0.5, pageCount: 1) == 0)
+    }
+
     private static func settles(_ phases: [ScrollPhase]) -> [Bool] {
         var settling = PageScrollSettling()
         return phases.map { settling.phaseChanged(to: $0) }
