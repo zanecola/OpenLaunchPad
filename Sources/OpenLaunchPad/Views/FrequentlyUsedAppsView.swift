@@ -52,10 +52,22 @@ struct FrequentlyUsedAppsLayout {
         self.iconSize = iconSize
         self.cellWidth = cellWidth
         spacing = visibleCount > 1 ? min(max(naturalSpacing, minimumSpacing), 80) : 0
-        rowHeight = LaunchpadIconMetrics.cellHeight(
-            for: iconSize,
+        rowHeight = Self.rowHeight(
+            configuredIconSize: configuredIconSize,
+            showsLabels: showsLabels,
+            presentation: presentation
+        )
+    }
+
+    static func rowHeight(
+        configuredIconSize: CGFloat,
+        showsLabels: Bool,
+        presentation: FrequentlyUsedAppsPresentation
+    ) -> CGFloat {
+        LaunchpadIconMetrics.cellHeight(
+            for: min(configuredIconSize, presentation.maximumIconSize),
             showsLabel: showsLabels
-        ) + 24 + Self.headerHeight
+        ) + 24 + headerHeight
     }
 }
 
@@ -64,6 +76,8 @@ struct FrequentlyUsedAppsView: View {
     @Environment(ConfigStore.self) private var config
 
     let presentation: FrequentlyUsedAppsPresentation
+    /// Overrides the configured icon size, so full screen can shrink the row with its grid.
+    var iconSize: CGFloat?
     let onLaunch: (AppItem) -> Void
 
     var body: some View {
@@ -72,7 +86,7 @@ struct FrequentlyUsedAppsView: View {
             GeometryReader { proxy in
                 let layout = FrequentlyUsedAppsLayout(
                     width: proxy.size.width,
-                    configuredIconSize: config.iconSize,
+                    configuredIconSize: iconSize ?? config.iconSize,
                     showsLabels: config.iconLabelVisible,
                     presentation: presentation
                 )
@@ -127,10 +141,10 @@ struct FrequentlyUsedAppsView: View {
     }
 
     private var rowHeight: CGFloat {
-        let iconSize = min(config.iconSize, presentation.maximumIconSize)
-        return LaunchpadIconMetrics.cellHeight(
-            for: iconSize,
-            showsLabel: config.iconLabelVisible
-        ) + 24 + FrequentlyUsedAppsLayout.headerHeight
+        FrequentlyUsedAppsLayout.rowHeight(
+            configuredIconSize: iconSize ?? config.iconSize,
+            showsLabels: config.iconLabelVisible,
+            presentation: presentation
+        )
     }
 }

@@ -13,13 +13,13 @@ enum AppGridMode {
 }
 
 struct AppGridLayout {
+    let iconSize: CGFloat
     let columnCount: Int
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let columnSpacing: CGFloat
     let rowSpacing: CGFloat
     let contentWidth: CGFloat
-    let viewportHeight: CGFloat
 
     init(size: CGSize, iconSize: CGFloat, requestedColumns: Int, showsLabels: Bool = true) {
         let horizontalPadding = min(max(size.width * 0.06, 24), 120)
@@ -34,13 +34,13 @@ struct AppGridLayout {
             : 0
         let columnSpacing = columnCount > 1 ? min(max(naturalSpacing, minimumSpacing), 96) : 0
 
+        self.iconSize = iconSize
         self.columnCount = columnCount
         self.cellWidth = cellWidth
         self.cellHeight = LaunchpadIconMetrics.cellHeight(for: iconSize, showsLabel: showsLabels)
         self.columnSpacing = columnSpacing
         self.rowSpacing = min(max(size.height * 0.04, 24), 48)
         self.contentWidth = CGFloat(columnCount) * cellWidth + CGFloat(max(columnCount - 1, 0)) * columnSpacing
-        self.viewportHeight = size.height
     }
 
     func contentHeight(itemCount: Int) -> CGFloat {
@@ -55,21 +55,25 @@ struct AppGridView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
     let mode: AppGridMode
+    /// Geometry fitted by the full-screen page; without it the grid sizes itself to its frame.
+    private let fittedLayout: AppGridLayout?
     private let onLaunch: ((AppItem) -> Void)?
     @State private var itemFrames: [UUID: CGRect] = [:]
     @State private var activeTarget: DragHoverTarget?
 
     init(
         mode: AppGridMode = .paged,
+        layout: AppGridLayout? = nil,
         onLaunch: ((AppItem) -> Void)? = nil
     ) {
         self.mode = mode
+        self.fittedLayout = layout
         self.onLaunch = onLaunch
     }
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = AppGridLayout(
+            let layout = fittedLayout ?? AppGridLayout(
                 size: proxy.size,
                 iconSize: config.iconSize,
                 requestedColumns: mode.requestedColumns(configuredColumns: config.gridColumns),
@@ -108,14 +112,9 @@ struct AppGridView: View {
 
     private func pagedGrid(layout: AppGridLayout) -> some View {
         ZStack {
+            // Top-anchored, so a partly filled page keeps its rows where the other pages have them.
             itemGrid(items: currentPageItems, layout: layout)
-                .frame(
-                    minHeight: max(
-                        layout.viewportHeight - 48,
-                        layout.contentHeight(itemCount: currentPageItems.count)
-                    ),
-                    alignment: .center
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .id(currentPageIndex)
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
 
@@ -158,7 +157,7 @@ struct AppGridView: View {
 
         return LazyVGrid(columns: gridColumns, spacing: layout.rowSpacing) {
             ForEach(items) { item in
-                itemView(item: item)
+                itemView(item: item, iconSize: layout.iconSize)
                     .frame(
                         width: layout.cellWidth,
                         height: layout.cellHeight,
@@ -178,13 +177,13 @@ struct AppGridView: View {
     }
 
     @ViewBuilder
-    private func itemView(item: LaunchpadItem) -> some View {
+    private func itemView(item: LaunchpadItem, iconSize: CGFloat) -> some View {
         switch item {
         case .app(let app):
             AppIconView(
                 app: app,
                 icon: vm.icon(for: app.bundleID),
-                iconSize: config.iconSize,
+                iconSize: iconSize,
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
                 dragPayload: LaunchpadDragPayload(itemID: app.id, kind: .app),
@@ -203,7 +202,7 @@ struct AppGridView: View {
         case .folder(let folder):
             FolderView(
                 folder: folder,
-                iconSize: config.iconSize,
+                iconSize: iconSize,
                 showLabel: config.iconLabelVisible,
                 isEditMode: vm.isEditMode,
                 iconProvider: { vm.icon(for: $0) },

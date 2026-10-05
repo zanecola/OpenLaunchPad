@@ -1,9 +1,108 @@
 import SwiftUI
 
+/// Fits the full-screen page between the search bar and the page dots, inside insets that keep it
+/// clear of the menu bar and the Dock. Icons shrink, down to 48 pt, until the largest page fits, so
+/// every page shares one geometry. Page capacity is not limited yet (ROADMAP P1-1), so a page with
+/// more rows than fit at 48 pt still overflows.
+struct FullScreenPageLayout {
+    static let minimumIconSize: CGFloat = 48
+    static let searchTopPadding: CGFloat = 20
+    static let searchBarHeight: CGFloat = 40
+    static let searchBottomPadding: CGFloat = 12
+    static let pageIndicatorHeight: CGFloat = 36
+    static let bottomPadding: CGFloat = 12
+
+    let grid: AppGridLayout
+    /// Height left for the grid below the search bar and, when shown, the Frequently Used row.
+    let gridHeight: CGFloat
+    /// False when the grid would not fit beside the row even with the smallest icons.
+    let showsFrequentlyUsed: Bool
+
+    init(
+        size: CGSize,
+        insets: EdgeInsets,
+        iconSize: CGFloat,
+        requestedColumns: Int,
+        showsLabels: Bool,
+        largestPageItemCount: Int,
+        showsPageIndicator: Bool,
+        wantsFrequentlyUsed: Bool
+    ) {
+        let width = max(size.width - insets.leading - insets.trailing, 0)
+        let chromeHeight = insets.top + Self.searchTopPadding + Self.searchBarHeight + Self.searchBottomPadding
+            + (showsPageIndicator ? Self.pageIndicatorHeight : 0) + Self.bottomPadding + insets.bottom
+        let available = CGSize(width: width, height: max(size.height - chromeHeight, 0))
+        let fit = { (showsFrequentlyUsed: Bool) in
+            Self.fitting(
+                in: available,
+                iconSize: iconSize,
+                requestedColumns: requestedColumns,
+                showsLabels: showsLabels,
+                itemCount: largestPageItemCount,
+                showsFrequentlyUsed: showsFrequentlyUsed
+            )
+        }
+
+        // The row stays if the grid fits beside it; otherwise the grid gets its space.
+        self = (wantsFrequentlyUsed ? fit(true) : nil) ?? fit(false) ?? FullScreenPageLayout(
+            grid: AppGridLayout(
+                size: available,
+                iconSize: min(iconSize, Self.minimumIconSize),
+                requestedColumns: requestedColumns,
+                showsLabels: showsLabels
+            ),
+            gridHeight: available.height,
+            showsFrequentlyUsed: false
+        )
+    }
+
+    private init(grid: AppGridLayout, gridHeight: CGFloat, showsFrequentlyUsed: Bool) {
+        self.grid = grid
+        self.gridHeight = gridHeight
+        self.showsFrequentlyUsed = showsFrequentlyUsed
+    }
+
+    /// The layout with the largest icons, from `iconSize` down to the minimum, whose rows fit below
+    /// the Frequently Used row, which shrinks with the grid.
+    private static func fitting(
+        in available: CGSize,
+        iconSize: CGFloat,
+        requestedColumns: Int,
+        showsLabels: Bool,
+        itemCount: Int,
+        showsFrequentlyUsed: Bool
+    ) -> FullScreenPageLayout? {
+        var candidate = iconSize
+        while candidate >= minimumIconSize {
+            let rowHeight = showsFrequentlyUsed
+                ? FrequentlyUsedAppsLayout.rowHeight(
+                    configuredIconSize: candidate,
+                    showsLabels: showsLabels,
+                    presentation: .fullScreen
+                )
+                : 0
+            let gridHeight = max(available.height - rowHeight, 0)
+            let grid = AppGridLayout(
+                size: CGSize(width: available.width, height: gridHeight),
+                iconSize: candidate,
+                requestedColumns: requestedColumns,
+                showsLabels: showsLabels
+            )
+            if grid.contentHeight(itemCount: itemCount) <= gridHeight {
+                return FullScreenPageLayout(grid: grid, gridHeight: gridHeight, showsFrequentlyUsed: showsFrequentlyUsed)
+            }
+            candidate = candidate.rounded(.up) - 1
+        }
+        return nil
+    }
+}
+
 /// Full-screen Launchpad overlay — blur backdrop, search, grid, page dots.
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
+    /// Keeps content clear of the menu bar and the Dock; the backdrop still fills the screen.
+    var contentInsets = EdgeInsets()
     /// Closes without launching anything.
     var onDismiss: () -> Void = {}
     var onAppLaunched: () -> Void = {}
@@ -15,84 +114,93 @@ struct LaunchpadView: View {
         @Bindable var vm = vm
         let searchResults = vm.searchResults
 
-        ZStack {
-            // Backdrop — clicks on empty space, including between icons, close the folder,
-            // leave edit mode or dismiss
-            Color.clear
-                .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 0).onEnded { value in
-                    // The end of a drag or a slipped press is not a click.
-                    guard hypot(value.translation.width, value.translation.height) < 6 else { return }
-                    if vm.expandedFolderID != nil {
-                        vm.closeFolder()
-                    } else if vm.isEditMode {
-                        vm.toggleEditMode()
-                    } else {
-                        onDismiss()
+        GeometryReader { proxy in
+            let pageLayout = fittedPageLayout(for: proxy.size)
+            ZStack {
+                // Backdrop — clicks on empty space, including between icons, close the folder,
+                // leave edit mode or dismiss
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(DragGesture(minimumDistance: 0).onEnded { value in
+                        // The end of a drag or a slipped press is not a click.
+                        guard hypot(value.translation.width, value.translation.height) < 6 else { return }
+                        if vm.expandedFolderID != nil {
+                            vm.closeFolder()
+                        } else if vm.isEditMode {
+                            vm.toggleEditMode()
+                        } else {
+                            onDismiss()
+                        }
+                    })
+
+                VStack(spacing: 0) {
+                    // Search bar
+                    SearchBarView(
+                        text: $vm.searchQuery,
+                        onClear: vm.closeFolder,
+                        onSubmit: openTopSearchResult,
+                        onOpenSettings: onOpenSettings
+                    )
+                        .frame(height: FullScreenPageLayout.searchBarHeight)
+                        .padding(.bottom, FullScreenPageLayout.searchBottomPadding)
+
+                    if searchResults == nil && pageLayout.showsFrequentlyUsed {
+                        FrequentlyUsedAppsView(
+                            presentation: .fullScreen,
+                            iconSize: pageLayout.grid.iconSize,
+                            onLaunch: launch
+                        )
                     }
-                })
 
-            VStack(spacing: 0) {
-                // Search bar
-                SearchBarView(
-                    text: $vm.searchQuery,
-                    onClear: vm.closeFolder,
-                    onSubmit: openTopSearchResult,
-                    onOpenSettings: onOpenSettings
-                )
-                    .padding(.top, 40)
-                    .padding(.bottom, 12)
+                    // Content: search results or paginated grid
+                    if let results = searchResults {
+                        searchResultsView(results)
+                    } else {
+                        AppGridView(
+                            mode: .paged,
+                            layout: pageLayout.grid,
+                            onLaunch: launch
+                        )
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
 
-                if searchResults == nil {
-                    FrequentlyUsedAppsView(
-                        presentation: .fullScreen,
-                        onLaunch: launch
+                    // Page indicator (hidden during search)
+                    if searchResults == nil && vm.pages.count > 1 {
+                        PageIndicatorView(pageCount: vm.pages.count, currentPage: $vm.currentPage)
+                            .frame(height: FullScreenPageLayout.pageIndicatorHeight)
+                    }
+                }
+                .padding(.top, contentInsets.top + FullScreenPageLayout.searchTopPadding)
+                .padding(.bottom, contentInsets.bottom + FullScreenPageLayout.bottomPadding)
+                .padding(.leading, contentInsets.leading)
+                .padding(.trailing, contentInsets.trailing)
+
+                // Folder expanded overlay
+                if let folder = vm.expandedFolder {
+                    Color.black.opacity(0.001)  // captures taps to close folder
+                        .ignoresSafeArea()
+                        .onTapGesture { vm.closeFolder() }
+
+                    FolderExpandedView(
+                        folder: folder,
+                        iconSize: config.iconSize,
+                        showLabel: config.iconLabelVisible,
+                        iconProvider: { vm.icon(for: $0) },
+                        onLaunch: launch,
+                        onRename: { vm.renameFolder(folder.id, to: $0) },
+                        onAppDrop: { payload, targetApp, zone in
+                            handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
+                        },
+                        onAppDraggedOut: { payload in
+                            vm.removeApp(payload.itemID, fromFolder: folder.id)
+                        },
+                        onClose: vm.closeFolder
                     )
+                    .animation(.spring(duration: config.animationDuration(0.3)), value: folder.id)
                 }
 
-                // Content: search results or paginated grid
-                if let results = searchResults {
-                    searchResultsView(results)
-                } else {
-                    AppGridView(
-                        mode: .paged,
-                        onLaunch: launch
-                    )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-
-                // Page indicator (hidden during search)
-                if searchResults == nil && vm.pages.count > 1 {
-                    PageIndicatorView(pageCount: vm.pages.count, currentPage: $vm.currentPage)
-                        .padding(.bottom, 20)
-                }
+                LaunchpadDragPreviewView(iconSize: pageLayout.grid.iconSize)
             }
-
-            // Folder expanded overlay
-            if let folder = vm.expandedFolder {
-                Color.black.opacity(0.001)  // captures taps to close folder
-                    .ignoresSafeArea()
-                    .onTapGesture { vm.closeFolder() }
-
-                FolderExpandedView(
-                    folder: folder,
-                    iconSize: config.iconSize,
-                    showLabel: config.iconLabelVisible,
-                    iconProvider: { vm.icon(for: $0) },
-                    onLaunch: launch,
-                    onRename: { vm.renameFolder(folder.id, to: $0) },
-                    onAppDrop: { payload, targetApp, zone in
-                        handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
-                    },
-                    onAppDraggedOut: { payload in
-                        vm.removeApp(payload.itemID, fromFolder: folder.id)
-                    },
-                    onClose: vm.closeFolder
-                )
-                .animation(.spring(duration: config.animationDuration(0.3)), value: folder.id)
-            }
-
-            LaunchpadDragPreviewView()
         }
         .background(backdrop)
         .environment(dragState)
@@ -113,6 +221,19 @@ struct LaunchpadView: View {
             return .handled
         }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
+    }
+
+    private func fittedPageLayout(for size: CGSize) -> FullScreenPageLayout {
+        FullScreenPageLayout(
+            size: size,
+            insets: contentInsets,
+            iconSize: config.iconSize,
+            requestedColumns: config.gridColumns,
+            showsLabels: config.iconLabelVisible,
+            largestPageItemCount: vm.pages.map(\.count).max() ?? 0,
+            showsPageIndicator: vm.pages.count > 1,
+            wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps(limit: 1).isEmpty
+        )
     }
 
     /// These handlers see arrow keys before the focused text field does, so leave them to the

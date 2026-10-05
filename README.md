@@ -26,7 +26,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Search instantly, use horizontal mouse or trackpad gestures, click page controls, or navigate with the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size, labels, full-screen columns, popup size and appearance (System, Light or Dark), background dim, animation speed, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size, labels, full-screen columns, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 ## Gallery
@@ -208,12 +208,13 @@ Launchpad database or Applications folders
 - AppKit handles windows, the status item, system services, and the Carbon global hotkey.
 - JSON persistence is versioned and migrates earlier layout formats.
 
-The test suite covers layout invariants, persistence migrations, data sources, view-model orchestration, settings, popup placement, paging input, and app actions.
+The test suite covers layout invariants, persistence migrations, data sources, view-model orchestration, settings, popup placement, paging input, app actions, and full-screen layout fitting.
 
 ## Known Limitations
 
 - Releases are not yet Developer ID signed or notarized.
 - Dragging to a page edge does not automatically switch pages yet.
+- Pages have no item limit yet. Full screen shrinks icons down to 48 pt so a page fits, but a page that needs more rows than that, for example with 4 preferred columns, still runs past the page dots.
 - Legacy user-created Launchpad folders cannot be recovered when macOS no longer provides `desktopproperties.db`.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.

@@ -21,11 +21,16 @@ final class ConfigStore {
     var iconSize: Double = 80 {
         didSet { save(iconSize, forKey: Keys.iconSize) }
     }
+    static let iconSizeRange: ClosedRange<Double> = 48...128
     var iconLabelVisible: Bool = true {
         didSet { save(iconLabelVisible, forKey: Keys.iconLabelVisible) }
     }
     var gridColumns: Int = 7 {
         didSet { save(gridColumns, forKey: Keys.gridColumns) }
+    }
+    /// While full screen is open; off keeps the Dock and menu bar, as Launchpad did.
+    var autoHidesDockAndMenuBar: Bool = false {
+        didSet { save(autoHidesDockAndMenuBar, forKey: Keys.autoHidesDockAndMenuBar) }
     }
     var paneWidth: Double = 860 {
         didSet { save(paneWidth, forKey: Keys.paneWidth) }
@@ -83,6 +88,7 @@ final class ConfigStore {
         static let iconSize = "iconSize"
         static let iconLabelVisible = "iconLabelVisible"
         static let gridColumns = "gridColumns"
+        static let autoHidesDockAndMenuBar = "autoHidesDockAndMenuBar"
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
         static let popupAppearance = "popupAppearance"
@@ -101,7 +107,8 @@ final class ConfigStore {
 
     private func load() {
         if defaults.object(forKey: Keys.iconSize) != nil {
-            iconSize = defaults.double(forKey: Keys.iconSize)
+            let storedSize = defaults.double(forKey: Keys.iconSize)
+            iconSize = min(max(storedSize, Self.iconSizeRange.lowerBound), Self.iconSizeRange.upperBound)
         }
         if defaults.object(forKey: Keys.iconLabelVisible) != nil {
             iconLabelVisible = defaults.bool(forKey: Keys.iconLabelVisible)
@@ -109,6 +116,9 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.gridColumns) != nil {
             let storedColumns = defaults.integer(forKey: Keys.gridColumns)
             gridColumns = storedColumns == 0 ? 0 : min(max(storedColumns, 4), 12)
+        }
+        if defaults.object(forKey: Keys.autoHidesDockAndMenuBar) != nil {
+            autoHidesDockAndMenuBar = defaults.bool(forKey: Keys.autoHidesDockAndMenuBar)
         }
         if defaults.object(forKey: Keys.paneWidth) != nil {
             paneWidth = defaults.double(forKey: Keys.paneWidth)

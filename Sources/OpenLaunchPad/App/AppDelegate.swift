@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     private var localeObserver: NSObjectProtocol?
+    /// Set while full screen auto-hides the Dock and menu bar, to restore on hide.
+    private var presentationOptionsBeforeFullScreen: NSApplication.PresentationOptions?
 
     private var visibleSurface = VisibleSurface.none
 
@@ -134,6 +136,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func hideLaunchpad() {
         visibleSurface = .none
         removePopupDismissMonitor()
+        if let options = presentationOptionsBeforeFullScreen {
+            NSApp.presentationOptions = options
+            presentationOptionsBeforeFullScreen = nil
+        }
         fullScreenWindow.hide()
         popupPanel?.hide()
         viewModel.searchQuery = ""
@@ -165,7 +171,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Full-screen mode
 
     private func showFullScreen() {
+        let autoHides = config.autoHidesDockAndMenuBar
         let root = LaunchpadView(
+            contentInsets: FullScreenWindow.contentInsets(autoHidesDockAndMenuBar: autoHides),
             onDismiss: dismissLaunchpad,
             onAppLaunched: hideLaunchpad,
             onOpenSettings: openSettings
@@ -176,6 +184,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = NSHostingController(rootView: root)
         visibleSurface = .fullScreen
         fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrDismiss() }
+        if autoHides {
+            presentationOptionsBeforeFullScreen = NSApp.presentationOptions
+            // Takes effect while this app is active. Auto-hiding the menu bar requires a Dock
+            // option, and an invalid combination raises.
+            NSApp.presentationOptions = [.autoHideDock, .autoHideMenuBar]
+        }
         unhideIfNeeded()
         fullScreenWindow.show(hostingView: controller)
     }

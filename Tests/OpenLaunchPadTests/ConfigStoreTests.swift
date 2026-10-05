@@ -149,6 +149,29 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func storedIconSizeIsClampedIntoTheSliderRange() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(1e9, forKey: "iconSize")
+
+        #expect(ConfigStore(defaults: defaults).iconSize == ConfigStore.iconSizeRange.upperBound)
+
+        defaults.set(10, forKey: "iconSize")
+
+        #expect(ConfigStore(defaults: defaults).iconSize == ConfigStore.iconSizeRange.lowerBound)
+    }
+
+    @Test
+    func fullScreenKeepsTheDockAndMenuBarByDefault() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        #expect(!config.autoHidesDockAndMenuBar)
+
+        config.autoHidesDockAndMenuBar = true
+
+        #expect(ConfigStore(defaults: defaults).autoHidesDockAndMenuBar)
+    }
+
+    @Test
     func frequentlyUsedAppsVisibilityPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

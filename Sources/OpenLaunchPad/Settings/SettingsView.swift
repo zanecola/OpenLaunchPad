@@ -55,7 +55,7 @@ private struct GeneralSettingsTab: View {
 
                 Text(
                     config.showFrequentlyUsedApps
-                        ? "Shows a shortcut row above your apps, ranked by launch frequency and recency."
+                        ? "Shows a shortcut row above your apps, ranked by launch frequency and recency. Full screen leaves it out when your apps would not fit beside it."
                         : "The shortcut row is hidden. Existing usage history remains stored until cleared."
                 )
                 .font(.caption)
@@ -103,7 +103,7 @@ private struct AppearanceSettingsTab: View {
             Section("Icons") {
                 HStack {
                     Text("Size")
-                    Slider(value: $config.iconSize, in: 48...128, step: 4)
+                    Slider(value: $config.iconSize, in: ConfigStore.iconSizeRange, step: 4)
                     Text("\(Int(config.iconSize))pt")
                         .monospacedDigit()
                         .frame(width: 36)
@@ -120,9 +120,14 @@ private struct AppearanceSettingsTab: View {
                     }
                 }
 
-                Text("The actual count may reduce on smaller displays so icons never overlap.")
+                Text("On smaller displays, full screen uses fewer columns or smaller icons, down to 48 pt, so the page fits.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Picker("While open", selection: $config.autoHidesDockAndMenuBar) {
+                    Text("Keep Dock and menu bar").tag(false)
+                    Text("Auto-hide both").tag(true)
+                }
             }
 
             Section("Popup Window") {
