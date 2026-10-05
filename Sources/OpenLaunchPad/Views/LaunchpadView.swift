@@ -125,20 +125,7 @@ struct LaunchpadView: View {
             ZStack {
                 // Backdrop — clicks on empty space, including between icons, close the folder,
                 // leave edit mode or dismiss
-                Color.clear
-                    .contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 0).onEnded { value in
-                        // The end of a drag or a slipped press is not a click.
-                        guard hypot(value.translation.width, value.translation.height) < 6 else { return }
-                        if vm.expandedFolderID != nil {
-                            vm.closeFolder()
-                        } else if vm.isEditMode {
-                            vm.toggleEditMode()
-                        } else {
-                            onDismiss()
-                        }
-                    })
-                    .accessibilityHidden(true)
+                emptySpaceClickTarget
 
                 VStack(spacing: 0) {
                     // The field is centered on its own; the gear sits in the corner, clear of it.
@@ -322,36 +309,60 @@ struct LaunchpadView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             let cols = Array(repeating: GridItem(.fixed(config.iconSize + 24), spacing: 12), count: 7)
-            ScrollView {
-                LazyVGrid(columns: cols, spacing: 16) {
-                    ForEach(results) { item in
-                        switch item {
-                        case .app(let app):
-                            AppIconView(
-                                app: app,
-                                icon: vm.icon(for: app.bundleID),
-                                iconSize: config.iconSize,
-                                showLabel: config.iconLabelVisible,
-                                isEditMode: false,
-                                onTap: { launch(app) }
-                            )
-                        case .folder(let folder):
-                            FolderView(
-                                folder: folder,
-                                iconSize: config.iconSize,
-                                showLabel: config.iconLabelVisible,
-                                isEditMode: false,
-                                iconProvider: { vm.icon(for: $0) },
-                                onOpen: { vm.toggleFolder(folder.id) }
-                            )
+            GeometryReader { viewport in
+                ScrollView {
+                    LazyVGrid(columns: cols, spacing: 16) {
+                        ForEach(results) { item in
+                            switch item {
+                            case .app(let app):
+                                AppIconView(
+                                    app: app,
+                                    icon: vm.icon(for: app.bundleID),
+                                    iconSize: config.iconSize,
+                                    showLabel: config.iconLabelVisible,
+                                    isEditMode: false,
+                                    onTap: { launch(app) }
+                                )
+                            case .folder(let folder):
+                                FolderView(
+                                    folder: folder,
+                                    iconSize: config.iconSize,
+                                    showLabel: config.iconLabelVisible,
+                                    isEditMode: false,
+                                    iconProvider: { vm.icon(for: $0) },
+                                    onOpen: { vm.toggleFolder(folder.id) }
+                                )
+                            }
                         }
                     }
+                    .padding(.horizontal, 24)
+                    // The scroll view takes clicks from the backdrop behind it, so empty space
+                    // around the results catches them itself, down to the bottom of the viewport.
+                    .frame(maxWidth: .infinity, minHeight: viewport.size.height, alignment: .top)
+                    .background { emptySpaceClickTarget }
                 }
-                .padding(.horizontal, 24)
+                .scrollIndicators(.hidden)
+                .launchpadScrollAppearance()
             }
-            .scrollIndicators(.hidden)
-            .launchpadScrollAppearance()
         }
+    }
+
+    /// A click, not the end of a drag or a slipped press, closes the open folder, leaves edit
+    /// mode or dismisses.
+    private var emptySpaceClickTarget: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onEnded { value in
+                guard hypot(value.translation.width, value.translation.height) < 6 else { return }
+                if vm.expandedFolderID != nil {
+                    vm.closeFolder()
+                } else if vm.isEditMode {
+                    vm.toggleEditMode()
+                } else {
+                    onDismiss()
+                }
+            })
+            .accessibilityHidden(true)
     }
 
     // MARK: - Backdrop
