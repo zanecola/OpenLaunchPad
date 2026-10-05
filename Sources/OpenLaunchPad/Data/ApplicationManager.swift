@@ -40,6 +40,7 @@ final class SystemApplicationManager: ApplicationManaging {
     private let currentAppURL: URL
     private let currentBundleID: String?
     private let registeredURLs: (String) -> [URL]
+    private let preferredURL: (String) -> URL?
     private let moveToTrash: (URL) throws -> Void
 
     init(
@@ -48,6 +49,7 @@ final class SystemApplicationManager: ApplicationManaging {
         currentAppURL: URL = Bundle.main.bundleURL,
         currentBundleID: String? = Bundle.main.bundleIdentifier,
         registeredURLs: ((String) -> [URL])? = nil,
+        preferredURL: ((String) -> URL?)? = nil,
         moveToTrash: ((URL) throws -> Void)? = nil
     ) {
         self.workspace = workspace
@@ -55,6 +57,7 @@ final class SystemApplicationManager: ApplicationManaging {
         self.currentAppURL = currentAppURL
         self.currentBundleID = currentBundleID
         self.registeredURLs = registeredURLs ?? { workspace.urlsForApplications(withBundleIdentifier: $0) }
+        self.preferredURL = preferredURL ?? { workspace.urlForApplication(withBundleIdentifier: $0) }
         self.moveToTrash = moveToTrash ?? { _ = try fileManager.trashItem(at: $0, resultingItemURL: nil) }
     }
 
@@ -141,11 +144,11 @@ final class SystemApplicationManager: ApplicationManaging {
         return url
     }
 
-    /// The scanned copy while it exists; otherwise LaunchServices' preferred copy.
+    /// LaunchServices' preferred copy only for an app without a scanned copy. A scanned copy
+    /// that is gone is not found: another copy may be a different version, and Uninstall would
+    /// trash a bundle the tile never showed.
     private func applicationURL(for app: AppItem) -> URL? {
-        guard let url = app.bundleURL else {
-            return workspace.urlForApplication(withBundleIdentifier: app.bundleID)
-        }
+        guard let url = app.bundleURL else { return preferredURL(app.bundleID) }
         return fileManager.fileExists(atPath: url.path) ? url : nil
     }
 }

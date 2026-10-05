@@ -48,11 +48,14 @@ struct ApplicationManagerTests {
         defer { fixture.remove() }
         let other = try fixture.addBundle("Other/Foo.app", bundleID: "com.example.foo")
         let deleted = fixture.root.appendingPathComponent("Deleted/Foo.app", isDirectory: true)
-        let manager = fixture.manager(registeredURLs: [other])
+        let recorder = TrashRecorder()
+        // LaunchServices would offer the other copy, so falling back to it fails this test.
+        let manager = fixture.manager(registeredURLs: [other], recorder: recorder)
         let app = Self.app("Foo", "com.example.foo", at: deleted)
 
         #expect(manager.uninstallURL(for: app) == nil)
         #expect(throws: ApplicationManagerError.self) { try manager.uninstall(app) }
+        #expect(recorder.trashed.isEmpty)
         #expect(throws: ApplicationManagerError.self) { try manager.launch(app) }
         #expect(throws: ApplicationManagerError.self) { try manager.revealInFinder(app) }
         #expect(throws: ApplicationManagerError.self) { try manager.showInfo(app) }
@@ -157,7 +160,8 @@ private final class BundleFixture {
         return bundle
     }
 
-    /// Never touches the real Trash or LaunchServices: both are replaced with fakes.
+    /// Never touches the real Trash or LaunchServices: both are replaced with fakes, and the
+    /// first registered copy stands in for LaunchServices' preferred one.
     @MainActor
     func manager(
         registeredURLs: [URL],
@@ -169,6 +173,7 @@ private final class BundleFixture {
             currentAppURL: currentAppURL ?? root.appendingPathComponent("NotInstalled/OpenLaunchPad.app"),
             currentBundleID: currentBundleID,
             registeredURLs: { _ in registeredURLs },
+            preferredURL: { _ in registeredURLs.first },
             moveToTrash: { recorder.trashed.append($0) }
         )
     }
