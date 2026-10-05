@@ -29,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await self?.viewModel.load()
         }
     }
+    private lazy var applicationsWatcher = ApplicationsFolderWatcher { [weak self] in
+        Task { @MainActor [weak self] in
+            await self?.viewModel.load()
+        }
+    }
 
     private var visibleSurface = VisibleSurface.none
 
@@ -61,12 +66,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerHotkey()
         updateStatusItemVisibility()
         databaseWatcher.start()
+        applicationsWatcher.start()
         Task { await viewModel.load() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         removePopupDismissMonitor()
         databaseWatcher.stop()
+        applicationsWatcher.stop()
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
         config.onMenuBarVisibilityChange = nil

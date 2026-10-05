@@ -33,6 +33,21 @@ struct ApplicationsFolderDataSourceTests {
         #expect(folder.title == "Utilities")
         #expect(folder.apps.map(\.title) == ["Terminal"])
     }
+
+    @Test
+    func appScannedMidInstallAppearsOnceItsInfoPlistIsWritten() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        let contents = fixture.firstRoot.appendingPathComponent("Half.app/Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+
+        #expect(try source.loadPages().flatMap { $0 }.isEmpty)
+
+        try fixture.addApp(name: "Half", bundleID: "com.example.half", under: fixture.firstRoot)
+
+        #expect(try source.loadPages().flatMap { $0 }.map(\.title) == ["Half"])
+    }
 }
 
 private final class ApplicationsFixture {
