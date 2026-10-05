@@ -11,9 +11,11 @@ struct LaunchpadDatabaseWatcherTests {
         defer { try? FileManager.default.removeItem(at: url) }
 
         try await confirmation("database change callback", expectedCount: 1) { confirm in
+            // Off the main queue, which MainActor tests running alongside can hold past the wait.
             let watcher = LaunchpadDatabaseWatcher(
                 path: url.path,
                 debounceInterval: 0.03,
+                queue: DispatchQueue(label: "LaunchpadDatabaseWatcherTests"),
                 onChange: { confirm() }
             )
             #expect(watcher.start())
