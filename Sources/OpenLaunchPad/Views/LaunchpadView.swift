@@ -32,6 +32,7 @@ struct LaunchpadView: View {
                 SearchBarView(
                     text: $vm.searchQuery,
                     onClear: vm.closeFolder,
+                    onSubmit: openTopSearchResult,
                     onOpenSettings: onOpenSettings
                 )
                     .padding(.top, 40)
@@ -92,13 +93,7 @@ struct LaunchpadView: View {
         .environment(dragState)
         .ignoresSafeArea()
         .onKeyPress(.escape) {
-            if vm.expandedFolderID != nil {
-                vm.closeFolder()
-            } else if vm.isEditMode {
-                vm.toggleEditMode()
-            } else {
-                onDismiss()
-            }
+            if !vm.stepBack() { onDismiss() }
             return .handled
         }
         .onKeyPress(.leftArrow) {
@@ -118,6 +113,14 @@ struct LaunchpadView: View {
             onDismiss()
         } else {
             missingApp = app
+        }
+    }
+
+    private func openTopSearchResult() {
+        switch vm.searchResults?.first {
+        case .app(let app): launch(app)
+        case .folder(let folder): vm.expandedFolderID = folder.id
+        case nil: break
         }
     }
 

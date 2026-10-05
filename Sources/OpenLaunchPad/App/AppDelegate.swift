@@ -140,6 +140,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel.expandedFolderID = nil
     }
 
+    private func stepBackOrHide() {
+        if !viewModel.stepBack() { hideLaunchpad() }
+    }
+
     // MARK: - Full-screen mode
 
     private func showFullScreen() {
@@ -152,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let controller = NSHostingController(rootView: root)
         visibleSurface = .fullScreen
+        fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrHide() }
         fullScreenWindow.show(hostingView: controller)
     }
 
@@ -170,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(config)
 
         let controller = NSHostingController(rootView: root)
+        panel.onCancel = { [weak self] in self?.stepBackOrHide() }
         panel.show(
             anchorPoint: anchorPoint,
             hostingView: controller,

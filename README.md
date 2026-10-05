@@ -97,7 +97,8 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 - A labeled **Frequently Used** row shows up to seven apps and updates after each launch. Turn the row on or off, or clear its local history, under **Settings > General > Suggestions**.
 - Use Left/Right, Command-Left/Command-Right, the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode.
 - Scroll vertically in popup mode and inside large folders.
-- Press Escape to close an expanded folder or dismiss full-screen mode.
+- Press Return to open the top search result.
+- Press Escape to step back one level: close an open folder, then clear the search, then close the launcher.
 
 ### Organize apps
 

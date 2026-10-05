@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchBarView: View {
     @Binding var text: String
     var onClear: () -> Void = {}
+    var onSubmit: () -> Void = {}
     var onOpenSettings: (() -> Void)? = nil
 
     var body: some View {
@@ -33,7 +34,7 @@ struct SearchBarView: View {
             TextField("Search", text: $text)
                 .textFieldStyle(.plain)
                 .font(.title3)
-                .onSubmit { onClear() }
+                .onSubmit(onSubmit)
 
             if !text.isEmpty {
                 Button(action: { text = ""; onClear() }) {

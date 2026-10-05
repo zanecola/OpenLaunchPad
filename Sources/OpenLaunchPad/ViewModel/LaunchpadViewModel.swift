@@ -409,6 +409,23 @@ final class LaunchpadViewModel {
         persistLayout()
     }
 
+    // MARK: - Escape
+
+    /// Steps back one level: closes the open folder, then clears the search, then leaves edit mode.
+    /// Returns false when there is nothing left to step back from, so the launcher should close.
+    func stepBack() -> Bool {
+        if expandedFolderID != nil {
+            closeFolder()
+        } else if !searchQuery.isEmpty {
+            searchQuery = ""
+        } else if isEditMode {
+            toggleEditMode()
+        } else {
+            return false
+        }
+        return true
+    }
+
     // MARK: - Edit mode
 
     func toggleEditMode() {

@@ -28,6 +28,13 @@ final class FullScreenWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    /// Escape that no view handled, for example when nothing in the window has focus.
+    var onCancel: () -> Void = {}
+
+    override func cancelOperation(_ sender: Any?) {
+        onCancel()
+    }
+
     func show(hostingView: NSHostingController<some View>) {
         contentViewController = hostingView
         guard let screen = NSScreen.main else { return }

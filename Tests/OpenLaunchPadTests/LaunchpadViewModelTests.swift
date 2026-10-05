@@ -832,6 +832,29 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func stepBackClosesFolderThenClearsSearchThenLeavesEditMode() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.isEditMode = true
+        viewModel.searchQuery = "work"
+        viewModel.toggleFolder(folder.id)
+
+        #expect(viewModel.stepBack())
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(viewModel.searchQuery == "work")
+
+        #expect(viewModel.stepBack())
+        #expect(viewModel.searchQuery.isEmpty)
+        #expect(viewModel.isEditMode)
+
+        #expect(viewModel.stepBack())
+        #expect(!viewModel.isEditMode)
+
+        #expect(!viewModel.stepBack())
+    }
+
+    @Test
     func searchMatchesAppAliases() {
         let calendar = AppItem(id: UUID(), bundleID: "com.example.calendar", title: "日历", aliases: ["Calendar"])
         let code = AppItem(id: UUID(), bundleID: "com.example.code", title: "Visual Studio Code", aliases: ["Code"])

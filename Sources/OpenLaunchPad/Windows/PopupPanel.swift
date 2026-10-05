@@ -79,6 +79,13 @@ final class PopupPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
 
+    /// Escape that no view handled, for example when nothing in the window has focus.
+    var onCancel: () -> Void = {}
+
+    override func cancelOperation(_ sender: Any?) {
+        onCancel()
+    }
+
     func show(
         anchorPoint: NSPoint?,
         hostingView: NSHostingController<some View>,

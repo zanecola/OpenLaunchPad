@@ -19,6 +19,7 @@ struct MenuBarPanelView: View {
             VStack(spacing: 0) {
                 SearchBarView(
                     text: $vm.searchQuery,
+                    onSubmit: openTopSearchResult,
                     onOpenSettings: onOpenSettings
                 )
                     .padding(.horizontal, 12)
@@ -80,6 +81,10 @@ struct MenuBarPanelView: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
         .environment(dragState)
+        .onKeyPress(.escape) {
+            if !vm.stepBack() { onDismissRequested() }
+            return .handled
+        }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
     }
 
@@ -131,6 +136,14 @@ struct MenuBarPanelView: View {
         vm.closeFolder()
         onDismissRequested()
         dismiss()
+    }
+
+    private func openTopSearchResult() {
+        switch vm.searchResults?.first {
+        case .app(let app): launchAndDismiss(app)
+        case .folder(let folder): vm.expandedFolderID = folder.id
+        case nil: break
+        }
     }
 
     private func handleFolderAppDrop(
