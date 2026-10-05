@@ -15,10 +15,8 @@ struct FolderView: View {
 
     @State private var isHovered = false
     @Environment(LaunchpadDragState.self) private var dragState
-
-    private var previewIcons: [NSImage] {
-        folder.apps.prefix(9).map { iconProvider($0.bundleID) }
-    }
+    /// Also tells which backdrop the tile sits on: the dark full screen or the adaptive popup.
+    @Environment(\.launchpadLabelStyle) private var labelStyle
 
     var body: some View {
         content
@@ -46,30 +44,46 @@ struct FolderView: View {
         .onHover { isHovered = $0 }
     }
 
-    // 3×3 icon grid inside a rounded-rect container (classic Launchpad folder look)
+    /// A 3×3 preview in an iconSize slot. The tile is 0.805 of the slot, the visible body of a macOS
+    /// app icon, so it matches the apps beside it and its label sits on their baseline.
     private var folderIcon: some View {
-        let cellSize = iconSize * 0.28
-        let columns = Array(repeating: GridItem(.fixed(cellSize), spacing: 2), count: 3)
+        let slot = CGFloat(iconSize)
+        let tile = slot * 0.805
+        let cellSize = tile * 0.29
+        let shape = RoundedRectangle(cornerRadius: tile * 0.225, style: .continuous)
+        let columns = Array(repeating: GridItem(.fixed(cellSize), spacing: 0), count: 3)
+        let previewIcons = folder.apps.prefix(9).map { iconProvider($0.bundleID) }
 
-        return ZStack {
-            RoundedRectangle(cornerRadius: iconSize * 0.22)
-                .fill(.ultraThinMaterial)
-                .frame(width: iconSize, height: iconSize)
-
-            LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(0..<9, id: \.self) { i in
-                    if i < previewIcons.count {
-                        Image(nsImage: previewIcons[i])
-                            .resizable()
-                            .frame(width: cellSize, height: cellSize)
-                    } else {
-                        Color.clear.frame(width: cellSize, height: cellSize)
-                    }
+        return LazyVGrid(columns: columns, spacing: 0) {
+            ForEach(0..<9, id: \.self) { i in
+                if i < previewIcons.count {
+                    Image(nsImage: previewIcons[i])
+                        .resizable()
+                        .frame(width: cellSize, height: cellSize)
+                } else {
+                    Color.clear.frame(width: cellSize, height: cellSize)
                 }
             }
-            .padding(iconSize * 0.1)
         }
+        .padding(tile * 0.065)
+        .frame(width: tile, height: tile)
+        .background { tileFill(shape) }
         .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+        .frame(width: slot, height: slot)
+    }
+
+    @ViewBuilder
+    private func tileFill(_ shape: RoundedRectangle) -> some View {
+        switch labelStyle {
+        case .onDarkBackdrop:
+            Color.clear
+                .glassEffect(.regular.tint(.white.opacity(0.08)), in: shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.2), lineWidth: 0.5))
+        case .adaptive:
+            shape
+                .fill(.quaternary)
+                .overlay(shape.strokeBorder(.separator, lineWidth: 0.5))
+        }
     }
 }
 
