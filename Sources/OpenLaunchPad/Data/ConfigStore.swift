@@ -61,6 +61,12 @@ final class ConfigStore {
     var animationSpeed: Double = 1.0 {
         didSet { save(animationSpeed, forKey: Keys.animationSpeed) }
     }
+    static let animationSpeedRange: ClosedRange<Double> = 0.2...2.0
+
+    /// Length of a launcher transition that takes `base` seconds at 1×; higher speeds are shorter.
+    func animationDuration(_ base: Double) -> Double {
+        base / animationSpeed
+    }
     // MARK: - Persistence helpers
 
     private enum Keys {
@@ -117,7 +123,8 @@ final class ConfigStore {
             globalShortcut = sc.isAllowedGlobalShortcut ? sc : nil
         }
         if defaults.object(forKey: Keys.animationSpeed) != nil {
-            animationSpeed = defaults.double(forKey: Keys.animationSpeed)
+            let storedSpeed = defaults.double(forKey: Keys.animationSpeed)
+            animationSpeed = min(max(storedSpeed, Self.animationSpeedRange.lowerBound), Self.animationSpeedRange.upperBound)
         }
     }
 }

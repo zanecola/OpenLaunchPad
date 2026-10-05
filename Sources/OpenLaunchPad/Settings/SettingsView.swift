@@ -168,7 +168,7 @@ private struct AppearanceSettingsTab: View {
             Section("Animation") {
                 HStack {
                     Text("Speed")
-                    Slider(value: $config.animationSpeed, in: 0.2...2.0, step: 0.1)
+                    Slider(value: $config.animationSpeed, in: ConfigStore.animationSpeedRange, step: 0.1)
                     Text("\(config.animationSpeed, specifier: "%.1f")×")
                         .monospacedDigit()
                         .frame(width: 36)

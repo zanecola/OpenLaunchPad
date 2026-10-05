@@ -82,7 +82,7 @@ struct LaunchpadView: View {
                     },
                     onClose: vm.closeFolder
                 )
-                .animation(.spring(duration: 0.3 * config.animationSpeed), value: folder.id)
+                .animation(.spring(duration: config.animationDuration(0.3)), value: folder.id)
             }
 
             LaunchpadDragPreviewView()

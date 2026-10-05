@@ -74,6 +74,29 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func fasterAnimationSpeedShortensTransitions() {
+        let config = ConfigStore(defaults: InMemoryKeyValueStore())
+
+        config.animationSpeed = 2
+        #expect(config.animationDuration(0.3) == 0.15)
+
+        config.animationSpeed = 0.5
+        #expect(config.animationDuration(0.3) == 0.6)
+    }
+
+    @Test
+    func storedAnimationSpeedIsClampedIntoSupportedRange() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(0, forKey: "animationSpeed")
+
+        #expect(ConfigStore(defaults: defaults).animationSpeed == ConfigStore.animationSpeedRange.lowerBound)
+
+        defaults.set(10, forKey: "animationSpeed")
+
+        #expect(ConfigStore(defaults: defaults).animationSpeed == ConfigStore.animationSpeedRange.upperBound)
+    }
+
+    @Test
     func frequentlyUsedAppsVisibilityPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

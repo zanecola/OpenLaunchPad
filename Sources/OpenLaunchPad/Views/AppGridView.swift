@@ -100,7 +100,7 @@ struct AppGridView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: 0.22 * config.animationSpeed), value: vm.currentPage)
+            .animation(.easeInOut(duration: config.animationDuration(0.22)), value: vm.currentPage)
         }
     }
 
