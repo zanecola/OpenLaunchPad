@@ -65,6 +65,21 @@ struct LaunchpadMotionTests {
     }
 
     @Test
+    func foldersZoomOnASpringAndCrossfadeUnderReduceMotion() {
+        #expect(LaunchpadMotion().folderZoom == .spring(response: 0.35, dampingFraction: 0.86))
+        #expect(LaunchpadMotion(speed: 2).folderZoom == .spring(response: 0.175, dampingFraction: 0.86))
+        #expect(LaunchpadMotion().folderBackdropFade == .easeOut(duration: 0.22))
+
+        let reduced = LaunchpadMotion(reduceMotion: true)
+        #expect(reduced.folderZoom == .easeInOut(duration: 0.22))
+        #expect(reduced.folderBackdropFade == .easeOut(duration: 0.22))
+
+        let off = LaunchpadMotion(animatesTransitions: false)
+        #expect(off.folderZoom == nil)
+        #expect(off.folderBackdropFade == nil)
+    }
+
+    @Test
     func readsTheAnimationSettings() {
         let config = ConfigStore(defaults: InMemoryKeyValueStore())
         config.animatesTransitions = false

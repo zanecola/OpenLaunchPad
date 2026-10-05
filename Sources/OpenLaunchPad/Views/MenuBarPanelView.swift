@@ -38,36 +38,16 @@ struct MenuBarPanelView: View {
                     )
                 }
             }
+            .blursBehindOpenFolder()
 
-            if let folder = vm.expandedFolder {
-                Color.black.opacity(0.35)
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: vm.closeFolder)
-                    .accessibilityHidden(true)
-
-                FolderExpandedView(
-                    folder: folder,
-                    iconSize: config.popupIconSize,
-                    showLabel: config.iconLabelVisible,
-                    availableSize: CGSize(
-                        width: config.paneWidth - Self.folderInsets.leading - Self.folderInsets.trailing,
-                        height: config.paneHeight - Self.folderInsets.top - Self.folderInsets.bottom
-                    ),
-                    iconProvider: { vm.icon(for: $0) },
-                    onLaunch: launchAndDismiss,
-                    onRename: { vm.renameFolder(folder.id, to: $0) },
-                    onAppDrop: { payload, targetApp, zone in
-                        handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
-                    },
-                    onAppDraggedOut: { payload in
-                        vm.removeApp(payload.itemID, fromFolder: folder.id)
-                    },
-                    onClose: vm.closeFolder
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(Self.folderInsets)
-                .transition(.scale(scale: 0.94).combined(with: .opacity))
-            }
+            FolderOverlay(
+                backdrop: .popup,
+                iconSize: config.popupIconSize,
+                showsLabels: config.iconLabelVisible,
+                insets: Self.folderInsets,
+                dim: 0.35,
+                onLaunch: launchAndDismiss
+            )
 
             LaunchpadDragPreviewView()
         }
@@ -120,7 +100,7 @@ struct MenuBarPanelView: View {
                                 showLabel: config.iconLabelVisible,
                                 isEditMode: false,
                                 iconProvider: { vm.icon(for: $0) },
-                                onOpen: { vm.toggleFolder(folder.id) }
+                                onOpen: { vm.toggleFolder(folder.id, from: $0) }
                             )
                         }
                     }
@@ -145,23 +125,8 @@ struct MenuBarPanelView: View {
     private func openTopSearchResult() {
         switch vm.searchResults?.first {
         case .app(let app): launchAndDismiss(app)
-        case .folder(let folder): vm.expandedFolderID = folder.id
+        case .folder(let folder): vm.openFolder(folder.id)
         case nil: break
         }
-    }
-
-    private func handleFolderAppDrop(
-        payload: LaunchpadDragPayload,
-        targetApp: AppItem,
-        zone: DropZone,
-        folderID: UUID
-    ) -> Bool {
-        guard payload.kind == .app, payload.itemID != targetApp.id else { return false }
-
-        let placement: ItemPlacement = switch zone {
-        case .leading: .before
-        case .center, .trailing: .after
-        }
-        return vm.reorderApp(payload.itemID, inFolder: folderID, relativeTo: targetApp.id, placement: placement)
     }
 }

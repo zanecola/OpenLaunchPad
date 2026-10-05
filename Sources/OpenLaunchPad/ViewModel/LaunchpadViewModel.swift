@@ -21,6 +21,11 @@ final class LaunchpadViewModel {
         }
     }
     var expandedFolderID: UUID? = nil
+    /// The tile the open folder was opened from, in its window, so the folder grows out of it and
+    /// shrinks back into it. nil when it was opened another way, such as Return on a search result.
+    private(set) var expandedFolderTileFrame: CGRect?
+    /// The open folder's name while the user edits it; nil when it is not being edited.
+    var folderTitleDraft: String?
     var isEditMode: Bool = false
     var currentPage: Int = 0
     /// Where full screen's pages are scrolled to, in pages: 1.5 is halfway from the second page
@@ -456,12 +461,43 @@ final class LaunchpadViewModel {
 
     // MARK: - Folder expand/collapse
 
-    func toggleFolder(_ id: UUID) {
-        expandedFolderID = expandedFolderID == id ? nil : id
+    /// `tileFrame` is the folder's tile in its window.
+    func toggleFolder(_ id: UUID, from tileFrame: CGRect? = nil) {
+        if expandedFolderID == id {
+            closeFolder()
+        } else {
+            openFolder(id, from: tileFrame)
+        }
     }
 
+    func openFolder(_ id: UUID, from tileFrame: CGRect? = nil) {
+        guard expandedFolderID != id else { return }
+        commitFolderRename()
+        expandedFolderTileFrame = tileFrame
+        expandedFolderID = id
+    }
+
+    /// Saves a name being edited, so closing the folder in any way keeps it.
     func closeFolder() {
+        commitFolderRename()
         expandedFolderID = nil
+    }
+
+    func beginRenamingFolder() {
+        folderTitleDraft = expandedFolder?.title
+    }
+
+    /// Ends editing and saves the name, unless it is empty or unchanged.
+    func commitFolderRename() {
+        guard let draft = folderTitleDraft else { return }
+        folderTitleDraft = nil
+        if let expandedFolderID {
+            renameFolder(expandedFolderID, to: draft)
+        }
+    }
+
+    func cancelFolderRename() {
+        folderTitleDraft = nil
     }
 
     func renameFolder(_ id: UUID, to newName: String) {
@@ -478,10 +514,13 @@ final class LaunchpadViewModel {
 
     // MARK: - Escape
 
-    /// Steps back one level: closes the open folder, then clears the search, then leaves edit mode.
-    /// Returns false when there is nothing left to step back from, so the launcher should close.
+    /// Steps back one level: stops editing the open folder's name without saving it, closes the
+    /// folder, then clears the search, then leaves edit mode. Returns false when there is nothing
+    /// left to step back from, so the launcher should close.
     func stepBack() -> Bool {
-        if expandedFolderID != nil {
+        if folderTitleDraft != nil {
+            cancelFolderRename()
+        } else if expandedFolderID != nil {
             closeFolder()
         } else if !searchQuery.isEmpty {
             searchQuery = ""

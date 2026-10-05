@@ -6,16 +6,13 @@ import Testing
 struct FolderPanelLayoutTests {
     private static let roomy = CGSize(width: 1_400, height: 800)
 
-    private func layout(apps: Int, iconSize: CGFloat = 80, in size: CGSize = roomy) -> FolderPanelLayout {
-        FolderPanelLayout(appCount: apps, iconSize: iconSize, showsLabels: true, availableSize: size)
-    }
-
-    private func panelSize(_ layout: FolderPanelLayout) -> CGSize {
-        CGSize(
-            width: layout.gridWidth + FolderPanelLayout.horizontalPadding * 2,
-            height: layout.gridHeight + FolderPanelLayout.verticalPadding * 2
-                + FolderPanelLayout.titleHeight + FolderPanelLayout.titleSpacing
-        )
+    private func layout(
+        apps: Int,
+        iconSize: CGFloat = 80,
+        in size: CGSize = roomy,
+        backdrop: LaunchpadBackdropMode = .fullScreen
+    ) -> FolderPanelLayout {
+        FolderPanelLayout(appCount: apps, iconSize: iconSize, showsLabels: true, availableSize: size, backdrop: backdrop)
     }
 
     @Test(arguments: [(2, 3), (3, 3), (4, 4), (5, 5), (10, 5), (40, 5)])
@@ -30,7 +27,17 @@ struct FolderPanelLayoutTests {
 
         #expect(folder.gridWidth == 5 * folder.cellWidth + 4 * FolderPanelLayout.columnSpacing)
         #expect(folder.gridHeight == 2 * folder.cellHeight + FolderPanelLayout.rowSpacing)
-        #expect(panelSize(onLargeDisplay) == panelSize(folder))
+        #expect(onLargeDisplay.size == folder.size)
+    }
+
+    @Test
+    func theNameSitsAboveThePanelOutsideIt() {
+        let fullScreen = layout(apps: 6)
+        let popup = layout(apps: 6, backdrop: .popup)
+
+        #expect(fullScreen.panelSize.height == fullScreen.gridHeight + 2 * FolderPanelLayout.verticalPadding)
+        #expect(fullScreen.size.height == fullScreen.titleHeight + FolderPanelLayout.titleSpacing + fullScreen.panelSize.height)
+        #expect(fullScreen.titleHeight > popup.titleHeight)
     }
 
     @Test
@@ -43,9 +50,9 @@ struct FolderPanelLayoutTests {
         #expect(folder.cellHeight == grid.cellHeight)
     }
 
-    @Test
-    func moreThanThreeRowsScroll() {
-        let folder = layout(apps: 20)
+    @Test(arguments: [LaunchpadBackdropMode.fullScreen, .popup])
+    func moreThanThreeRowsScroll(backdrop: LaunchpadBackdropMode) {
+        let folder = layout(apps: 20, backdrop: backdrop)
 
         #expect(folder.columnCount == 5)
         #expect(folder.gridHeight == 3 * folder.cellHeight + 2 * FolderPanelLayout.rowSpacing)
@@ -55,19 +62,79 @@ struct FolderPanelLayoutTests {
     func narrowPopupUsesTheColumnsThatFit(paneWidth: Double) {
         // The popup's folder area: the pane minus 16 pt at the sides and 64 pt for the search header.
         let space = CGSize(width: paneWidth - 32, height: 620 - 80)
-        let folder = layout(apps: 10, in: space)
+        let folder = layout(apps: 10, in: space, backdrop: .popup)
 
         #expect(folder.columnCount < 5)
-        #expect(panelSize(folder).width <= space.width)
+        #expect(folder.size.width <= space.width)
     }
 
     @Test
-    func shortSpaceClampsTheGridSoThePanelFits() {
+    func shortPopupClampsTheGridSoTheFolderFits() {
         let space = CGSize(width: 828, height: 300 - 80)
-        let folder = layout(apps: 10, in: space)
+        let folder = layout(apps: 10, in: space, backdrop: .popup)
 
         #expect(folder.gridHeight < folder.cellHeight * 2)
-        #expect(panelSize(folder).height <= space.height)
+        #expect(folder.size.height <= space.height)
+    }
+
+    @Test
+    func thePanelIsCenteredBelowItsName() {
+        let folder = layout(apps: 6)
+        let area = CGRect(x: 24, y: 100, width: 1_200, height: 700)
+        let panel = folder.panelFrame(centeredIn: area)
+
+        #expect(panel.size == folder.panelSize)
+        #expect(panel.midX == area.midX)
+        #expect(panel.maxY - folder.size.height == area.midY - folder.size.height / 2)
+    }
+}
+
+struct FolderZoomTests {
+    private static let bounds = CGSize(width: 1_600, height: 1_000)
+
+    @Test
+    func thePanelStartsShrunkOntoItsTile() {
+        let tile = CGRect(x: 100, y: 200, width: 64, height: 64)
+        let panel = CGRect(x: 400, y: 300, width: 640, height: 320)
+
+        let zoom = FolderZoom(tile: tile, panel: panel, in: Self.bounds)
+
+        #expect(zoom.scale == 0.1)
+        #expect(zoom.offset == CGSize(width: 132 - 720, height: 232 - 460))
+        #expect(zoom.anchor == UnitPoint(x: 720.0 / 1_600, y: 460.0 / 1_000))
+        #expect(zoom.settled == FolderZoom(tile: panel, panel: panel, in: Self.bounds))
+    }
+
+    @Test
+    func aTallPanelFitsTheTileByItsHeight() {
+        let zoom = FolderZoom(
+            tile: CGRect(x: 0, y: 0, width: 60, height: 60),
+            panel: CGRect(x: 0, y: 0, width: 300, height: 600),
+            in: Self.bounds
+        )
+
+        #expect(zoom.scale == 0.1)
+    }
+
+    @Test
+    func neverGrowsNorCollapses() {
+        let panel = CGRect(x: 0, y: 0, width: 300, height: 300)
+        let big = FolderZoom(tile: CGRect(x: 0, y: 0, width: 900, height: 900), panel: panel, in: Self.bounds)
+        let empty = FolderZoom(tile: .zero, panel: panel, in: Self.bounds)
+
+        #expect(big.scale == 1)
+        #expect(empty.scale > 0)
+    }
+
+    @Test
+    func withoutATileThePanelGrowsInPlace() {
+        let panel = CGRect(x: 400, y: 300, width: 640, height: 320)
+
+        let zoom = FolderZoom(tile: nil, panel: panel, in: Self.bounds)
+
+        #expect(zoom.scale == 0.85)
+        #expect(zoom.offset == .zero)
+        #expect(zoom.anchor == UnitPoint(x: 720.0 / 1_600, y: 460.0 / 1_000))
     }
 }
 

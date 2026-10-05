@@ -285,11 +285,11 @@ private struct AppearanceSettingsTab: View {
 
     private var animationDescription: String {
         guard config.animatesTransitions else {
-            return "The launcher opens, closes and turns pages at once."
+            return "The launcher and folders open and close at once, and pages turn at once."
         }
         return reduceMotion
-            ? "Opening and closing the launcher, launching an app and turning pages. Reduce Motion is on, so the launcher fades without zooming and pages turn at once."
-            : "Opening and closing the launcher, launching an app and turning pages."
+            ? "Opening and closing the launcher and folders, launching an app and turning pages. Reduce Motion is on, so the launcher and folders fade without zooming, and pages turn at once."
+            : "Opening and closing the launcher and folders, launching an app and turning pages."
     }
 
     private var popupColumnCount: Int {

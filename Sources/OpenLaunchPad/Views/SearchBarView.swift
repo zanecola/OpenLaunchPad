@@ -23,6 +23,10 @@ struct SearchBarView: View {
                 .onSubmit(onSubmit)
                 // The launcher stays alive between shows, so each show focuses search again.
                 .onChange(of: vm.presentationID, initial: true) { isFocused = true }
+                // Renaming a folder takes focus; typing searches again once the name is done.
+                .onChange(of: vm.folderTitleDraft == nil) { _, isDone in
+                    if isDone { isFocused = true }
+                }
 
             if !text.isEmpty {
                 Button(action: { text = ""; onClear() }) {
@@ -35,11 +39,16 @@ struct SearchBarView: View {
         }
         .padding(.horizontal, 12)
         .frame(height: backdrop == .fullScreen ? 36 : 32)
-        .background { fieldBackground }
+        .background { LaunchpadFieldBackground(backdrop: backdrop) }
     }
+}
 
-    @ViewBuilder
-    private var fieldBackground: some View {
+/// A text field's capsule: glass over the full-screen backdrop; filled and outlined in the
+/// popup, so it reads in either appearance.
+struct LaunchpadFieldBackground: View {
+    let backdrop: LaunchpadBackdropMode
+
+    var body: some View {
         switch backdrop {
         case .fullScreen:
             Color.clear.glassEffect(.regular, in: .capsule)

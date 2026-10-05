@@ -111,7 +111,6 @@ struct FullScreenPageLayout {
 struct LaunchpadView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    @Environment(\.launchpadMotion) private var motion
     /// Keeps content clear of the menu bar and the Dock; the backdrop still fills the screen.
     var contentInsets = EdgeInsets()
     /// Closes without launching anything.
@@ -178,38 +177,16 @@ struct LaunchpadView: View {
                 .padding(.bottom, contentInsets.bottom + FullScreenPageLayout.bottomPadding)
                 .padding(.leading, contentInsets.leading)
                 .padding(.trailing, contentInsets.trailing)
+                .blursBehindOpenFolder()
 
-                // Folder expanded overlay
-                if let folder = vm.expandedFolder {
-                    // Dims the page behind the folder; a click on it closes the folder.
-                    Color.black.opacity(0.25)
-                        .ignoresSafeArea()
-                        .onTapGesture { vm.closeFolder() }
-                        .accessibilityHidden(true)
-
-                    FolderExpandedView(
-                        folder: folder,
-                        iconSize: pageLayout.grid.iconSize,
-                        showLabel: config.iconLabelVisible,
-                        availableSize: CGSize(
-                            width: proxy.size.width - folderInsets.leading - folderInsets.trailing,
-                            height: proxy.size.height - folderInsets.top - folderInsets.bottom
-                        ),
-                        iconProvider: { vm.icon(for: $0) },
-                        onLaunch: launch,
-                        onRename: { vm.renameFolder(folder.id, to: $0) },
-                        onAppDrop: { payload, targetApp, zone in
-                            handleFolderAppDrop(payload: payload, targetApp: targetApp, zone: zone, folderID: folder.id)
-                        },
-                        onAppDraggedOut: { payload in
-                            vm.removeApp(payload.itemID, fromFolder: folder.id)
-                        },
-                        onClose: vm.closeFolder
-                    )
-                    .animation(motion.movement(0.3) { .spring(duration: $0) }, value: folder.id)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(folderInsets)
-                }
+                FolderOverlay(
+                    backdrop: .fullScreen,
+                    iconSize: pageLayout.grid.iconSize,
+                    showsLabels: config.iconLabelVisible,
+                    insets: folderInsets,
+                    dim: 0.25,
+                    onLaunch: launch
+                )
 
                 LaunchpadDragPreviewView(iconSize: pageLayout.grid.iconSize)
             }
@@ -279,24 +256,9 @@ struct LaunchpadView: View {
     private func openTopSearchResult() {
         switch vm.searchResults?.first {
         case .app(let app): launch(app)
-        case .folder(let folder): vm.expandedFolderID = folder.id
+        case .folder(let folder): vm.openFolder(folder.id)
         case nil: break
         }
-    }
-
-    private func handleFolderAppDrop(
-        payload: LaunchpadDragPayload,
-        targetApp: AppItem,
-        zone: DropZone,
-        folderID: UUID
-    ) -> Bool {
-        guard payload.kind == .app, payload.itemID != targetApp.id else { return false }
-
-        let placement: ItemPlacement = switch zone {
-        case .leading: .before
-        case .center, .trailing: .after
-        }
-        return vm.reorderApp(payload.itemID, inFolder: folderID, relativeTo: targetApp.id, placement: placement)
     }
 
     // MARK: - Search results
@@ -332,7 +294,7 @@ struct LaunchpadView: View {
                                     showLabel: config.iconLabelVisible,
                                     isEditMode: false,
                                     iconProvider: { vm.icon(for: $0) },
-                                    onOpen: { vm.toggleFolder(folder.id) }
+                                    onOpen: { vm.toggleFolder(folder.id, from: $0) }
                                 )
                             }
                         }

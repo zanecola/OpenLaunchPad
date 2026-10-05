@@ -40,6 +40,17 @@ struct LaunchpadMotion: Equatable, Sendable {
         reduceMotion ? .opacity : transition
     }
 
+    /// An open folder grows out of its tile and shrinks back into it on a spring; under Reduce
+    /// Motion it crossfades instead.
+    var folderZoom: Animation? {
+        movement(0.35) { .spring(response: $0, dampingFraction: 0.86) } ?? animation(0.22) { .easeInOut(duration: $0) }
+    }
+
+    /// The dim and blur behind an open folder.
+    var folderBackdropFade: Animation? {
+        animation(0.22) { .easeOut(duration: $0) }
+    }
+
     // MARK: - Launcher windows
 
     /// Full screen fades in while its content settles from 1.06x, as Launchpad zoomed its icons into place.

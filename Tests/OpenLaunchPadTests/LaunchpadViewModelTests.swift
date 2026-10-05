@@ -1078,6 +1078,106 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func aFolderRemembersTheTileItOpenedFrom() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(folder)]]
+        let tile = CGRect(x: 120, y: 340, width: 64, height: 64)
+
+        viewModel.toggleFolder(folder.id, from: tile)
+        #expect(viewModel.expandedFolderTileFrame == tile)
+        // Return on the open folder's search result opens nothing new.
+        viewModel.openFolder(folder.id)
+        #expect(viewModel.expandedFolderTileFrame == tile)
+
+        viewModel.closeFolder()
+        viewModel.openFolder(folder.id)
+        #expect(viewModel.expandedFolderID == folder.id)
+        #expect(viewModel.expandedFolderTileFrame == nil)
+    }
+
+    @Test
+    func returnSavesTheEditedFolderName() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.toggleFolder(folder.id)
+
+        viewModel.beginRenamingFolder()
+        #expect(viewModel.folderTitleDraft == "Work")
+        viewModel.folderTitleDraft = " Office "
+        viewModel.commitFolderRename()
+
+        #expect(viewModel.folderTitleDraft == nil)
+        #expect(viewModel.expandedFolder?.title == "Office")
+        #expect(store.savedLayouts.last?.folders.first?.title == "Office")
+    }
+
+    @Test
+    func escapeCancelsTheRenameBeforeClosingTheFolder() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.toggleFolder(folder.id)
+        viewModel.beginRenamingFolder()
+        viewModel.folderTitleDraft = "Office"
+
+        #expect(viewModel.stepBack())
+        #expect(viewModel.folderTitleDraft == nil)
+        #expect(viewModel.expandedFolderID == folder.id)
+
+        #expect(viewModel.stepBack())
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(viewModel.pages == [[.folder(folder)]])
+        #expect(store.savedLayouts.isEmpty)
+    }
+
+    enum FolderClose: CaseIterable {
+        case clickOutside
+        case hideLauncher
+        case typeASearch
+    }
+
+    @Test(arguments: FolderClose.allCases)
+    func closingTheFolderSavesTheEditedName(close: FolderClose) {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.toggleFolder(folder.id)
+        viewModel.beginRenamingFolder()
+        viewModel.folderTitleDraft = "Office"
+
+        switch close {
+        case .clickOutside: viewModel.closeFolder()
+        case .hideLauncher: viewModel.endPresentation()
+        case .typeASearch: viewModel.searchQuery = "m"
+        }
+
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(viewModel.folderTitleDraft == nil)
+        #expect(viewModel.pages.first?.first?.title == "Office")
+    }
+
+    @Test
+    func anEmptyNameKeepsTheOldOne() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: store)
+        viewModel.pages = [[.folder(folder)]]
+        viewModel.toggleFolder(folder.id)
+        viewModel.beginRenamingFolder()
+        viewModel.folderTitleDraft = "   "
+
+        viewModel.commitFolderRename()
+
+        #expect(viewModel.folderTitleDraft == nil)
+        #expect(viewModel.expandedFolder?.title == "Work")
+        #expect(store.savedLayouts.isEmpty)
+    }
+
+    @Test
     func everyShowGetsANewPresentationID() {
         let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
         let beforeFirstShow = viewModel.presentationID

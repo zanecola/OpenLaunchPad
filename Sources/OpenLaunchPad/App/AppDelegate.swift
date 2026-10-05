@@ -207,7 +207,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // A show since then keeps what it found.
             guard let self, viewModel.presentationID == presentation,
                   !fullScreenWindow.isVisible, !popupPanel.isVisible else { return }
-            viewModel.endPresentation()
+            // At once, so a quick reopen doesn't find the folder still shrinking away.
+            var reset = Transaction()
+            reset.disablesAnimations = true
+            withTransaction(reset) { self.viewModel.endPresentation() }
         }
         let motion = launcherMotion
         fullScreenWindow.hide(exit == .launch ? motion.fullScreenLaunch : motion.fullScreenClose, then: endPresentation)

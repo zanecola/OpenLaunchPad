@@ -258,7 +258,7 @@ struct AppGridView: View {
                 dragPayload: LaunchpadDragPayload(itemID: folder.id, kind: .folder),
                 onDragChanged: handleDragChanged,
                 onDragEnded: handleDragEnded,
-                onOpen: { vm.toggleFolder(folder.id) }
+                onOpen: { vm.toggleFolder(folder.id, from: $0) }
             )
         }
     }
