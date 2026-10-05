@@ -82,7 +82,7 @@ struct FrequentlyUsedAppsView: View {
 
     var body: some View {
         if config.showFrequentlyUsedApps,
-           !vm.frequentlyUsedApps(limit: 1).isEmpty {
+           !vm.frequentlyUsedApps.isEmpty {
             GeometryReader { proxy in
                 let layout = FrequentlyUsedAppsLayout(
                     width: proxy.size.width,
@@ -90,7 +90,7 @@ struct FrequentlyUsedAppsView: View {
                     showsLabels: config.iconLabelVisible,
                     presentation: presentation
                 )
-                let apps = vm.frequentlyUsedApps(limit: layout.visibleCount)
+                let apps = vm.frequentlyUsedApps.prefix(layout.visibleCount)
 
                 VStack(spacing: 0) {
                     HStack {

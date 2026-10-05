@@ -253,7 +253,7 @@ struct LaunchpadView: View {
             rows: config.gridRows,
             showsLabels: config.iconLabelVisible,
             showsPageIndicator: vm.pages.count > 1,
-            wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps(limit: 1).isEmpty
+            wantsFrequentlyUsed: config.showFrequentlyUsedApps && !vm.frequentlyUsedApps.isEmpty
         )
     }
 

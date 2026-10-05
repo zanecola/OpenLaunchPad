@@ -370,12 +370,12 @@ struct LaunchpadViewModelTests {
         )
         viewModel.pages = [[.app(mail), .folder(folder)]]
 
-        #expect(viewModel.frequentlyUsedApps(limit: 2) == [calendar, mail])
+        #expect(viewModel.frequentlyUsedApps == [calendar, mail])
         #expect(viewModel.hasAppUsageHistory)
     }
 
     @Test
-    func recordingAndClearingUsagePersistsAndUpdatesSuggestions() {
+    func launchesRankAtTheNextShowAndClearingTheHistoryEmptiesSuggestionsAtOnce() {
         let mail = Self.app("Mail")
         let usageStore = StubAppUsageStore()
         let launchDate = Date(timeIntervalSince1970: 600)
@@ -390,7 +390,7 @@ struct LaunchpadViewModelTests {
 
         viewModel.recordLaunch(of: mail)
 
-        #expect(viewModel.frequentlyUsedApps(limit: 1) == [mail])
+        #expect(viewModel.frequentlyUsedApps.isEmpty)
         #expect(usageStore.savedHistories.last?.records == [
             AppUsageRecord(
                 bundleID: mail.bundleID,
@@ -399,11 +399,68 @@ struct LaunchpadViewModelTests {
             )
         ])
 
+        viewModel.beginPresentation()
+
+        #expect(viewModel.frequentlyUsedApps == [mail])
+
         viewModel.clearAppUsageHistory()
 
-        #expect(viewModel.frequentlyUsedApps(limit: 1).isEmpty)
+        #expect(viewModel.frequentlyUsedApps.isEmpty)
         #expect(!viewModel.hasAppUsageHistory)
         #expect(usageStore.savedHistories.last?.records.isEmpty == true)
+    }
+
+    @Test
+    func frequentlyUsedOrderHoldsThroughAShowButFollowsThePages() {
+        let mail = Self.app("Mail")
+        let notes = Self.app("Notes")
+        let work = FolderItem(id: UUID(), title: "Work", apps: [mail, Self.app("Calendar")])
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore(history: AppUsageHistory(records: [
+                AppUsageRecord(bundleID: mail.bundleID, launchCount: 2, lastLaunchedAt: Date(timeIntervalSince1970: 100)),
+                AppUsageRecord(bundleID: notes.bundleID, launchCount: 1, lastLaunchedAt: Date(timeIntervalSince1970: 100))
+            ]))
+        )
+        viewModel.pages = [[.app(mail), .app(notes)]]
+        viewModel.beginPresentation()
+
+        viewModel.recordLaunch(of: notes)
+        viewModel.recordLaunch(of: notes)
+
+        #expect(viewModel.frequentlyUsedApps == [mail, notes])
+
+        viewModel.pages = [[.folder(work), .app(notes)]]
+        #expect(viewModel.frequentlyUsedApps == [mail, notes])
+
+        viewModel.pages = [[.app(notes)]]
+        #expect(viewModel.frequentlyUsedApps == [notes])
+
+        viewModel.pages = [[.app(mail), .app(notes)]]
+        viewModel.beginPresentation()
+        #expect(viewModel.frequentlyUsedApps == [notes, mail])
+    }
+
+    @Test
+    func rearrangingPagesDoesNotInvalidateViewsShowingFrequentlyUsedApps() {
+        let mail = Self.app("Mail")
+        let notes = Self.app("Notes")
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore(history: AppUsageHistory(records: [
+                AppUsageRecord(bundleID: mail.bundleID, launchCount: 1, lastLaunchedAt: Date(timeIntervalSince1970: 100))
+            ]))
+        )
+        viewModel.pages = [[.app(mail), .app(notes)]]
+
+        #expect(!observationFires(
+            when: { viewModel.pages = [[.app(notes)], [.app(mail)]] },
+            reading: { _ = viewModel.frequentlyUsedApps }
+        ))
     }
 
     @Test

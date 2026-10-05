@@ -10,7 +10,9 @@ final class LaunchpadViewModel {
 
     // MARK: - Published state
 
-    var pages: [[LaunchpadItem]] = []
+    var pages: [[LaunchpadItem]] = [] {
+        didSet { resolveFrequentlyUsedApps() }
+    }
     /// Typing closes an open folder: the results replace the grid behind it, and Return would
     /// otherwise launch one of them rather than anything in the folder.
     var searchQuery: String = "" {
@@ -94,15 +96,19 @@ final class LaunchpadViewModel {
         !appUsageHistory.records.isEmpty
     }
 
-    func frequentlyUsedApps(limit: Int) -> [AppItem] {
-        guard limit > 0 else { return [] }
+    /// Most used first. Ranked when a show begins, so launching apps doesn't move these icons
+    /// until the next show; an app that leaves the pages leaves this list at once.
+    private(set) var frequentlyUsedApps: [AppItem] = []
+    @ObservationIgnored private var frequentlyUsedBundleIDs: [String] = []
 
+    private func rankFrequentlyUsedApps() {
+        frequentlyUsedBundleIDs = appUsageHistory.rankedBundleIDs(limit: appUsageHistory.records.count)
+        resolveFrequentlyUsedApps()
+    }
+
+    private func resolveFrequentlyUsedApps() {
         let apps = appsByBundleID
-        return appUsageHistory
-            .rankedBundleIDs(limit: appUsageHistory.records.count)
-            .compactMap { apps[$0] }
-            .prefix(limit)
-            .map { $0 }
+        frequentlyUsedApps = frequentlyUsedBundleIDs.compactMap { apps[$0] }
     }
 
     /// Every app, top level and in folders; the first tile wins for a duplicated bundle ID.
@@ -162,6 +168,7 @@ final class LaunchpadViewModel {
         appUsageHistory = appUsageStore.loadHistory()
         self.makeUUID = makeUUID
         self.now = now
+        rankFrequentlyUsedApps()
     }
 
     // MARK: - Loading
@@ -380,6 +387,7 @@ final class LaunchpadViewModel {
     func clearAppUsageHistory() {
         appUsageHistory.removeAll()
         appUsageStore.saveHistory(appUsageHistory)
+        rankFrequentlyUsedApps()
     }
 
     func uninstallURL(for app: AppItem) -> URL? {
@@ -488,8 +496,10 @@ final class LaunchpadViewModel {
     /// search, drop a hover left from the last show and scroll back to the top when it changes.
     private(set) var presentationID = 0
 
+    /// Also ranks Frequently Used again, with the launches since the last show.
     func beginPresentation() {
         presentationID += 1
+        rankFrequentlyUsedApps()
     }
 
     /// The launcher is hiding: it opens next time with no query and no open folder.
