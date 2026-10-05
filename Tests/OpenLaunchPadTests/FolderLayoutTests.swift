@@ -50,12 +50,47 @@ struct FolderPanelLayoutTests {
         #expect(folder.cellHeight == grid.cellHeight)
     }
 
-    @Test(arguments: [LaunchpadBackdropMode.fullScreen, .popup])
-    func moreThanThreeRowsScroll(backdrop: LaunchpadBackdropMode) {
-        let folder = layout(apps: 20, backdrop: backdrop)
+    @Test
+    func fullScreenPutsMoreThanThreeRowsOnFurtherPages() {
+        let folder = layout(apps: 17)
 
         #expect(folder.columnCount == 5)
+        #expect(folder.pageCapacity == 15)
+        #expect(folder.pageCount == 2)
         #expect(folder.gridHeight == 3 * folder.cellHeight + 2 * FolderPanelLayout.rowSpacing)
+        #expect(folder.pages(Array(0..<17)) == [Array(0..<15), [15, 16]])
+        #expect(folder.panelSize.height
+            == folder.gridHeight + 2 * FolderPanelLayout.verticalPadding + FolderPanelLayout.pageIndicatorHeight)
+    }
+
+    @Test
+    func oneFullScreenPageHasNoPageControl() {
+        let folder = layout(apps: 15)
+
+        #expect(folder.pageCount == 1)
+        #expect(folder.pages(Array(0..<15)) == [Array(0..<15)])
+        #expect(folder.panelSize.height == folder.gridHeight + 2 * FolderPanelLayout.verticalPadding)
+    }
+
+    @Test
+    func fullScreenPagesHoldTheRowsThatFit() {
+        // Room for two rows of 80 pt icons beside the name and the page control.
+        let folder = layout(apps: 12, in: CGSize(width: 1_400, height: 430))
+
+        #expect(folder.pageCapacity == 10)
+        #expect(folder.pageCount == 2)
+        #expect(folder.size.height <= 430)
+    }
+
+    @Test
+    func thePopupScrollsMoreThanThreeRows() {
+        let folder = layout(apps: 20, backdrop: .popup)
+
+        #expect(folder.columnCount == 5)
+        #expect(folder.pageCapacity == nil)
+        #expect(folder.pageCount == 1)
+        #expect(folder.gridHeight == 3 * folder.cellHeight + 2 * FolderPanelLayout.rowSpacing)
+        #expect(folder.pages(Array(0..<20)) == [Array(0..<20)])
     }
 
     @Test(arguments: [400.0, 520.0, 640.0])

@@ -73,6 +73,7 @@ struct LaunchpadMotionTests {
         let reduced = LaunchpadMotion(reduceMotion: true)
         #expect(reduced.folderZoom == .easeInOut(duration: 0.22))
         #expect(reduced.folderBackdropFade == .easeOut(duration: 0.22))
+        #expect(reduced.pageTurn == nil)
 
         let off = LaunchpadMotion(animatesTransitions: false)
         #expect(off.folderZoom == nil)

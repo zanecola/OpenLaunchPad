@@ -105,7 +105,8 @@ private final class TileFrame {
 }
 
 /// Sizes an open folder to its apps: three to five columns, fewer when the space is narrower, and
-/// up to three rows before the grid scrolls. The folder's name sits above the panel.
+/// up to three rows. More apps go on further pages in full screen, with a page control below them,
+/// and scroll in the popup. The folder's name sits above the panel.
 struct FolderPanelLayout {
     static let minimumColumns = 3
     static let maximumColumns = 5
@@ -115,16 +116,21 @@ struct FolderPanelLayout {
     static let horizontalPadding: CGFloat = 32
     static let verticalPadding: CGFloat = 28
     static let titleSpacing: CGFloat = 20
+    /// Inside the panel, below the apps, when full screen has more than one page.
+    static let pageIndicatorHeight: CGFloat = 24
 
     let iconSize: CGFloat
     let columnCount: Int
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let gridWidth: CGFloat
-    /// The grid's viewport; more rows scroll.
+    /// The grid's viewport: one page in full screen; in the popup, more rows scroll.
     let gridHeight: CGFloat
     /// The name's row above the panel.
     let titleHeight: CGFloat
+    /// How many apps a full-screen page holds; nil in the popup, which scrolls instead.
+    let pageCapacity: Int?
+    let pageCount: Int
 
     static func titleHeight(for backdrop: LaunchpadBackdropMode) -> CGFloat {
         backdrop == .fullScreen ? 44 : 28
@@ -143,21 +149,40 @@ struct FolderPanelLayout {
         let fittingColumns = Int((gridSpace.width + Self.columnSpacing) / (cellWidth + Self.columnSpacing))
         let columnCount = max(1, min(max(appCount, Self.minimumColumns), Self.maximumColumns, fittingColumns))
         let rowCount = (max(appCount, 1) + columnCount - 1) / columnCount
-        let visibleRows = CGFloat(min(rowCount, Self.maximumVisibleRows))
+        func height(rows: Int) -> CGFloat {
+            CGFloat(rows) * cellHeight + CGFloat(max(rows - 1, 0)) * Self.rowSpacing
+        }
+        func fittingRows(in height: CGFloat) -> Int {
+            min(Self.maximumVisibleRows, max(1, Int((height + Self.rowSpacing) / (cellHeight + Self.rowSpacing))))
+        }
 
+        switch backdrop {
+        case .fullScreen:
+            // Apps that don't fit on one page make room for the page control below them.
+            let rowsPerPage = rowCount <= fittingRows(in: gridSpace.height)
+                ? rowCount
+                : fittingRows(in: gridSpace.height - Self.pageIndicatorHeight)
+            let capacity = columnCount * rowsPerPage
+            pageCapacity = capacity
+            pageCount = (max(appCount, 1) + capacity - 1) / capacity
+            gridHeight = height(rows: rowsPerPage)
+        case .popup:
+            pageCapacity = nil
+            pageCount = 1
+            gridHeight = max(0, min(height(rows: min(rowCount, Self.maximumVisibleRows)), gridSpace.height))
+        }
         self.iconSize = iconSize
         self.columnCount = columnCount
         self.cellWidth = cellWidth
         self.cellHeight = cellHeight
         self.titleHeight = titleHeight
         gridWidth = CGFloat(columnCount) * cellWidth + CGFloat(columnCount - 1) * Self.columnSpacing
-        gridHeight = max(0, min(visibleRows * cellHeight + (visibleRows - 1) * Self.rowSpacing, gridSpace.height))
     }
 
     var panelSize: CGSize {
         CGSize(
             width: gridWidth + Self.horizontalPadding * 2,
-            height: gridHeight + Self.verticalPadding * 2
+            height: gridHeight + Self.verticalPadding * 2 + (pageCount > 1 ? Self.pageIndicatorHeight : 0)
         )
     }
 
@@ -176,6 +201,13 @@ struct FolderPanelLayout {
         )
     }
 
+    /// The apps on each full-screen page; in the popup, all of them on one.
+    func pages<Item>(_ items: [Item]) -> [[Item]] {
+        guard let pageCapacity else { return [items] }
+        return stride(from: 0, to: items.count, by: pageCapacity).map {
+            Array(items[$0..<min($0 + pageCapacity, items.count)])
+        }
+    }
 }
 
 /// How an open folder sits on its tile as it starts to grow out of it, and as it finishes
@@ -322,16 +354,20 @@ struct FolderOverlay: View {
 struct FolderExpandedView: View {
     let folder: FolderItem
     let layout: FolderPanelLayout
+    /// Full screen pages through more than three rows; the popup scrolls them.
     let backdrop: LaunchpadBackdropMode
     let showLabel: Bool
     let iconProvider: (String) -> NSImage
     var onLaunch: (AppItem) -> Void = { _ in }
 
     @Environment(LaunchpadViewModel.self) private var vm
+    @Environment(\.launchpadMotion) private var motion
     @State private var appFrames: [UUID: CGRect] = [:]
     @State private var panelFrame: CGRect = .zero
     @State private var activeTarget: FolderDragHoverTarget?
     @State private var isDraggingOutside = false
+    @State private var pagePosition = ScrollPosition(idType: Int.self)
+    @State private var currentPage = 0
 
     private static let panelShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
 
@@ -346,12 +382,13 @@ struct FolderExpandedView: View {
     }
 
     private var panel: some View {
-        ScrollView(.vertical) {
-            appGrid(folder.apps)
+        VStack(spacing: 0) {
+            switch backdrop {
+            case .fullScreen: pagedGrid
+            case .popup: scrollingGrid
+            }
         }
-        .frame(width: layout.gridWidth, height: layout.gridHeight)
-        .scrollIndicators(.hidden)
-        .launchpadScrollAppearance()
+        .frame(width: layout.gridWidth)
         .padding(.horizontal, FolderPanelLayout.horizontalPadding)
         .padding(.vertical, FolderPanelLayout.verticalPadding)
         .background(.regularMaterial, in: Self.panelShape)
@@ -374,6 +411,58 @@ struct FolderExpandedView: View {
         .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
             appFrames = frames
         }
+    }
+
+    /// Pages side by side, as on the launcher's own pages: a swipe follows the fingers, and the
+    /// wheel and the dots turn them.
+    private var pagedGrid: some View {
+        let pages = layout.pages(folder.apps)
+        return VStack(spacing: 0) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    ForEach(pages.indices, id: \.self) { index in
+                        appGrid(pages[index])
+                            .frame(width: layout.gridWidth, height: layout.gridHeight, alignment: .top)
+                            .accessibilityHidden(index != currentPage)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .alwaysByOne))
+            .scrollPosition($pagePosition)
+            .scrollIndicators(.never)
+            .onScrollGeometryChange(for: Int.self) { geometry in
+                Int((geometry.contentOffset.x / max(geometry.containerSize.width, 1)).rounded())
+            } action: { _, page in
+                currentPage = min(max(page, 0), pages.count - 1)
+            }
+            .frame(height: layout.gridHeight)
+            .background {
+                // Also keeps the wheel from scrolling the launcher's pages behind the folder.
+                PageWheelMonitor(
+                    isEnabled: { true },
+                    onPrevious: { showPage(currentPage - 1, of: pages.count) },
+                    onNext: { showPage(currentPage + 1, of: pages.count) }
+                )
+                .frame(width: 0, height: 0)
+            }
+
+            if pages.count > 1 {
+                FolderPageDots(pageCount: pages.count, currentPage: currentPage) {
+                    showPage($0, of: pages.count)
+                }
+                .frame(height: FolderPanelLayout.pageIndicatorHeight)
+            }
+        }
+    }
+
+    private var scrollingGrid: some View {
+        ScrollView(.vertical) {
+            appGrid(folder.apps)
+        }
+        .frame(height: layout.gridHeight)
+        .scrollIndicators(.hidden)
+        .launchpadScrollAppearance()
     }
 
     private func appGrid(_ apps: [AppItem]) -> some View {
@@ -401,6 +490,21 @@ struct FolderExpandedView: View {
                 .launchpadItemFrame(id: app.id)
             }
         }
+    }
+
+    private func showPage(_ page: Int, of pageCount: Int) {
+        let page = min(max(page, 0), pageCount - 1)
+        guard page != currentPage else { return }
+        withAnimation(motion.pageTurn) {
+            pagePosition.scrollTo(id: page)
+        }
+    }
+
+    /// The apps a drop can land on: those on the page showing. Other pages' apps sit beside the
+    /// panel, clipped, where a drag out of the folder ends.
+    private var droppableApps: [AppItem] {
+        let pages = layout.pages(folder.apps)
+        return pages.indices.contains(currentPage) ? pages[currentPage] : []
     }
 
     @ViewBuilder
@@ -456,7 +560,7 @@ struct FolderExpandedView: View {
 
     private func hoverTarget(for payload: LaunchpadDragPayload, at location: CGPoint) -> FolderDragHoverTarget? {
         guard panelFrame.contains(location),
-              let targetApp = folder.apps.first(where: { app in
+              let targetApp = droppableApps.first(where: { app in
                   app.id != payload.itemID && appFrames[app.id]?.contains(location) == true
               }),
               let frame = appFrames[targetApp.id] else {
@@ -570,6 +674,39 @@ private struct FolderTitle: View {
         .buttonStyle(.plain)
         .help("Close Folder")
         .accessibilityLabel("Close Folder")
+    }
+}
+
+/// The open folder's pages, as bare dots below its apps, like the launcher's own page control.
+private struct FolderPageDots: View {
+    let pageCount: Int
+    let currentPage: Int
+    let onSelect: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(0..<pageCount, id: \.self) { index in
+                Button {
+                    onSelect(index)
+                } label: {
+                    PageIndicatorView.dot
+                        .opacity(index == currentPage ? 1 : 0.35)
+                        .frame(width: PageIndicatorView.dotBoxSize.width, height: PageIndicatorView.dotBoxSize.height)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Folder Page")
+        .accessibilityValue("\(currentPage + 1) of \(pageCount)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: onSelect(currentPage + 1)
+            case .decrement: onSelect(currentPage - 1)
+            @unknown default: break
+            }
+        }
     }
 }
 

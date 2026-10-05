@@ -40,6 +40,11 @@ struct LaunchpadMotion: Equatable, Sendable {
         reduceMotion ? .opacity : transition
     }
 
+    /// A page turn from the keys, a dot or the wheel, in the grid or in a folder.
+    var pageTurn: Animation? {
+        movement(0.38) { .spring(response: $0, dampingFraction: 0.9) }
+    }
+
     /// An open folder grows out of its tile and shrinks back into it on a spring; under Reduce
     /// Motion it crossfades instead.
     var folderZoom: Animation? {

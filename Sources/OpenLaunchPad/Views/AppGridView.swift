@@ -391,7 +391,7 @@ private struct FollowsCurrentPage: ViewModifier {
                 onTurn()
                 // A swipe that settled is already there.
                 guard vm.pagePosition != Double(currentPage) else { return }
-                withAnimation(motion.movement(0.38) { .spring(response: $0, dampingFraction: 0.9) }) {
+                withAnimation(motion.pageTurn) {
                     position.scrollTo(id: currentPage)
                 }
             }
