@@ -117,7 +117,9 @@ final class LaunchpadViewModel {
 
     // MARK: - Icon cache (bundleID → NSImage)
 
-    private var iconCache: [String: NSImage] = [:]
+    /// Filled from view bodies, so it isn't observed: a miss would otherwise re-render every
+    /// view that shows an icon.
+    @ObservationIgnored private var iconCache: [String: NSImage] = [:]
 
     // MARK: - Init
 

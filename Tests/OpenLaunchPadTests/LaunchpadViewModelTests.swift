@@ -962,6 +962,16 @@ struct LaunchpadViewModelTests {
         #expect(viewModel.searchResults == [])
     }
 
+    @Test
+    func iconCacheMissDoesNotInvalidateViewsShowingOtherIcons() {
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+
+        #expect(!observationFires(
+            when: { _ = viewModel.icon(for: "com.example.Notes") },
+            reading: { _ = viewModel.icon(for: "com.example.Mail") }
+        ))
+    }
+
     private static func viewModel(
         pages: [[LaunchpadItem]],
         store: StubLayoutStore
