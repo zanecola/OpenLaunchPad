@@ -5,10 +5,10 @@ struct OpenLaunchPadApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
+        // SettingsWindowController owns the Settings window, and Command-comma opens it below;
+        // this scene only carries the commands.
         Settings {
-            SettingsView()
-                .environment(appDelegate.viewModel)
-                .environment(appDelegate.config)
+            EmptyView()
         }
         .commands {
             CommandGroup(replacing: .appSettings) {

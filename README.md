@@ -133,7 +133,7 @@ If an app was moved or deleted since OpenLaunchPad last looked, opening it says 
 
 ### Settings
 
-Open Settings from the gear, the menu-bar icon's right-click menu, or Command-comma. Changes apply immediately.
+Open Settings from the gear, the menu-bar icon's right-click menu, or Command-comma. Its General, Appearance, and Shortcuts tabs sit in the toolbar, and the window resizes to fit each one. Changes apply immediately.
 
 | Setting | Default | Notes |
 |---|---|---|

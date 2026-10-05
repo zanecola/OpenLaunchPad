@@ -1,25 +1,34 @@
 import SwiftUI
 
-struct SettingsView: View {
-    @Environment(ConfigStore.self) private var config
-    @Environment(LaunchpadViewModel.self) private var vm
+/// The Settings window's panes, in toolbar order (see SettingsWindowController).
+enum SettingsPane: CaseIterable {
+    case general
+    case appearance
+    case shortcuts
 
-    var body: some View {
-        @Bindable var config = config
-
-        TabView {
-            GeneralSettingsTab()
-                .tabItem { Label("General", systemImage: "gear") }
-
-            AppearanceSettingsTab()
-                .tabItem { Label("Appearance", systemImage: "paintbrush") }
-
-            ShortcutSettingsTab()
-                .tabItem { Label("Shortcuts", systemImage: "keyboard") }
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .appearance: "Appearance"
+        case .shortcuts: "Shortcuts"
         }
-        .frame(width: 520, height: 430)
-        .environment(config)
-        .environment(vm)
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: "gear"
+        case .appearance: "paintbrush"
+        case .shortcuts: "keyboard"
+        }
+    }
+
+    @MainActor @ViewBuilder
+    var content: some View {
+        switch self {
+        case .general: GeneralSettingsTab()
+        case .appearance: AppearanceSettingsTab()
+        case .shortcuts: ShortcutSettingsTab()
+        }
     }
 }
 
@@ -86,7 +95,6 @@ private struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
     }
 }
 
@@ -196,7 +204,6 @@ private struct AppearanceSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
     }
 
     private var popupColumnCount: Int {
@@ -239,6 +246,5 @@ private struct ShortcutSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
     }
 }
