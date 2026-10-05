@@ -30,7 +30,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, the open and close animations, pages that follow your fingers and turn with the mouse wheel, and the Dim, popup appearance, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, the open and close animations, pages that follow your fingers and turn with the mouse wheel, folders that open out of their icon with their name above them and pages of their own, and the Dim, popup appearance, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -49,7 +49,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
   </tr>
 </table>
 
-Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, and blurred background.
+Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, open folders, and blurred background.
 
 ## Install
 
@@ -103,9 +103,10 @@ Both launchers are built once when OpenLaunchPad starts and kept ready, so openi
 - Start typing as soon as the launcher opens: Search already has focus, in the popup too. It ignores case and accents, and finds apps by the name Finder shows, their bundle name, or their file name, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
 - **Frequently Used** shows the apps you open most often. In the popup it is a row lined up with the grid's columns, under a small "Frequently Used" header, and it scrolls away with the grid. In full screen it is a compact shelf of up to nine smaller icons below Search, without labels (hover an icon to see its name); full screen leaves it out when your apps would not fit beside it. The order is set each time the launcher opens, so icons don't move while you use it. Show it in both places, the popup only, or nowhere, and clear its local history, under **Settings > General > Suggestions**.
 - In full screen, swipe sideways with two fingers on a trackpad (or one on a Magic Mouse) over the apps: the pages follow your fingers and settle on the nearest page, and one flick turns one page. A mouse wheel turns one page per notch, up and down or sideways, anywhere on the screen. Left/Right (while Search is empty), Command-[ / Command-] and a click on a page dot turn pages too. The page dots are bare, as in Launchpad, and the white one moves with the pages; choose **Dots + Arrows** in Settings to get previous and next arrows when you point at them.
-- Scroll vertically in popup mode and inside large folders.
+- Scroll vertically in popup mode.
+- A folder opens out of its icon and closes back into it, while the page behind blurs and dims; with Reduce Motion on it fades in and out. Its name is above it. Close it with Escape or a click outside it; the popup also gives it a close button. A folder with more than three rows of apps has pages in full screen, which you swipe or turn with its dots or the mouse wheel, and scrolls in the popup.
 - Press Return to open the top search result.
-- Press Escape to step back one level: close an open folder, then clear the search, then close the launcher.
+- Press Escape to step back one level: cancel renaming a folder, close an open folder, then clear the search, then close the launcher.
 - Click empty space, including the space between icons, to close an open folder or the full-screen launcher.
 - With VoiceOver, every app and folder is a button named after it, and folders also say how many apps they hold. The page dots are one control that says which page you are on ("Page, 2 of 3"); increase or decrease it to turn pages.
 
@@ -116,7 +117,7 @@ Both launchers are built once when OpenLaunchPad starts and kept ready, so openi
 - Drop an app onto an existing folder to add it.
 - Open a folder and drag apps to reorder them.
 - Drag an app outside the expanded folder to move it back to the launcher.
-- Click an open folder's title to rename it. The name is saved when you press Return or close the folder.
+- Click an open folder's name to rename it. The name is selected for you; Return saves it, Escape cancels, and closing the folder saves it too.
 
 Changes are saved immediately and survive relaunches. Search results are launch-only, so filtering cannot accidentally change your layout.
 
@@ -153,7 +154,7 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup keeps its own background |
 | Blur radius | 48 pt | 0–80 pt, for Wallpaper |
 | Dim | 25% | 0–60% black over the wallpaper or glass; Solid is not dimmed |
-| Animate transitions | On | Full screen fades in as its icons settle from slightly larger, as in Launchpad, and fades out as they grow; the popup grows from the menu-bar icon or the Dock. Launching an app only fades the launcher, and pages slide when the keyboard, a dot or the wheel turns them. Off makes all of these instant. With Reduce Motion on, they fade without zooming, and those page turns are instant. Swiped pages always follow your fingers |
+| Animate transitions | On | Full screen fades in as its icons settle from slightly larger, as in Launchpad, and fades out as they grow; the popup grows from the menu-bar icon or the Dock. Folders grow out of their icon and shrink back into it. Launching an app only fades the launcher, and pages slide when the keyboard, a dot or the wheel turns them. Off makes all of these instant. With Reduce Motion on, the launcher and folders fade without zooming, and those page turns are instant. Swiped pages always follow your fingers |
 | Animation speed | 1.0× | 0.5–2.0×; higher is faster |
 | Global shortcut | None | Must use Command or Control, or be a function key (F1–F12), so it can't capture ordinary typing. A Shift- or Option-only shortcut saved by an older version is cleared |
 
@@ -239,7 +240,7 @@ Applications folders, scanned and watched
 - AppKit handles windows, the status item, system services, and the Carbon global hotkey.
 - JSON persistence is versioned and migrates earlier layout formats.
 
-The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, the animation rules and how a show cancels a closing launcher, popup placement, paging input, drag state, app actions, full-screen and folder layout fitting, and how the wallpaper background is found and cached.
+The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, the animation rules and how a show cancels a closing launcher, popup placement, paging input, drag state, app actions, full-screen and folder layout fitting, how a folder zooms out of its tile and is renamed, and how the wallpaper background is found and cached.
 
 ## Known Limitations
 
