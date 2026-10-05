@@ -49,7 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewModel = LaunchpadViewModel(
             dataSource: dataSource,
             layoutStore: JSONLayoutStore(),
-            iconProvider: BundleIconProvider()
+            iconProvider: BundleIconProvider(),
+            appUsageStore: UserDefaultsAppUsageStore()
         )
         super.init()
     }

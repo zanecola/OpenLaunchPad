@@ -4,9 +4,9 @@ final class UserDefaultsAppUsageStore: AppUsageStoring {
     private static let currentVersion = 1
     private static let storageKey = "appUsageHistory"
 
-    private let defaults: UserDefaults
+    private let defaults: any KeyValueStoring
 
-    init(defaults: UserDefaults = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
+    init(defaults: any KeyValueStoring = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
         self.defaults = defaults
     }
 

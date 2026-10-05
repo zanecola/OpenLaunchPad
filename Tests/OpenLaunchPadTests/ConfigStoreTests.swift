@@ -5,10 +5,8 @@ import Testing
 
 struct ConfigStoreTests {
     @Test
-    func legacyColumnPreferenceIsNormalizedIntoSupportedRange() throws {
-        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func legacyColumnPreferenceIsNormalizedIntoSupportedRange() {
+        let defaults = InMemoryKeyValueStore()
         defaults.set(2, forKey: "gridColumns")
 
         let config = ConfigStore(defaults: defaults)
@@ -18,10 +16,8 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func menuBarVisibilityChangesPersistAndNotify() throws {
-        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func menuBarVisibilityChangesPersistAndNotify() {
+        let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)
         var notificationCount = 0
         config.onMenuBarVisibilityChange = {
@@ -36,9 +32,7 @@ struct ConfigStoreTests {
 
     @Test
     func shortcutChangesPersistAndNotify() throws {
-        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)
         var notificationCount = 0
         config.onGlobalShortcutChange = {
@@ -59,10 +53,8 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func frequentlyUsedAppsVisibilityPersists() throws {
-        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func frequentlyUsedAppsVisibilityPersists() {
+        let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)
 
         config.showFrequentlyUsedApps = false

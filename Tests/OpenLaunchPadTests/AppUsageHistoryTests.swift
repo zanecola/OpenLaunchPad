@@ -45,10 +45,8 @@ struct AppUsageHistoryTests {
     }
 
     @Test
-    func userDefaultsStoreRoundTripsHistory() throws {
-        let suiteName = "OpenLaunchPadTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func userDefaultsStoreRoundTripsHistory() {
+        let defaults = InMemoryKeyValueStore()
         let store = UserDefaultsAppUsageStore(defaults: defaults)
         let history = AppUsageHistory(records: [
             AppUsageRecord(

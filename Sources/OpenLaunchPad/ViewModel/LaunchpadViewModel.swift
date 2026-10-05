@@ -95,7 +95,7 @@ final class LaunchpadViewModel {
         layoutStore: any LayoutStoring,
         iconProvider: any AppIconProviding,
         applicationManager: (any ApplicationManaging)? = nil,
-        appUsageStore: (any AppUsageStoring)? = nil,
+        appUsageStore: any AppUsageStoring,
         makeUUID: @escaping () -> UUID = UUID.init,
         now: @escaping () -> Date = Date.init
     ) {
@@ -103,9 +103,8 @@ final class LaunchpadViewModel {
         self.layoutStore = layoutStore
         self.iconProvider = iconProvider
         self.applicationManager = applicationManager ?? SystemApplicationManager()
-        let resolvedUsageStore = appUsageStore ?? UserDefaultsAppUsageStore()
-        self.appUsageStore = resolvedUsageStore
-        appUsageHistory = resolvedUsageStore.loadHistory()
+        self.appUsageStore = appUsageStore
+        appUsageHistory = appUsageStore.loadHistory()
         self.makeUUID = makeUUID
         self.now = now
     }

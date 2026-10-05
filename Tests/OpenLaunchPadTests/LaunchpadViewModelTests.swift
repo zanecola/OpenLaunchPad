@@ -12,7 +12,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: dataSource,
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.currentPage = 2
 
@@ -27,7 +28,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: [[.app(Self.app("Mail"))]]),
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.expandedFolderID = folderID
 
@@ -43,7 +45,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [
             [.app(targetApp)],
@@ -71,7 +74,8 @@ struct LaunchpadViewModelTests {
                 [.app(mail), .app(calendar), .app(notes)]
             ]),
             layoutStore: layoutStore,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
 
         await viewModel.load()
@@ -90,7 +94,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: layoutStore,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [
             [.app(mail), .app(calendar)]
@@ -116,7 +121,8 @@ struct LaunchpadViewModelTests {
                 [.app(mail), .app(calendar)]
             ]),
             layoutStore: layoutStore,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
 
         await viewModel.load()
@@ -133,7 +139,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [
             [.app(Self.app("Mail"))],
@@ -205,11 +212,17 @@ struct LaunchpadViewModelTests {
         let folder = FolderItem(id: UUID(), title: "Work", apps: [mail, calendar])
         let store = StubLayoutStore()
         let applicationManager = StubApplicationManager()
+        let launchDate = Date(timeIntervalSince1970: 100)
+        let usageStore = StubAppUsageStore(history: AppUsageHistory(records: [
+            AppUsageRecord(bundleID: mail.bundleID, launchCount: 3, lastLaunchedAt: launchDate),
+            AppUsageRecord(bundleID: notes.bundleID, launchCount: 1, lastLaunchedAt: launchDate)
+        ]))
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: store,
             iconProvider: StubIconProvider(),
-            applicationManager: applicationManager
+            applicationManager: applicationManager,
+            appUsageStore: usageStore
         )
         viewModel.pages = [[.folder(folder), .app(notes)]]
 
@@ -218,6 +231,7 @@ struct LaunchpadViewModelTests {
         #expect(applicationManager.uninstalledApps == [mail])
         #expect(viewModel.pages == [[.app(calendar), .app(notes)]])
         #expect(store.savedLayouts == [StoredLayout(pageIDs: [[calendar.id, notes.id]])])
+        #expect(usageStore.savedHistories.last?.records.map(\.bundleID) == [notes.bundleID])
     }
 
     @Test
@@ -228,7 +242,8 @@ struct LaunchpadViewModelTests {
             dataSource: StubDataSource(pages: []),
             layoutStore: StubLayoutStore(),
             iconProvider: StubIconProvider(),
-            applicationManager: applicationManager
+            applicationManager: applicationManager,
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [[.app(mail)]]
 
@@ -314,7 +329,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [[.folder(folder)]]
 
@@ -336,7 +352,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: []),
             layoutStore: layoutStore,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         viewModel.pages = [[.folder(folder)]]
         viewModel.toggleFolder(folder.id)
@@ -370,7 +387,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: StubDataSource(pages: [[.folder(folder)]]),
             layoutStore: layoutStore,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
 
         await viewModel.load()
@@ -633,7 +651,8 @@ struct LaunchpadViewModelTests {
         let viewModel = LaunchpadViewModel(
             dataSource: source,
             layoutStore: StubLayoutStore(),
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
         await viewModel.load()
         #expect(viewModel.removeApp(terminal.id, fromFolder: folderID))
@@ -662,6 +681,7 @@ struct LaunchpadViewModelTests {
             dataSource: StubDataSource(pages: []),
             layoutStore: store,
             iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore(),
             makeUUID: { folderID }
         )
         viewModel.pages = [[.app(mail), .app(calendar), .app(notes)]]
@@ -747,7 +767,8 @@ struct LaunchpadViewModelTests {
         LaunchpadViewModel(
             dataSource: StubDataSource(pages: pages),
             layoutStore: store,
-            iconProvider: StubIconProvider()
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore()
         )
     }
 

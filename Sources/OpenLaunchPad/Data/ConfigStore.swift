@@ -7,11 +7,11 @@ import Observation
 final class ConfigStore {
     static let shared = ConfigStore()
 
-    private let defaults: UserDefaults
+    private let defaults: any KeyValueStoring
     @ObservationIgnored var onGlobalShortcutChange: (() -> Void)?
     @ObservationIgnored var onMenuBarVisibilityChange: (() -> Void)?
 
-    init(defaults: UserDefaults = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
+    init(defaults: any KeyValueStoring = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
         self.defaults = defaults
         load()
     }
