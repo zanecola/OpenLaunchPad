@@ -85,11 +85,23 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func turningTransitionsOffRemovesTheirAnimationAndPersists() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        #expect(config.animatesTransitions)
+
+        config.animatesTransitions = false
+
+        #expect(config.animationDuration(0.3) == nil)
+        #expect(ConfigStore(defaults: defaults).animatesTransitions == false)
+    }
+
+    @Test
     func storedAnimationSpeedIsClampedIntoSupportedRange() {
         let defaults = InMemoryKeyValueStore()
-        defaults.set(0, forKey: "animationSpeed")
+        defaults.set(0.2, forKey: "animationSpeed")
 
-        #expect(ConfigStore(defaults: defaults).animationSpeed == ConfigStore.animationSpeedRange.lowerBound)
+        #expect(ConfigStore(defaults: defaults).animationSpeed == 0.5)
 
         defaults.set(10, forKey: "animationSpeed")
 

@@ -217,7 +217,7 @@ struct LaunchpadView: View {
                         },
                         onClose: vm.closeFolder
                     )
-                    .animation(.spring(duration: config.animationDuration(0.3)), value: folder.id)
+                    .animation(config.animationDuration(0.3).map { .spring(duration: $0) }, value: folder.id)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(folderInsets)
                 }

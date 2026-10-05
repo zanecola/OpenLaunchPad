@@ -104,7 +104,7 @@ struct AppGridView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: config.animationDuration(0.22)), value: vm.currentPage)
+            .animation(config.animationDuration(0.22).map { .easeInOut(duration: $0) }, value: vm.currentPage)
             // Turning the page cancels a drag on the old page without a drop.
             .onChange(of: vm.currentPage) { activeTarget = nil }
         }

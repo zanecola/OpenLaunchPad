@@ -76,11 +76,16 @@ final class ConfigStore {
     var animationSpeed: Double = 1.0 {
         didSet { save(animationSpeed, forKey: Keys.animationSpeed) }
     }
-    static let animationSpeedRange: ClosedRange<Double> = 0.2...2.0
+    static let animationSpeedRange: ClosedRange<Double> = 0.5...2.0
+    /// Off turns pages and opens folders without a transition.
+    var animatesTransitions: Bool = true {
+        didSet { save(animatesTransitions, forKey: Keys.animatesTransitions) }
+    }
 
     /// Length of a launcher transition that takes `base` seconds at 1×; higher speeds are shorter.
-    func animationDuration(_ base: Double) -> Double {
-        base / animationSpeed
+    /// nil when transitions are off.
+    func animationDuration(_ base: Double) -> Double? {
+        animatesTransitions ? base / animationSpeed : nil
     }
     // MARK: - Persistence helpers
 
@@ -99,6 +104,7 @@ final class ConfigStore {
         static let dockClickMode = "dockClickMode"
         static let globalShortcut = "globalShortcut"
         static let animationSpeed = "animationSpeed"
+        static let animatesTransitions = "animatesTransitions"
     }
 
     private func save<T>(_ value: T, forKey key: String) {
@@ -155,6 +161,9 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.animationSpeed) != nil {
             let storedSpeed = defaults.double(forKey: Keys.animationSpeed)
             animationSpeed = min(max(storedSpeed, Self.animationSpeedRange.lowerBound), Self.animationSpeedRange.upperBound)
+        }
+        if defaults.object(forKey: Keys.animatesTransitions) != nil {
+            animatesTransitions = defaults.bool(forKey: Keys.animatesTransitions)
         }
     }
 }

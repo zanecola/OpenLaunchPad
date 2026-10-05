@@ -183,6 +183,8 @@ private struct AppearanceSettingsTab: View {
             }
 
             Section("Animation") {
+                Toggle("Animate page and folder transitions", isOn: $config.animatesTransitions)
+
                 HStack {
                     Text("Speed")
                     Slider(value: $config.animationSpeed, in: ConfigStore.animationSpeedRange, step: 0.1)
@@ -190,6 +192,7 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 36)
                 }
+                .disabled(!config.animatesTransitions)
             }
         }
         .formStyle(.grouped)
