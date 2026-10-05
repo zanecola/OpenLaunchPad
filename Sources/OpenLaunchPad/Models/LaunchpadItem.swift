@@ -19,6 +19,9 @@ struct FolderItem: Identifiable, Hashable, Codable, Sendable {
     let id: UUID
     var title: String
     var apps: [AppItem]
+    /// The scanned directory's own name, such as "Utilities" or "Chrome Apps.localized". Layouts
+    /// saved before folder titles were localized stored it as the title.
+    var directoryName: String? = nil
 }
 
 enum LaunchpadItem: Identifiable, Hashable, Codable, Sendable {

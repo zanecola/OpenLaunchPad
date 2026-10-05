@@ -549,6 +549,32 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func storedRawDirectoryNameShowsTheLocalizedFolderTitleButARenameStays() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let docs = Self.app("Docs")
+        let sheets = Self.app("Sheets")
+        let utilities = FolderItem(id: UUID(), title: "实用工具", apps: [console, terminal], directoryName: "Utilities")
+        let webApps = FolderItem(id: UUID(), title: "Chrome Apps", apps: [docs, sheets], directoryName: "Chrome Apps.localized")
+        // Saved before scanned folders were titled with their localized names.
+        let stored = StoredLayout(
+            pageIDs: [[utilities.id, webApps.id]],
+            folders: [
+                StoredFolder(id: utilities.id, title: "Utilities", appIDs: [console.id, terminal.id]),
+                StoredFolder(id: webApps.id, title: "Web", appIDs: [docs.id, sheets.id])
+            ]
+        )
+        let viewModel = Self.viewModel(
+            pages: [[.folder(utilities), .folder(webApps)]],
+            store: StubLayoutStore(layout: stored)
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages.flatMap { $0 }.map(\.title) == ["实用工具", "Web"])
+    }
+
+    @Test
     func loadResolvesStoredMembershipAcrossTopLevelAndSourceFolders() async {
         let mail = Self.app("Mail")
         let terminal = Self.app("Terminal")

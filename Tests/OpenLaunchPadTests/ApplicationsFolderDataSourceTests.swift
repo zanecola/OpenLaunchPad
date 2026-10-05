@@ -167,6 +167,9 @@ struct ApplicationsFolderDataSourceTests {
             .loadPages().flatMap { $0 }
 
         #expect(items.map(\.title) == ["Chrome Apps"])
+        if case .folder(let folder) = items.first {
+            #expect(folder.directoryName == "Chrome Apps.localized")
+        }
     }
 
     @Test

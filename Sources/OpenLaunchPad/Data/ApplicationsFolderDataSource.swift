@@ -88,7 +88,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
             id: stableUUID(for: "folder:\(directory)"),
             // displayName drops ".localized" and localizes system folders such as Utilities.
             title: FileManager.default.displayName(atPath: directory),
-            apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
+            apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) },
+            directoryName: (directory as NSString).lastPathComponent
         ))
     }
 

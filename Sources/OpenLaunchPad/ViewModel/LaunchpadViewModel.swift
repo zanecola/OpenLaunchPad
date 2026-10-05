@@ -273,9 +273,12 @@ final class LaunchpadViewModel {
                 }
             }
 
+            // A title saved as the raw directory name was never a rename, so show the localized one.
+            let sourceFolder = sourceFoldersByID[id]
+            let title = sourceFolder.flatMap { $0.directoryName == storedFolder.title ? $0.title : nil }
             return normalized(FolderItem(
                 id: storedFolder.id,
-                title: storedFolder.title,
+                title: title ?? storedFolder.title,
                 apps: folderApps
             ))
         }
