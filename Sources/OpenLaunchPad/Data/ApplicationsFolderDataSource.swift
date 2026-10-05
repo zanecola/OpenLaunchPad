@@ -104,7 +104,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
             bundleID: bundleID,
             title: title,
             aliases: aliases,
-            bundleURL: bundleURL
+            bundleURL: bundleURL,
+            bundleVersion: info["CFBundleVersion"] as? String
         )
     }
 

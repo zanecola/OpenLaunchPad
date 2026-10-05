@@ -84,6 +84,16 @@ final class LaunchpadViewModel {
     func frequentlyUsedApps(limit: Int) -> [AppItem] {
         guard limit > 0 else { return [] }
 
+        let apps = appsByBundleID
+        return appUsageHistory
+            .rankedBundleIDs(limit: appUsageHistory.records.count)
+            .compactMap { apps[$0] }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    /// Every app, top level and in folders; the first tile wins for a duplicated bundle ID.
+    private var appsByBundleID: [String: AppItem] {
         var appsByBundleID: [String: AppItem] = [:]
         for item in pages.flatMap({ $0 }) {
             switch item {
@@ -97,12 +107,7 @@ final class LaunchpadViewModel {
                 }
             }
         }
-
-        return appUsageHistory
-            .rankedBundleIDs(limit: appUsageHistory.records.count)
-            .compactMap { appsByBundleID[$0] }
-            .prefix(limit)
-            .map { $0 }
+        return appsByBundleID
     }
 
     // MARK: - Dependencies (injected, enabling testability)
@@ -151,7 +156,14 @@ final class LaunchpadViewModel {
 
         do {
             let sourcedPages = try dataSource.loadPages()
+            let previousApps = appsByBundleID
             pages = applyCustomLayout(to: sourcedPages)
+            // A moved or updated bundle changes its AppItem, which re-renders its tiles;
+            // drop its icon so they load the new one.
+            let loadedApps = appsByBundleID
+            iconCache = iconCache.filter { bundleID, _ in
+                loadedApps[bundleID] != nil && loadedApps[bundleID] == previousApps[bundleID]
+            }
             if expandedFolderID != nil, expandedFolder == nil {
                 closeFolder()
             }

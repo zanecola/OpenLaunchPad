@@ -91,6 +91,21 @@ struct ApplicationsFolderDataSourceTests {
     }
 
     @Test
+    func inPlaceUpdateChangesTheScannedItemButNotItsID() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        try fixture.addApp(name: "Mail", bundleID: "com.example.mail", version: "1", under: fixture.firstRoot)
+        let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
+        let before = try source.loadPages()
+
+        try fixture.addApp(name: "Mail", bundleID: "com.example.mail", version: "2", under: fixture.firstRoot)
+        let after = try source.loadPages()
+
+        #expect(after.flatMap { $0 }.map(\.id) == before.flatMap { $0 }.map(\.id))
+        #expect(after != before)
+    }
+
+    @Test
     func localizedDirectoryIsTitledWithoutItsSuffix() throws {
         let fixture = try ApplicationsFixture()
         defer { fixture.remove() }
@@ -178,16 +193,23 @@ private final class ApplicationsFixture {
         try FileManager.default.createDirectory(at: secondRoot, withIntermediateDirectories: true)
     }
 
-    func addApp(name: String, bundleName: String? = nil, bundleID: String, under directory: URL) throws {
+    func addApp(
+        name: String,
+        bundleName: String? = nil,
+        bundleID: String,
+        version: String? = nil,
+        under directory: URL
+    ) throws {
         let contents = directory
             .appendingPathComponent("\(name).app", isDirectory: true)
             .appendingPathComponent("Contents", isDirectory: true)
         try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
-        let plist: [String: Any] = [
+        var plist: [String: Any] = [
             "CFBundleIdentifier": bundleID,
             "CFBundleName": bundleName ?? name,
             "CFBundlePackageType": "APPL"
         ]
+        plist["CFBundleVersion"] = version
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         try data.write(to: contents.appendingPathComponent("Info.plist"))
     }

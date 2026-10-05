@@ -11,6 +11,8 @@ struct AppItem: Identifiable, Hashable, Codable, Sendable {
     /// The bundle the data source found, so app actions target this copy rather than
     /// LaunchServices' preferred one. Not persisted: layout.json stores IDs only.
     var bundleURL: URL? = nil
+    /// CFBundleVersion, so an in-place update changes the item and reloads its icon.
+    var bundleVersion: String? = nil
 }
 
 struct FolderItem: Identifiable, Hashable, Codable, Sendable {

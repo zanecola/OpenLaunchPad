@@ -972,6 +972,42 @@ struct LaunchpadViewModelTests {
         ))
     }
 
+    @Test
+    func loadReloadsTheIconsOfChangedOrRemovedAppsOnly() async {
+        var mail = Self.app("Mail")
+        let notes = Self.app("Notes")
+        let dataSource = StubDataSource(pages: [[.app(mail), .app(notes)]])
+        let icons = CountingIconProvider()
+        let viewModel = LaunchpadViewModel(
+            dataSource: dataSource,
+            layoutStore: StubLayoutStore(),
+            iconProvider: icons,
+            appUsageStore: StubAppUsageStore()
+        )
+        func showIcons() {
+            _ = viewModel.icon(for: mail.bundleID)
+            _ = viewModel.icon(for: notes.bundleID)
+        }
+
+        await viewModel.load()
+        showIcons()
+        await viewModel.load()
+        showIcons()
+        #expect(icons.requests == [mail.bundleID, notes.bundleID])
+
+        mail.bundleVersion = "2"
+        dataSource.pages = [[.app(mail), .app(notes)]]
+        await viewModel.load()
+        showIcons()
+        #expect(icons.requests == [mail.bundleID, notes.bundleID, mail.bundleID])
+
+        dataSource.pages = [[.app(mail)]]
+        await viewModel.load()
+        _ = viewModel.icon(for: notes.bundleID)
+        #expect(icons.requests.last == notes.bundleID)
+        #expect(icons.requests.count == 4)
+    }
+
     private static func viewModel(
         pages: [[LaunchpadItem]],
         store: StubLayoutStore
@@ -1037,6 +1073,15 @@ private final class StubLayoutStore: LayoutStoring {
 private final class StubIconProvider: AppIconProviding {
     func icon(for bundleID: String) -> NSImage {
         NSImage(size: NSSize(width: 1, height: 1))
+    }
+}
+
+private final class CountingIconProvider: AppIconProviding {
+    var requests: [String] = []
+
+    func icon(for bundleID: String) -> NSImage {
+        requests.append(bundleID)
+        return NSImage(size: NSSize(width: 1, height: 1))
     }
 }
 
