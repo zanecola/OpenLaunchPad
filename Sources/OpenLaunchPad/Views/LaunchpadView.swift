@@ -96,6 +96,7 @@ struct LaunchpadView: View {
         }
         .background(backdrop)
         .environment(dragState)
+        .environment(\.launchpadLabelStyle, .onDarkBackdrop)
         .ignoresSafeArea()
         .onKeyPress(.escape) {
             if !vm.stepBack() { onDismiss() }

@@ -126,6 +126,12 @@ private struct AppearanceSettingsTab: View {
             }
 
             Section("Popup Window") {
+                Picker("Appearance", selection: $config.popupAppearance) {
+                    ForEach(PopupAppearance.allCases, id: \.self) { appearance in
+                        Text(appearance.rawValue).tag(appearance)
+                    }
+                }
+
                 HStack {
                     Text("Width")
                     Slider(value: $config.paneWidth, in: 400...1400, step: 20)

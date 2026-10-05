@@ -14,7 +14,7 @@ struct PageIndicatorView: View {
                     currentPage = index
                 } label: {
                     Circle()
-                        .fill(index == currentPage ? Color.white : Color.white.opacity(0.38))
+                        .fill(index == currentPage ? Color.primary : Color.primary.opacity(0.38))
                         .frame(width: index == currentPage ? 8 : 6, height: index == currentPage ? 8 : 6)
                         .frame(width: 22, height: 28)
                         .contentShape(Rectangle())

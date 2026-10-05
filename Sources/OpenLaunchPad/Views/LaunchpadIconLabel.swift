@@ -15,17 +15,29 @@ enum LaunchpadIconMetrics {
     }
 }
 
+enum LaunchpadLabelStyle {
+    /// White with a shadow, over the always-dark full-screen backdrop.
+    case onDarkBackdrop
+    /// The adaptive label color, over the popup, which can be light or dark.
+    case adaptive
+}
+
+extension EnvironmentValues {
+    @Entry var launchpadLabelStyle: LaunchpadLabelStyle = .adaptive
+}
+
 struct LaunchpadIconLabel: View {
     let title: String
     let iconSize: CGFloat
+    @Environment(\.launchpadLabelStyle) private var style
 
     var body: some View {
         Text(title)
             .font(.system(size: LaunchpadIconMetrics.labelFontSize(for: iconSize)))
             .lineLimit(2)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.6), radius: 2)
+            .foregroundStyle(style == .onDarkBackdrop ? Color.white : Color.primary)
+            .shadow(color: style == .onDarkBackdrop ? .black.opacity(0.6) : .clear, radius: 2)
             .frame(
                 width: iconSize + 16,
                 height: LaunchpadIconMetrics.labelHeight(for: iconSize),

@@ -58,6 +58,17 @@ enum PopupPlacement {
     }
 }
 
+extension PopupAppearance {
+    /// nil follows the system appearance.
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
 /// Floating panel shared by Dock and menu-bar popup modes.
 final class PopupPanel: NSPanel {
     init(width: CGFloat, height: CGFloat) {

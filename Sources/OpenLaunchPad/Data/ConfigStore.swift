@@ -33,6 +33,9 @@ final class ConfigStore {
     var paneHeight: Double = 620 {
         didSet { save(paneHeight, forKey: Keys.paneHeight) }
     }
+    var popupAppearance: PopupAppearance = .system {
+        didSet { defaults.set(popupAppearance.rawValue, forKey: Keys.popupAppearance) }
+    }
     /// Opacity of the black layer over the full-screen blur.
     var backgroundDim: Double = 0.25 {
         didSet { save(backgroundDim, forKey: Keys.backgroundDim) }
@@ -82,6 +85,7 @@ final class ConfigStore {
         static let gridColumns = "gridColumns"
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
+        static let popupAppearance = "popupAppearance"
         static let backgroundDim = "backgroundDim"
         static let legacyBackgroundBlur = "backgroundBlur"
         static let showMenuBarIcon = "showMenuBarIcon"
@@ -111,6 +115,10 @@ final class ConfigStore {
         }
         if defaults.object(forKey: Keys.paneHeight) != nil {
             paneHeight = defaults.double(forKey: Keys.paneHeight)
+        }
+        if let raw = defaults.string(forKey: Keys.popupAppearance),
+           let appearance = PopupAppearance(rawValue: raw) {
+            popupAppearance = appearance
         }
         if defaults.object(forKey: Keys.backgroundDim) != nil {
             let storedDim = defaults.double(forKey: Keys.backgroundDim)

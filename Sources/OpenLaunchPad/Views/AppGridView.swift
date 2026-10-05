@@ -84,12 +84,12 @@ struct AppGridView: View {
                     ProgressView()
                 } else if let error = vm.loadError {
                     Text(error)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
                         .padding()
                 } else if vm.pages.isEmpty {
                     Text("No applications found")
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.secondary)
                 } else {
                     switch mode {
                     case .paged:
@@ -221,14 +221,14 @@ struct AppGridView: View {
             switch activeTarget?.zone {
             case .leading, .trailing:
                 Capsule()
-                    .fill(.white.opacity(0.82))
+                    .fill(Color.primary.opacity(0.82))
                     .frame(width: 4, height: width * 0.78)
             case .center:
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 2)
+                    .stroke(Color.primary.opacity(0.58), lineWidth: 2)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(.white.opacity(0.08))
+                            .fill(Color.primary.opacity(0.08))
                     )
                     .frame(width: width, height: width)
             case nil:

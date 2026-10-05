@@ -11,4 +11,9 @@ struct FullScreenWindowTests {
         #expect(window.level == .normal)
         #expect(!window.collectionBehavior.contains(.canJoinAllSpaces))
     }
+
+    @Test
+    func windowIsDarkWhateverTheSystemAppearance() {
+        #expect(FullScreenWindow().appearance?.name == .darkAqua)
+    }
 }

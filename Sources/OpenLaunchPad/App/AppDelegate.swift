@@ -197,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(config)
 
         let controller = NSHostingController(rootView: root)
+        panel.appearance = config.popupAppearance.nsAppearance
         panel.onCancel = { [weak self] in self?.stepBackOrDismiss() }
         panel.onResignKey = { [weak self] in self?.popupDidResignKey() }
         unhideIfNeeded()

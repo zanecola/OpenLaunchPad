@@ -26,7 +26,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Search instantly, use horizontal mouse or trackpad gestures, click page controls, or navigate with the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size, labels, full-screen columns, popup dimensions, background dim, animation speed, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size, labels, full-screen columns, popup size and appearance (System, Light or Dark), background dim, animation speed, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 ## Gallery

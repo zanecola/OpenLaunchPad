@@ -129,6 +129,26 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func popupAppearanceFollowsTheSystemByDefaultAndPersists() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        #expect(config.popupAppearance == .system)
+
+        config.popupAppearance = .dark
+
+        #expect(defaults.string(forKey: "popupAppearance") == "Dark")
+        #expect(ConfigStore(defaults: defaults).popupAppearance == .dark)
+    }
+
+    @Test
+    func unknownStoredPopupAppearanceFallsBackToSystem() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Sepia", forKey: "popupAppearance")
+
+        #expect(ConfigStore(defaults: defaults).popupAppearance == .system)
+    }
+
+    @Test
     func frequentlyUsedAppsVisibilityPersists() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

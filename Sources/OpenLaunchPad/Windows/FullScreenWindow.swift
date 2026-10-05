@@ -17,6 +17,8 @@ final class FullScreenWindow: NSWindow {
         )
         isOpaque = false
         backgroundColor = .clear
+        // Launchpad always drew white labels over a darkened backdrop, whatever the system appearance.
+        appearance = NSAppearance(named: .darkAqua)
         level = .normal
         collectionBehavior = [.ignoresCycle]
         isReleasedWhenClosed = false

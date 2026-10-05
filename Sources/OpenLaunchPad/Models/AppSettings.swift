@@ -6,6 +6,12 @@ enum DockClickMode: String, Codable, CaseIterable, Sendable {
     case popup = "Popup"
 }
 
+enum PopupAppearance: String, CaseIterable, Sendable {
+    case system = "System"
+    case light = "Light"
+    case dark = "Dark"
+}
+
 enum LaunchpadSortOrder: Sendable {
     case ascending
     case descending

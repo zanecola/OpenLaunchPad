@@ -157,7 +157,7 @@ struct FolderExpandedView: View {
         .overlay {
             if isDraggingOutside {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(.white.opacity(0.58), style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
+                    .stroke(Color.primary.opacity(0.58), style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
             }
         }
         .onTapGesture {}  // absorb taps so background tap closes
@@ -204,11 +204,11 @@ struct FolderExpandedView: View {
             switch activeTarget?.zone {
             case .leading, .trailing:
                 Capsule()
-                    .fill(.white.opacity(0.82))
+                    .fill(Color.primary.opacity(0.82))
                     .frame(width: 4, height: iconSize * 0.62)
             case .center:
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(.white.opacity(0.52), lineWidth: 2)
+                    .stroke(Color.primary.opacity(0.52), lineWidth: 2)
                     .frame(width: iconSize * 0.7 + 20, height: iconSize * 0.7 + 20)
             case nil:
                 EmptyView()

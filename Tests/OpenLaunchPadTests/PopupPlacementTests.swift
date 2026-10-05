@@ -20,6 +20,13 @@ struct PopupPlacementTests {
     }
 
     @Test
+    func popupAppearanceMapsToThePanelAppearance() {
+        #expect(PopupAppearance.system.nsAppearance == nil)
+        #expect(PopupAppearance.light.nsAppearance?.name == .aqua)
+        #expect(PopupAppearance.dark.nsAppearance?.name == .darkAqua)
+    }
+
+    @Test
     func bottomDockPlacementCentersOnClickedIcon() {
         let origin = PopupPlacement.origin(
             anchor: NSPoint(x: 1_400, y: 35),
