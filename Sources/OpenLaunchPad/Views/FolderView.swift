@@ -169,6 +169,9 @@ struct FolderExpandedView: View {
         .onChange(of: isRenaming) { wasRenaming, isRenaming in
             if wasRenaming && !isRenaming { commitRename() }
         }
+        // Clicking outside, Escape and dismissing the launcher remove this view without
+        // ending the text field's focus, so commit the draft here too.
+        .onDisappear(perform: commitRename)
         .background {
             GeometryReader { proxy in
                 Color.clear
@@ -190,7 +193,9 @@ struct FolderExpandedView: View {
             return
         }
         draftTitle = name
-        onRename(name)
+        if name != folder.title {
+            onRename(name)
+        }
     }
 
     @ViewBuilder

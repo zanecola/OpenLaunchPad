@@ -372,6 +372,24 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func renameFolderToItsCurrentTitleDoesNotPersist() {
+        let folder = FolderItem(
+            id: UUID(),
+            title: "Utilities",
+            apps: [Self.app("Terminal"), Self.app("Console")]
+        )
+        let layoutStore = StubLayoutStore()
+        let viewModel = Self.viewModel(pages: [], store: layoutStore)
+        viewModel.pages = [[.folder(folder)]]
+
+        viewModel.renameFolder(folder.id, to: " Utilities ")
+        viewModel.renameFolder(folder.id, to: "   ")
+
+        #expect(viewModel.pages == [[.folder(folder)]])
+        #expect(layoutStore.savedLayouts.isEmpty)
+    }
+
+    @Test
     func loadAppliesPersistedFolderName() async {
         let terminal = Self.app("Terminal")
         let console = Self.app("Console")

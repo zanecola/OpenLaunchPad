@@ -360,7 +360,8 @@ final class LaunchpadViewModel {
     func renameFolder(_ id: UUID, to newName: String) {
         let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let (pageIndex, itemIndex) = location(of: id),
-              case .folder(var folder) = pages[pageIndex][itemIndex] else {
+              case .folder(var folder) = pages[pageIndex][itemIndex],
+              folder.title != name else {
             return
         }
         folder.title = name
