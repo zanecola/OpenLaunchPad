@@ -18,16 +18,18 @@ struct OpenLaunchPadApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
 
+            // Not Command-arrows, which text fields need for line start and end, and not
+            // Control-arrows, which switch Spaces.
             CommandMenu("Pages") {
                 Button("Previous Page") {
                     appDelegate.viewModel.showPreviousPage()
                 }
-                .keyboardShortcut(.leftArrow, modifiers: .command)
+                .keyboardShortcut("[", modifiers: .command)
 
                 Button("Next Page") {
                     appDelegate.viewModel.showNextPage()
                 }
-                .keyboardShortcut(.rightArrow, modifiers: .command)
+                .keyboardShortcut("]", modifiers: .command)
             }
         }
 

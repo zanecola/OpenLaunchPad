@@ -97,14 +97,22 @@ struct LaunchpadView: View {
             return .handled
         }
         .onKeyPress(.leftArrow) {
+            guard arrowKeysTurnPages else { return .ignored }
             vm.showPreviousPage()
             return .handled
         }
         .onKeyPress(.rightArrow) {
+            guard arrowKeysTurnPages else { return .ignored }
             vm.showNextPage()
             return .handled
         }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
+    }
+
+    /// These handlers see arrow keys before the focused text field does, so leave them to the
+    /// caret while there is text to edit: a search query, or an open folder's name.
+    private var arrowKeysTurnPages: Bool {
+        vm.searchQuery.isEmpty && vm.expandedFolderID == nil
     }
 
     /// Stays open when the app can't be found, so the user can see why nothing opened.
