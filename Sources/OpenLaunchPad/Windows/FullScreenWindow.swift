@@ -37,10 +37,18 @@ final class FullScreenWindow: NSWindow {
         onCancel()
     }
 
-    func show(hostingView: NSHostingController<some View>) {
-        contentViewController = hostingView
-        guard let screen = NSScreen.main else { return }
-        setFrame(screen.frame, display: false)
+    /// Covers `screen`. A frame that is already right is left alone, so a show costs no layout.
+    func fit(to screen: NSScreen) {
+        if frame != screen.frame {
+            setFrame(screen.frame, display: false)
+        }
+    }
+
+    /// The content stays installed between shows, so this only orders the window in.
+    func show() {
+        // Applies what the show reset, such as search focus, before the window appears rather
+        // than a frame later.
+        contentView?.layoutSubtreeIfNeeded()
         makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -74,10 +82,8 @@ final class FullScreenWindow: NSWindow {
         )
     }
 
-    /// Insets for the screen `show(hostingView:)` covers.
-    static func contentInsets(autoHidesDockAndMenuBar: Bool) -> EdgeInsets {
-        guard let screen = NSScreen.main else { return EdgeInsets() }
-        return contentInsets(
+    static func contentInsets(for screen: NSScreen, autoHidesDockAndMenuBar: Bool) -> EdgeInsets {
+        contentInsets(
             screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
             safeAreaInsets: screen.safeAreaInsets,

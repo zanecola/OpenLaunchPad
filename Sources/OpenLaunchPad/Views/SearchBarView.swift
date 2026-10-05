@@ -8,6 +8,7 @@ struct SearchBarView: View {
     var onClear: () -> Void = {}
     var onSubmit: () -> Void = {}
     @FocusState private var isFocused: Bool
+    @Environment(LaunchpadViewModel.self) private var vm
 
     var body: some View {
         HStack(spacing: 8) {
@@ -20,8 +21,8 @@ struct SearchBarView: View {
                 .font(.system(size: 15))
                 .focused($isFocused)
                 .onSubmit(onSubmit)
-                // Hosts are rebuilt on every show, so this focuses search each time the launcher opens.
-                .onAppear { isFocused = true }
+                // The launcher stays alive between shows, so each show focuses search again.
+                .onChange(of: vm.presentationID, initial: true) { isFocused = true }
 
             if !text.isEmpty {
                 Button(action: { text = ""; onClear() }) {
@@ -54,10 +55,12 @@ struct SearchBarView: View {
 struct SettingsButton: View {
     let backdrop: LaunchpadBackdropMode
     let action: () -> Void
-    @State private var isHovered = false
+    @State private var hover = LauncherHover()
+    @Environment(LaunchpadViewModel.self) private var vm
 
     var body: some View {
         let diameter: CGFloat = backdrop == .fullScreen ? 30 : 28
+        let isHovered = hover.isActive(in: vm.presentationID)
         Button(action: action) {
             let symbol = Image(systemName: "gearshape.fill")
                 .font(.system(size: diameter / 2, weight: .medium))
@@ -83,8 +86,8 @@ struct SettingsButton: View {
         }
         .buttonStyle(.plain)
         .opacity(backdrop == .fullScreen && !isHovered ? 0.55 : 1)
-        .animation(.easeOut(duration: 0.15), value: isHovered)
-        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: hover)
+        .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
         .help("Open Settings")
         .accessibilityLabel("Open Settings")
     }

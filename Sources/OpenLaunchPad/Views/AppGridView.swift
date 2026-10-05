@@ -132,6 +132,7 @@ struct AppGridView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 34)
         }
+        .modifier(ScrollsToTopOnShow())
         .scrollIndicators(.hidden)
         .launchpadScrollAppearance()
         .overlay(alignment: .bottom) {
@@ -299,6 +300,19 @@ struct AppGridView: View {
         }
     }
 
+}
+
+/// The popup stays alive between shows, so each show starts back at the top. Only this modifier
+/// reads presentationID, so a show doesn't re-render the grid.
+private struct ScrollsToTopOnShow: ViewModifier {
+    @Environment(LaunchpadViewModel.self) private var vm
+    @State private var position = ScrollPosition(edge: .top)
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onChange(of: vm.presentationID) { position.scrollTo(edge: .top) }
+    }
 }
 
 private struct DragHoverTarget: Equatable {

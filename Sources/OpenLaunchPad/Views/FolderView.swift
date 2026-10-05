@@ -13,7 +13,8 @@ struct FolderView: View {
     var onOpen: () -> Void = {}
     var onLaunch: (AppItem) -> Void = { _ in }
 
-    @State private var isHovered = false
+    @State private var hover = LauncherHover()
+    @Environment(LaunchpadViewModel.self) private var vm
     @Environment(LaunchpadDragState.self) private var dragState
     /// Also tells which backdrop the tile sits on: the dark full screen or the adaptive popup.
     @Environment(\.launchpadLabelStyle) private var labelStyle
@@ -32,8 +33,8 @@ struct FolderView: View {
     private var content: some View {
         VStack(spacing: 6) {
             folderIcon
-                .scaleEffect(isHovered ? 1.08 : 1.0)
-                .animation(.spring(duration: 0.15), value: isHovered)
+                .scaleEffect(hover.isActive(in: vm.presentationID) ? 1.08 : 1.0)
+                .animation(.spring(duration: 0.15), value: hover)
 
             if showLabel {
                 LaunchpadIconLabel(title: folder.title, iconSize: CGFloat(iconSize))
@@ -41,7 +42,7 @@ struct FolderView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
-        .onHover { isHovered = $0 }
+        .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(folder.title)
         .accessibilityValue(folder.apps.count == 1 ? "1 app" : "\(folder.apps.count) apps")

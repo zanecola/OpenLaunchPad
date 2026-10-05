@@ -1,5 +1,4 @@
 import AppKit
-import SwiftUI
 
 enum PopupPlacement {
     static func origin(
@@ -103,33 +102,42 @@ final class PopupPanel: NSPanel {
         onResignKey()
     }
 
-    func show(
-        anchorPoint: NSPoint?,
-        hostingView: NSHostingController<some View>,
-        width: CGFloat,
-        height: CGFloat
-    ) {
-        setContentSize(NSSize(width: width, height: height))
-        contentViewController = hostingView
-        hostingView.view.wantsLayer = true
-        hostingView.view.layer?.cornerRadius = 18
-        hostingView.view.layer?.masksToBounds = true
+    /// Installs the content once; it stays for the app's lifetime.
+    func setContent(_ controller: NSViewController) {
+        contentViewController = controller
+        controller.view.wantsLayer = true
+        controller.view.layer?.cornerRadius = 18
+        controller.view.layer?.masksToBounds = true
+    }
 
+    /// A size that is already right is left alone, so a show costs no layout.
+    func fit(to size: NSSize) {
+        if frame.size != size {
+            setContentSize(size)
+        }
+    }
+
+    /// The content stays installed between shows, so this only places the panel and orders it in.
+    func show(anchorPoint: NSPoint?) {
+        let size = frame.size
         if let anchorPoint,
            let screen = NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) }) ?? NSScreen.main {
             setFrameOrigin(PopupPlacement.origin(
                 anchor: anchorPoint,
-                panelSize: NSSize(width: width, height: height),
+                panelSize: size,
                 screenFrame: screen.frame,
                 visibleFrame: screen.visibleFrame
             ))
         } else if let screen = NSScreen.main {
             setFrameOrigin(NSPoint(
-                x: screen.visibleFrame.midX - width / 2,
-                y: screen.visibleFrame.midY - height / 2
+                x: screen.visibleFrame.midX - size.width / 2,
+                y: screen.visibleFrame.midY - size.height / 2
             ))
         }
 
+        // Applies what the show reset, such as search focus, before the panel appears rather
+        // than a frame later.
+        contentView?.layoutSubtreeIfNeeded()
         orderFrontRegardless()
         // A non-activating panel can be key without activating the app, so typing reaches
         // the search field instead of the app the user was in.

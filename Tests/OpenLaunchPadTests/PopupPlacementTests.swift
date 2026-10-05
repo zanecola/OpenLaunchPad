@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Testing
 @testable import OpenLaunchPad
 
@@ -17,6 +18,20 @@ struct PopupPlacementTests {
         // Key on show, so typing after the hotkey reaches search rather than the previous app.
         #expect(!panel.becomesKeyOnlyIfNeeded)
         #expect(panel.canBecomeKey)
+    }
+
+    @Test @MainActor
+    func installedContentKeepsThePaneSizeAndFollowsAChange() {
+        let panel = PopupPanel(width: 800, height: 600)
+
+        // Installing a view controller sizes a window to the controller's view, here zero.
+        panel.setContent(NSHostingController(rootView: EmptyView()))
+        panel.fit(to: NSSize(width: 800, height: 600))
+        let installedSize = panel.frame.size
+        panel.fit(to: NSSize(width: 900, height: 640))
+
+        #expect(installedSize == NSSize(width: 800, height: 600))
+        #expect(panel.frame.size == NSSize(width: 900, height: 640))
     }
 
     @Test

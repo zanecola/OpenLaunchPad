@@ -98,7 +98,8 @@ struct FolderTileTests {
             isEditMode: false,
             iconProvider: { _ in NSImage(size: NSSize(width: 1, height: 1)) }
         )
-        .environment(LaunchpadDragState()))
+        .environment(LaunchpadDragState())
+        .environment(viewModel))
 
         #expect(folderTile.fittingSize == appTile.fittingSize)
     }

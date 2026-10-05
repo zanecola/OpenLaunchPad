@@ -12,7 +12,7 @@ struct AppIconView: View {
     var onDragEnded: (LaunchpadDragPayload, CGPoint) -> Void = { _, _ in }
     var onTap: () -> Void = {}
 
-    @State private var isHovered = false
+    @State private var hover = LauncherHover()
     @State private var wiggleAngle: Double = 0
     @State private var uninstallRequest: UninstallRequest?
     @State private var actionError: String?
@@ -92,7 +92,8 @@ struct AppIconView: View {
     }
 
     private var content: some View {
-        VStack(spacing: 6) {
+        let isHovered = hover.isActive(in: vm.presentationID)
+        return VStack(spacing: 6) {
             Image(nsImage: icon)
                 .resizable()
                 .interpolation(.high)
@@ -107,8 +108,8 @@ struct AppIconView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
-        .onHover { isHovered = $0 }
-        .animation(.spring(duration: 0.15), value: isHovered)
+        .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
+        .animation(.spring(duration: 0.15), value: hover)
         .onChange(of: isEditMode) { _, editing in
             if editing { startWiggle() } else { wiggleAngle = 0 }
         }

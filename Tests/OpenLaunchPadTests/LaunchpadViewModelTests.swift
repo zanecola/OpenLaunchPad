@@ -915,6 +915,36 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func everyShowGetsANewPresentationID() {
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        let beforeFirstShow = viewModel.presentationID
+
+        viewModel.beginPresentation()
+        let firstShow = viewModel.presentationID
+        viewModel.endPresentation()
+        viewModel.beginPresentation()
+
+        #expect(firstShow != beforeFirstShow)
+        #expect(viewModel.presentationID != firstShow)
+    }
+
+    @Test
+    func endingAPresentationClearsSearchAndClosesTheFolderButKeepsThePage() {
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [Self.app("Mail"), Self.app("Calendar")])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.app(Self.app("Notes"))], [.folder(folder)]]
+        viewModel.currentPage = 1
+        viewModel.searchQuery = "mail"
+        viewModel.toggleFolder(folder.id)
+
+        viewModel.endPresentation()
+
+        #expect(viewModel.searchQuery.isEmpty)
+        #expect(viewModel.expandedFolderID == nil)
+        #expect(viewModel.currentPage == 1)
+    }
+
+    @Test
     func searchMatchesAppAliases() {
         let calendar = AppItem(id: UUID(), bundleID: "com.example.calendar", title: "日历", aliases: ["Calendar"])
         let code = AppItem(id: UUID(), bundleID: "com.example.code", title: "Visual Studio Code", aliases: ["Code"])

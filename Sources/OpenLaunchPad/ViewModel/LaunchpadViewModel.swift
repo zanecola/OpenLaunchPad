@@ -467,6 +467,22 @@ final class LaunchpadViewModel {
         return true
     }
 
+    // MARK: - Presentation
+
+    /// Bumped on every show. Both launcher surfaces stay alive between shows, so views refocus
+    /// search, drop a hover left from the last show and scroll back to the top when it changes.
+    private(set) var presentationID = 0
+
+    func beginPresentation() {
+        presentationID += 1
+    }
+
+    /// The launcher is hiding: it opens next time with no query and no open folder.
+    func endPresentation() {
+        searchQuery = ""
+        closeFolder()
+    }
+
     // MARK: - Edit mode
 
     func toggleEditMode() {

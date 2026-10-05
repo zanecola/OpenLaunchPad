@@ -15,11 +15,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let viewModel: LaunchpadViewModel
 
     private let fullScreenWindow = FullScreenWindow()
+    /// The insets the full-screen content was last given, for the screen the window covers.
+    private var fullScreenInsets = EdgeInsets()
+    /// Type-erased so new insets can replace the root; it always wraps the same view, which keeps its state.
+    private lazy var fullScreenHost = NSHostingController(rootView: AnyView(fullScreenRoot(contentInsets: fullScreenInsets)))
+    private lazy var popupPanel = PopupPanel(width: config.paneWidth, height: config.paneHeight)
     private lazy var settingsWindowController = SettingsWindowController(
         viewModel: viewModel,
         config: config
     )
-    private var popupPanel: PopupPanel?
     private var statusItem: NSStatusItem?
     private var hotkeyRef: EventHotKeyRef?
     private var hotkeyHandler: EventHandlerRef?
@@ -35,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     private var localeObserver: NSObjectProtocol?
+    private var screenParametersObserver: NSObjectProtocol?
     /// Set while full screen auto-hides the Dock and menu bar, to restore on hide.
     private var presentationOptionsBeforeFullScreen: NSApplication.PresentationOptions?
 
@@ -70,6 +75,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         registerHotkey()
         updateStatusItemVisibility()
+        installLauncherSurfaces()
+        screenParametersObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refitFullScreen()
+            }
+        }
         databaseWatcher.start()
         applicationsWatcher.start()
         // App and folder names are localized and sorted for the current locale.
@@ -82,7 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 await self?.viewModel.load()
             }
         }
-        Task { await viewModel.load() }
+        Task {
+            await viewModel.load()
+            prewarmLauncherSurfaces()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -91,6 +109,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applicationsWatcher.stop()
         if let localeObserver {
             NotificationCenter.default.removeObserver(localeObserver)
+        }
+        if let screenParametersObserver {
+            NotificationCenter.default.removeObserver(screenParametersObserver)
         }
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
@@ -145,9 +166,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             presentationOptionsBeforeFullScreen = nil
         }
         fullScreenWindow.hide()
-        popupPanel?.hide()
-        viewModel.searchQuery = ""
-        viewModel.expandedFolderID = nil
+        popupPanel.hide()
+        viewModel.endPresentation()
     }
 
     /// Closes the launcher without launching anything. Opening it may have activated this app
@@ -172,39 +192,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !viewModel.stepBack() { dismissLaunchpad() }
     }
 
-    // MARK: - Full-screen mode
+    // MARK: - Launcher surfaces
 
-    private func showFullScreen() {
-        let autoHides = config.autoHidesDockAndMenuBar
-        let root = LaunchpadView(
-            contentInsets: FullScreenWindow.contentInsets(autoHidesDockAndMenuBar: autoHides),
-            onDismiss: dismissLaunchpad,
-            onAppLaunched: hideLaunchpad,
-            onOpenSettings: openSettings
-        )
-            .environment(viewModel)
-            .environment(config)
-
-        let controller = NSHostingController(rootView: root)
-        visibleSurface = .fullScreen
+    /// Builds each surface's content once, so a show only orders a window in and views keep their
+    /// state between shows. `LaunchpadViewModel.presentationID` tells them a new show began.
+    private func installLauncherSurfaces() {
+        // Each window sets its own size, so the content needn't be measured for size constraints.
+        fullScreenHost.sizingOptions = []
+        fullScreenWindow.contentViewController = fullScreenHost
         fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrDismiss() }
-        if autoHides {
-            presentationOptionsBeforeFullScreen = NSApp.presentationOptions
-            // Takes effect while this app is active. Auto-hiding the menu bar requires a Dock
-            // option, and an invalid combination raises.
-            NSApp.presentationOptions = [.autoHideDock, .autoHideMenuBar]
-        }
-        unhideIfNeeded()
-        fullScreenWindow.show(hostingView: controller)
-    }
+        refitFullScreen()
 
-    // MARK: - Popup mode
-
-    func showPopup(anchorPoint: NSPoint?) {
-        let panel = popupPanel ?? PopupPanel(width: config.paneWidth, height: config.paneHeight)
-        popupPanel = panel
-
-        let root = MenuBarPanelView(onDismissRequested: { [weak self] in
+        let popupHost = NSHostingController(rootView: MenuBarPanelView(onDismissRequested: { [weak self] in
             self?.dismissLaunchpad()
         }, onAppLaunched: { [weak self] in
             self?.hideLaunchpad()
@@ -212,19 +211,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.openSettings()
         })
             .environment(viewModel)
-            .environment(config)
+            .environment(config))
+        popupHost.sizingOptions = []
+        popupPanel.setContent(popupHost)
+        popupPanel.onCancel = { [weak self] in self?.stepBackOrDismiss() }
+        popupPanel.onResignKey = { [weak self] in self?.popupDidResignKey() }
+        popupPanel.fit(to: popupSize)
+    }
 
-        let controller = NSHostingController(rootView: root)
-        panel.appearance = config.popupAppearance.nsAppearance
-        panel.onCancel = { [weak self] in self?.stepBackOrDismiss() }
-        panel.onResignKey = { [weak self] in self?.popupDidResignKey() }
-        unhideIfNeeded()
-        panel.show(
-            anchorPoint: anchorPoint,
-            hostingView: controller,
-            width: config.paneWidth,
-            height: config.paneHeight
+    /// Lays out and draws both surfaces while they are ordered out, once the apps have loaded, so
+    /// the first show has nothing left to build.
+    private func prewarmLauncherSurfaces() {
+        popupPanel.appearance = config.popupAppearance.nsAppearance
+        for window: NSWindow in [fullScreenWindow, popupPanel] {
+            window.contentView?.layoutSubtreeIfNeeded()
+            window.displayIfNeeded()
+        }
+    }
+
+    private var popupSize: NSSize {
+        NSSize(width: config.paneWidth, height: config.paneHeight)
+    }
+
+    // MARK: - Full-screen mode
+
+    private func fullScreenRoot(contentInsets: EdgeInsets) -> some View {
+        LaunchpadView(
+            contentInsets: contentInsets,
+            onDismiss: dismissLaunchpad,
+            onAppLaunched: hideLaunchpad,
+            onOpenSettings: openSettings
         )
+            .environment(viewModel)
+            .environment(config)
+    }
+
+    /// Fits the window and its content insets to the screen full screen opens on, reapplying each
+    /// only when it changed.
+    private func refitFullScreen() {
+        guard let screen = NSScreen.main else { return }
+        fullScreenWindow.fit(to: screen)
+        let insets = FullScreenWindow.contentInsets(
+            for: screen,
+            autoHidesDockAndMenuBar: config.autoHidesDockAndMenuBar
+        )
+        if insets != fullScreenInsets {
+            fullScreenInsets = insets
+            fullScreenHost.rootView = AnyView(fullScreenRoot(contentInsets: insets))
+        }
+    }
+
+    private func showFullScreen() {
+        visibleSurface = .fullScreen
+        if config.autoHidesDockAndMenuBar {
+            presentationOptionsBeforeFullScreen = NSApp.presentationOptions
+            // Takes effect while this app is active. Auto-hiding the menu bar requires a Dock
+            // option, and an invalid combination raises.
+            NSApp.presentationOptions = [.autoHideDock, .autoHideMenuBar]
+        }
+        unhideIfNeeded()
+        refitFullScreen()
+        viewModel.beginPresentation()
+        fullScreenWindow.show()
+    }
+
+    // MARK: - Popup mode
+
+    func showPopup(anchorPoint: NSPoint?) {
+        popupPanel.appearance = config.popupAppearance.nsAppearance
+        popupPanel.fit(to: popupSize)
+        unhideIfNeeded()
+        viewModel.beginPresentation()
+        popupPanel.show(anchorPoint: anchorPoint)
         visibleSurface = .popup
         installPopupDismissMonitor()
     }
@@ -286,8 +344,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Wait a turn: a sheet, such as the uninstall confirmation, takes key from the panel
         // while it attaches, and the popup must stay open under it.
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.visibleSurface == .popup, let panel = self.popupPanel,
-                  !panel.isKeyWindow, panel.attachedSheet == nil else { return }
+            guard let self, self.visibleSurface == .popup,
+                  !self.popupPanel.isKeyWindow, self.popupPanel.attachedSheet == nil else { return }
             self.launcherToggle.recordImplicitDismissal()
             self.dismissLaunchpad()
         }
