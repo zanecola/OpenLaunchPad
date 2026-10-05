@@ -23,6 +23,13 @@ final class LaunchpadViewModel {
     var currentPage: Int = 0
     var isLoading: Bool = false
     var loadError: String? = nil
+    /// How many items a page holds: the full-screen grid's columns × rows. A change reloads, so
+    /// the source is chunked again and a saved layout's overflow moves onto later pages.
+    var pageCapacity: Int {
+        didSet {
+            if pageCapacity != oldValue { reload() }
+        }
+    }
     private var appUsageHistory: AppUsageHistory
 
     // MARK: - Derived state
@@ -142,6 +149,7 @@ final class LaunchpadViewModel {
         iconProvider: any AppIconProviding,
         applicationManager: (any ApplicationManaging)? = nil,
         appUsageStore: any AppUsageStoring,
+        pageCapacity: Int = 35,  // the default 7 × 5 grid
         makeUUID: @escaping () -> UUID = UUID.init,
         now: @escaping () -> Date = Date.init
     ) {
@@ -150,6 +158,7 @@ final class LaunchpadViewModel {
         self.iconProvider = iconProvider
         self.applicationManager = applicationManager ?? SystemApplicationManager()
         self.appUsageStore = appUsageStore
+        self.pageCapacity = pageCapacity
         appUsageHistory = appUsageStore.loadHistory()
         self.makeUUID = makeUUID
         self.now = now
@@ -167,9 +176,14 @@ final class LaunchpadViewModel {
         defer { isLoading = false }
 
         do {
-            let sourcedPages = try dataSource.loadPages()
+            let sourcedPages = try dataSource.loadPages(pageCapacity: pageCapacity)
             let previousApps = appsByBundleID
-            pages = applyCustomLayout(to: sourcedPages)
+            let mergedPages = applyCustomLayout(to: sourcedPages)
+            pages = LaunchpadLayout.reflow(mergedPages, capacity: pageCapacity)
+            // Saved, so apps moved onto later pages stay there if pages get more slots.
+            if pages != mergedPages {
+                persistLayout()
+            }
             // A moved or updated bundle changes its AppItem, which re-renders its tiles;
             // drop its icon so they load the new one.
             let loadedApps = appsByBundleID
@@ -187,7 +201,8 @@ final class LaunchpadViewModel {
     }
 
     /// Merges the data source's default ordering with any saved custom layout.
-    /// Items absent from the custom layout are appended to the last page.
+    /// Items absent from the custom layout are appended to the last page; reload then moves what
+    /// overflows it onto new pages.
     private func applyCustomLayout(to sourcedPages: [[LaunchpadItem]]) -> [[LaunchpadItem]] {
         guard let storedLayout = layoutStore.loadCustomLayout() else {
             return sourcedPages
@@ -546,7 +561,9 @@ final class LaunchpadViewModel {
         var layout = LaunchpadLayout(pages: pages)
         guard mutation(&layout) else { return false }
 
-        pages = layout.pages
+        // An app dropped onto a full page, or dragged out of a folder on one, pushes the page's
+        // last item onto the next page.
+        pages = LaunchpadLayout.reflow(layout.pages, capacity: pageCapacity)
         if expandedFolderID != nil, expandedFolder == nil {
             closeFolder()
         }

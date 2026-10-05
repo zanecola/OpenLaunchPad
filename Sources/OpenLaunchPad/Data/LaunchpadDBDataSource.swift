@@ -16,7 +16,8 @@ final class LaunchpadDBDataSource: AppDataSource {
             .path
     }
 
-    func loadPages() throws -> [[LaunchpadItem]] {
+    /// Keeps the database's own pages.
+    func loadPages(pageCapacity _: Int) throws -> [[LaunchpadItem]] {
         var db: OpaquePointer?
         guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK, let db else {
             throw LaunchpadDBError.cannotOpen(dbPath)

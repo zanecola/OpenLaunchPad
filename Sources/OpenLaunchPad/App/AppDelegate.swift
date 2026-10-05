@@ -59,7 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dataSource: dataSource,
             layoutStore: JSONLayoutStore(),
             iconProvider: BundleIconProvider(),
-            appUsageStore: UserDefaultsAppUsageStore()
+            appUsageStore: UserDefaultsAppUsageStore(),
+            pageCapacity: ConfigStore.shared.pageCapacity
         )
         super.init()
     }
@@ -72,6 +73,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         config.onMenuBarVisibilityChange = { [weak self] in
             self?.updateStatusItemVisibility()
+        }
+        config.onPageCapacityChange = { [weak self] in
+            guard let self else { return }
+            viewModel.pageCapacity = config.pageCapacity
         }
         registerHotkey()
         updateStatusItemVisibility()
@@ -116,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         unregisterHotkey()
         config.onGlobalShortcutChange = nil
         config.onMenuBarVisibilityChange = nil
+        config.onPageCapacityChange = nil
     }
 
     func applicationDidResignActive(_ notification: Notification) {

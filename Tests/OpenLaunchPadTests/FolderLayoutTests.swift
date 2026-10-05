@@ -106,7 +106,7 @@ struct FolderTileTests {
 }
 
 private struct EmptyDataSource: AppDataSource {
-    func loadPages() throws -> [[LaunchpadItem]] { [] }
+    func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] { [] }
 }
 
 private struct EmptyLayoutStore: LayoutStoring {

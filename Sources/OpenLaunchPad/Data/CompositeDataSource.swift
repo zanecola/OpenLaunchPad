@@ -11,11 +11,11 @@ final class CompositeDataSource: AppDataSource {
         self.fallback = fallback
     }
 
-    func loadPages() throws -> [[LaunchpadItem]] {
+    func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] {
         do {
-            return try primary.loadPages()
+            return try primary.loadPages(pageCapacity: pageCapacity)
         } catch {
-            return try fallback.loadPages()
+            return try fallback.loadPages(pageCapacity: pageCapacity)
         }
     }
 }

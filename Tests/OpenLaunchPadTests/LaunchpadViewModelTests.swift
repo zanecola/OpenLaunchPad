@@ -875,6 +875,91 @@ struct LaunchpadViewModelTests {
         #expect(store.savedLayouts.isEmpty)
     }
 
+    // MARK: - Page capacity
+
+    @Test
+    func loadAsksForPagesOfTheCapacityAndSavesNothingWhenTheyFit() async {
+        let source = StubDataSource(pages: [[.app(Self.app("Mail")), .app(Self.app("Notes"))]])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(source: source, store: store, pageCapacity: 2)
+
+        await viewModel.load()
+
+        #expect(source.requestedCapacities == [2])
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["Mail", "Notes"]])
+        #expect(store.savedLayouts.isEmpty)
+    }
+
+    @Test
+    func loadMovesASavedPagesOverflowOntoTheNextPageAndSavesIt() async {
+        let apps = ["A", "B", "C", "D", "E"].map(Self.app)
+        let store = StubLayoutStore(customLayout: [apps.prefix(3).map(\.id), apps.suffix(2).map(\.id)])
+        let viewModel = Self.viewModel(
+            source: StubDataSource(pages: [apps.map { .app($0) }]),
+            store: store,
+            pageCapacity: 2
+        )
+
+        await viewModel.load()
+
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A", "B"], ["C", "D"], ["E"]])
+        #expect(store.savedLayouts.count == 1)
+        #expect(store.savedLayouts.last?.pageIDs == viewModel.pages.map { $0.map(\.id) })
+    }
+
+    @Test
+    func newAppsFillTheLastPagesFreeSlotsThenANewPage() async {
+        let apps = ["A", "B", "C", "D"].map(Self.app)
+        let store = StubLayoutStore(customLayout: [[apps[0].id], [apps[1].id]])
+        let viewModel = Self.viewModel(
+            source: StubDataSource(pages: [apps.map { .app($0) }]),
+            store: store,
+            pageCapacity: 2
+        )
+
+        await viewModel.load()
+
+        // The first page keeps its free slot.
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A"], ["B", "C"], ["D"]])
+    }
+
+    @Test
+    func capacityChangesReloadAndNeverPullAppsBack() async {
+        let apps = ["A", "B", "C", "D", "E"].map(Self.app)
+        let source = StubDataSource(pages: [apps.map { .app($0) }])
+        let store = StubLayoutStore(customLayout: [apps.prefix(3).map(\.id), apps.suffix(2).map(\.id)])
+        let viewModel = Self.viewModel(source: source, store: store, pageCapacity: 3)
+        await viewModel.load()
+        #expect(store.savedLayouts.isEmpty)
+
+        viewModel.pageCapacity = 2
+
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A", "B"], ["C", "D"], ["E"]])
+        #expect(store.savedLayouts.count == 1)
+
+        viewModel.pageCapacity = 4
+
+        #expect(source.requestedCapacities == [3, 2, 4])
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A", "B"], ["C", "D"], ["E"]])
+        #expect(store.savedLayouts.count == 1)
+    }
+
+    @Test
+    func appDraggedOutOfAFolderOnAFullPagePushesTheLastItemOntoTheNextPage() {
+        let mail = Self.app("Mail")
+        let notes = Self.app("Notes")
+        let music = Self.app("Music")
+        let folder = FolderItem(id: UUID(), title: "Work", apps: [notes, Self.app("Calendar"), Self.app("Maps")])
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(source: StubDataSource(pages: []), store: store, pageCapacity: 2)
+        viewModel.pages = [[.app(mail), .folder(folder)], [.app(music)]]
+
+        #expect(viewModel.removeApp(notes.id, fromFolder: folder.id))
+
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["Mail", "Work"], ["Notes", "Music"]])
+        #expect(store.savedLayouts.count == 1)
+    }
+
     @Test
     func removingAppThatDissolvesExpandedFolderClosesIt() {
         let mail = Self.app("Mail")
@@ -1147,6 +1232,20 @@ struct LaunchpadViewModelTests {
         )
     }
 
+    private static func viewModel(
+        source: StubDataSource,
+        store: StubLayoutStore,
+        pageCapacity: Int
+    ) -> LaunchpadViewModel {
+        LaunchpadViewModel(
+            dataSource: source,
+            layoutStore: store,
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore(),
+            pageCapacity: pageCapacity
+        )
+    }
+
     private static func app(_ title: String) -> AppItem {
         AppItem(id: UUID(), bundleID: "com.example.\(title)", title: title)
     }
@@ -1154,13 +1253,15 @@ struct LaunchpadViewModelTests {
 
 private final class StubDataSource: AppDataSource {
     var pages: [[LaunchpadItem]]
+    private(set) var requestedCapacities: [Int] = []
 
     init(pages: [[LaunchpadItem]]) {
         self.pages = pages
     }
 
-    func loadPages() throws -> [[LaunchpadItem]] {
-        pages
+    func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] {
+        requestedCapacities.append(pageCapacity)
+        return pages
     }
 }
 

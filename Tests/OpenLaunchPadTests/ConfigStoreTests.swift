@@ -16,6 +16,65 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func freshSettingsUseTheLaunchpadGrid() {
+        let config = ConfigStore(defaults: InMemoryKeyValueStore())
+
+        #expect(config.gridColumns == 7)
+        #expect(config.gridRows == 5)
+        #expect(config.pageCapacity == 35)
+    }
+
+    @Test
+    func columnsSavedBeforeRowsExistedAreKept() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(11, forKey: "gridColumns")
+
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.gridColumns == 11)
+        #expect(config.gridRows == 5)
+        #expect(config.pageCapacity == 55)
+    }
+
+    @Test
+    func automaticColumnsBecomeTheDefaultSeven() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(0, forKey: "gridColumns")
+
+        #expect(ConfigStore(defaults: defaults).gridColumns == 7)
+        #expect(defaults.integer(forKey: "gridColumns") == 7)
+    }
+
+    @Test
+    func storedRowsAreClampedIntoTheSupportedRange() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(9, forKey: "gridRows")
+
+        #expect(ConfigStore(defaults: defaults).gridRows == 7)
+
+        defaults.set(1, forKey: "gridRows")
+
+        #expect(ConfigStore(defaults: defaults).gridRows == 4)
+    }
+
+    @Test
+    func gridChangesPersistAndNotify() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        var notificationCount = 0
+        config.onPageCapacityChange = {
+            notificationCount += 1
+        }
+
+        config.gridColumns = 8
+        config.gridRows = 6
+
+        #expect(notificationCount == 2)
+        #expect(config.pageCapacity == 48)
+        #expect(ConfigStore(defaults: defaults).pageCapacity == 48)
+    }
+
+    @Test
     func menuBarVisibilityChangesPersistAndNotify() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

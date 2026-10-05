@@ -24,7 +24,7 @@ struct LaunchpadDBDataSourceTests {
                 (13, 'Mail', 'com.apple.mail');
             """)
 
-        let pages = try LaunchpadDBDataSource(dbPath: fixture.path).loadPages()
+        let pages = try LaunchpadDBDataSource(dbPath: fixture.path).loadPages(pageCapacity: 35)
 
         #expect(pages.map { $0.map(\.title) } == [["Mail"]])
     }
@@ -55,7 +55,7 @@ struct LaunchpadDBDataSourceTests {
                 (9, 'Maps', 'com.apple.Maps');
             """)
 
-        let pages = try LaunchpadDBDataSource(dbPath: fixture.path).loadPages()
+        let pages = try LaunchpadDBDataSource(dbPath: fixture.path).loadPages(pageCapacity: 35)
 
         #expect(pages.count == 2)
         #expect(pages[0].map(\.title) == ["Work", "Mail"])
@@ -77,7 +77,7 @@ struct LaunchpadDBDataSourceTests {
         defer { try? FileManager.default.removeItem(atPath: path) }
 
         #expect(throws: LaunchpadDBError.self) {
-            try LaunchpadDBDataSource(dbPath: path).loadPages()
+            try LaunchpadDBDataSource(dbPath: path).loadPages(pageCapacity: 35)
         }
     }
 }

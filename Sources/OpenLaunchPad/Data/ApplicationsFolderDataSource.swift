@@ -6,7 +6,6 @@ import CryptoKit
 /// Used when the Launchpad DB is absent or unreadable (ADR-2 fallback).
 final class ApplicationsFolderDataSource: AppDataSource {
     private let searchPaths: [String]
-    private let itemsPerPage: Int
     private let preferredURL: (String) -> URL?
 
     static var defaultSearchPaths: [String] {
@@ -20,15 +19,13 @@ final class ApplicationsFolderDataSource: AppDataSource {
     /// `preferredURL` is LaunchServices' preferred copy of a bundle ID, asked only for duplicates.
     init(
         searchPaths: [String] = ApplicationsFolderDataSource.defaultSearchPaths,
-        itemsPerPage: Int = 35,  // 5×7 default grid
         preferredURL: @escaping (String) -> URL? = { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) }
     ) {
         self.searchPaths = searchPaths
-        self.itemsPerPage = itemsPerPage
         self.preferredURL = preferredURL
     }
 
-    func loadPages() throws -> [[LaunchpadItem]] {
+    func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] {
         let fm = FileManager.default
         var entries: [ScannedEntry] = []
         for path in searchPaths {
@@ -50,8 +47,8 @@ final class ApplicationsFolderDataSource: AppDataSource {
         items.sort { Self.isOrderedBefore($0.title, $1.title) }
 
         // Chunk into pages
-        return stride(from: 0, to: items.count, by: itemsPerPage).map { start in
-            let end = min(start + itemsPerPage, items.count)
+        return stride(from: 0, to: items.count, by: pageCapacity).map { start in
+            let end = min(start + pageCapacity, items.count)
             return Array(items[start..<end])
         }
     }

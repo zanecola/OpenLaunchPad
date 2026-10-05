@@ -130,6 +130,23 @@ struct LaunchpadLayout: Equatable, Sendable {
         return apply(updatedPages)
     }
 
+    /// Moves what overflows each page onto the start of the next, adding pages at the end as
+    /// needed, so no page holds more than `capacity` items. Nothing moves back to fill free slots.
+    static func reflow(_ pages: [[LaunchpadItem]], capacity: Int) -> [[LaunchpadItem]] {
+        var reflowed: [[LaunchpadItem]] = []
+        var overflow: [LaunchpadItem] = []
+        for page in pages {
+            let items = overflow + page
+            reflowed.append(Array(items.prefix(capacity)))
+            overflow = Array(items.dropFirst(capacity))
+        }
+        while !overflow.isEmpty {
+            reflowed.append(Array(overflow.prefix(capacity)))
+            overflow = Array(overflow.dropFirst(capacity))
+        }
+        return reflowed
+    }
+
     private mutating func apply(_ updatedPages: [[LaunchpadItem]]) -> Bool {
         guard updatedPages != pages else { return false }
         pages = updatedPages

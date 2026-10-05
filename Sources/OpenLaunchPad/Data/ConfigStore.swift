@@ -10,6 +10,7 @@ final class ConfigStore {
     private let defaults: any KeyValueStoring
     @ObservationIgnored var onGlobalShortcutChange: (() -> Void)?
     @ObservationIgnored var onMenuBarVisibilityChange: (() -> Void)?
+    @ObservationIgnored var onPageCapacityChange: (() -> Void)?
 
     init(defaults: any KeyValueStoring = UserDefaults(suiteName: "com.openlaunchpad") ?? .standard) {
         self.defaults = defaults
@@ -25,8 +26,24 @@ final class ConfigStore {
     var iconLabelVisible: Bool = true {
         didSet { save(iconLabelVisible, forKey: Keys.iconLabelVisible) }
     }
+    /// The full-screen page is a grid of gridColumns × gridRows slots.
     var gridColumns: Int = 7 {
-        didSet { save(gridColumns, forKey: Keys.gridColumns) }
+        didSet {
+            save(gridColumns, forKey: Keys.gridColumns)
+            onPageCapacityChange?()
+        }
+    }
+    static let gridColumnRange: ClosedRange<Int> = 4...12
+    var gridRows: Int = 5 {
+        didSet {
+            save(gridRows, forKey: Keys.gridRows)
+            onPageCapacityChange?()
+        }
+    }
+    static let gridRowRange: ClosedRange<Int> = 4...7
+    /// How many items a page holds.
+    var pageCapacity: Int {
+        gridColumns * gridRows
     }
     /// While full screen is open; off keeps the Dock and menu bar, as Launchpad did.
     var autoHidesDockAndMenuBar: Bool = false {
@@ -93,6 +110,7 @@ final class ConfigStore {
         static let iconSize = "iconSize"
         static let iconLabelVisible = "iconLabelVisible"
         static let gridColumns = "gridColumns"
+        static let gridRows = "gridRows"
         static let autoHidesDockAndMenuBar = "autoHidesDockAndMenuBar"
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
@@ -121,7 +139,14 @@ final class ConfigStore {
         }
         if defaults.object(forKey: Keys.gridColumns) != nil {
             let storedColumns = defaults.integer(forKey: Keys.gridColumns)
-            gridColumns = storedColumns == 0 ? 0 : min(max(storedColumns, 4), 12)
+            // 0 was the old Automatic; pages now have a fixed number of slots, so it takes the default.
+            gridColumns = storedColumns == 0
+                ? 7
+                : min(max(storedColumns, Self.gridColumnRange.lowerBound), Self.gridColumnRange.upperBound)
+        }
+        if defaults.object(forKey: Keys.gridRows) != nil {
+            let storedRows = defaults.integer(forKey: Keys.gridRows)
+            gridRows = min(max(storedRows, Self.gridRowRange.lowerBound), Self.gridRowRange.upperBound)
         }
         if defaults.object(forKey: Keys.autoHidesDockAndMenuBar) != nil {
             autoHidesDockAndMenuBar = defaults.bool(forKey: Keys.autoHidesDockAndMenuBar)

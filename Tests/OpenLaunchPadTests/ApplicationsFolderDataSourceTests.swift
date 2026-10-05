@@ -15,11 +15,10 @@ struct ApplicationsFolderDataSourceTests {
 
         let source = ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path],
-            itemsPerPage: 35,
             preferredURL: { _ in nil }
         )
-        let firstLoad = try source.loadPages().flatMap { $0 }
-        let secondLoad = try source.loadPages().flatMap { $0 }
+        let firstLoad = try source.loadPages(pageCapacity: 35).flatMap { $0 }
+        let secondLoad = try source.loadPages(pageCapacity: 35).flatMap { $0 }
 
         #expect(firstLoad.count == 2)
         #expect(firstLoad.map(\.id) == secondLoad.map(\.id))
@@ -37,6 +36,19 @@ struct ApplicationsFolderDataSourceTests {
     }
 
     @Test
+    func pagesHoldThePageCapacity() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        for name in ["A", "B", "C", "D", "E"] {
+            try fixture.addApp(name: name, bundleID: "com.example.\(name)", under: fixture.firstRoot)
+        }
+        let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path], preferredURL: { _ in nil })
+
+        #expect(try source.loadPages(pageCapacity: 2).map { $0.map(\.title) } == [["A", "B"], ["C", "D"], ["E"]])
+        #expect(try source.loadPages(pageCapacity: 5).map(\.count) == [5])
+    }
+
+    @Test
     func appsRecordTheBundleTheScanFound() throws {
         let fixture = try ApplicationsFixture()
         defer { fixture.remove() }
@@ -49,7 +61,7 @@ struct ApplicationsFolderDataSourceTests {
         let items = try ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path],
             preferredURL: { _ in nil }
-        ).loadPages().flatMap { $0 }
+        ).loadPages(pageCapacity: 35).flatMap { $0 }
 
         // Without a preferred copy or versions, the first search path wins a duplicate bundle ID,
         // and the item keeps that copy's path.
@@ -78,7 +90,7 @@ struct ApplicationsFolderDataSourceTests {
         let items = try ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path],
             preferredURL: { $0 == "com.example.foo" ? preferred : nil }
-        ).loadPages().flatMap { $0 }
+        ).loadPages(pageCapacity: 35).flatMap { $0 }
 
         // The preferred copy keeps its place in its folder, and the other copy has no tile.
         guard items.count == 1, case .folder(let folder) = items[0] else {
@@ -101,7 +113,7 @@ struct ApplicationsFolderDataSourceTests {
         let items = try ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path],
             preferredURL: { _ in elsewhere }
-        ).loadPages().flatMap { $0 }
+        ).loadPages(pageCapacity: 35).flatMap { $0 }
 
         guard items.count == 1, case .app(let foo) = items[0] else {
             Issue.record("Expected one Foo tile, got \(items.map(\.title))")
@@ -123,7 +135,7 @@ struct ApplicationsFolderDataSourceTests {
         )
         let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
 
-        let first = try #require(source.loadPages().flatMap { $0 }.first)
+        let first = try #require(source.loadPages(pageCapacity: 35).flatMap { $0 }.first)
         guard case .app(let app) = first else {
             Issue.record("Expected a top-level app")
             return
@@ -135,7 +147,7 @@ struct ApplicationsFolderDataSourceTests {
             at: fixture.firstRoot.appendingPathComponent("Visual Studio Code.app"),
             to: fixture.firstRoot.appendingPathComponent("VS Code.app")
         )
-        let renamed = try #require(source.loadPages().flatMap { $0 }.first)
+        let renamed = try #require(source.loadPages(pageCapacity: 35).flatMap { $0 }.first)
         #expect(renamed.title == "VS Code")
         #expect(renamed.id == app.id)
     }
@@ -146,10 +158,10 @@ struct ApplicationsFolderDataSourceTests {
         defer { fixture.remove() }
         try fixture.addApp(name: "Mail", bundleID: "com.example.mail", version: "1", under: fixture.firstRoot)
         let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
-        let before = try source.loadPages()
+        let before = try source.loadPages(pageCapacity: 35)
 
         try fixture.addApp(name: "Mail", bundleID: "com.example.mail", version: "2", under: fixture.firstRoot)
-        let after = try source.loadPages()
+        let after = try source.loadPages(pageCapacity: 35)
 
         #expect(after.flatMap { $0 }.map(\.id) == before.flatMap { $0 }.map(\.id))
         #expect(after != before)
@@ -164,7 +176,7 @@ struct ApplicationsFolderDataSourceTests {
         try fixture.addApp(name: "Sheets", bundleID: "com.example.sheets", under: webApps)
 
         let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
-            .loadPages().flatMap { $0 }
+            .loadPages(pageCapacity: 35).flatMap { $0 }
 
         #expect(items.map(\.title) == ["Chrome Apps"])
         if case .folder(let folder) = items.first {
@@ -185,7 +197,7 @@ struct ApplicationsFolderDataSourceTests {
         try fixture.addApp(name: "Notes", bundleID: "com.example.notes", under: tools)
 
         let items = try ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path], preferredURL: { _ in nil })
-            .loadPages().flatMap { $0 }
+            .loadPages(pageCapacity: 35).flatMap { $0 }
 
         #expect(items.map(\.title) == ["Mail", "Notes", "Reader"])
         #expect(items.allSatisfy { if case .app = $0 { true } else { false } })
@@ -206,7 +218,7 @@ struct ApplicationsFolderDataSourceTests {
 
         let items = try ApplicationsFolderDataSource(
             searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path]
-        ).loadPages().flatMap { $0 }
+        ).loadPages(pageCapacity: 35).flatMap { $0 }
 
         #expect(items.map(\.title) == ["App 2", "App 10", "Calendar", "iMovie", "Tools", "Xcode", "zoom.us"])
         guard case .folder(let folder) = items[4] else {
@@ -224,11 +236,11 @@ struct ApplicationsFolderDataSourceTests {
         try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
         let source = ApplicationsFolderDataSource(searchPaths: [fixture.firstRoot.path])
 
-        #expect(try source.loadPages().flatMap { $0 }.isEmpty)
+        #expect(try source.loadPages(pageCapacity: 35).flatMap { $0 }.isEmpty)
 
         try fixture.addApp(name: "Half", bundleID: "com.example.half", under: fixture.firstRoot)
 
-        #expect(try source.loadPages().flatMap { $0 }.map(\.title) == ["Half"])
+        #expect(try source.loadPages(pageCapacity: 35).flatMap { $0 }.map(\.title) == ["Half"])
     }
 }
 

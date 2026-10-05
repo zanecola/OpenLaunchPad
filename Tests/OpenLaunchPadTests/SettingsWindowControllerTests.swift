@@ -49,7 +49,7 @@ struct SettingsWindowControllerTests {
 }
 
 private final class EmptyDataSource: AppDataSource {
-    func loadPages() throws -> [[LaunchpadItem]] { [] }
+    func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] { [] }
 }
 
 private final class NullLayoutStore: LayoutStoring {

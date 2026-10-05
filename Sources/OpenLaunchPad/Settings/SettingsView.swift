@@ -121,14 +121,18 @@ private struct AppearanceSettingsTab: View {
             }
 
             Section("Full-Screen Layout") {
-                Picker("Preferred columns", selection: $config.gridColumns) {
-                    Text("Automatic").tag(0)
-                    ForEach(4...12, id: \.self) { count in
+                Picker("Columns", selection: $config.gridColumns) {
+                    ForEach(ConfigStore.gridColumnRange, id: \.self) { count in
+                        Text("\(count)").tag(count)
+                    }
+                }
+                Picker("Rows", selection: $config.gridRows) {
+                    ForEach(ConfigStore.gridRowRange, id: \.self) { count in
                         Text("\(count)").tag(count)
                     }
                 }
 
-                Text("On smaller displays, full screen uses fewer columns or smaller icons, down to 48 pt, so the page fits.")
+                Text("Each page holds \(config.pageCapacity) apps. With fewer, apps that no longer fit move to the next page; with more, pages keep their free slots.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

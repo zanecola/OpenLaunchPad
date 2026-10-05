@@ -298,6 +298,44 @@ struct LaunchpadLayoutTests {
         }
     }
 
+    @Test
+    func reflowLeavesPagesWithinCapacityAlone() {
+        let pages: [[LaunchpadItem]] = [[.app(Self.appA)], [.app(Self.appB), .app(Self.appC)]]
+
+        // The first page's free slot is not filled from the next page.
+        #expect(LaunchpadLayout.reflow(pages, capacity: 2) == pages)
+        #expect(LaunchpadLayout.reflow([], capacity: 2) == [])
+    }
+
+    @Test
+    func reflowPushesOverflowOntoTheStartOfTheNextPage() {
+        let pages: [[LaunchpadItem]] = [
+            [.app(Self.appA), .app(Self.appB), .app(Self.appC)],
+            [.app(Self.appD)]
+        ]
+
+        #expect(LaunchpadLayout.reflow(pages, capacity: 2) == [
+            [.app(Self.appA), .app(Self.appB)],
+            [.app(Self.appC), .app(Self.appD)]
+        ])
+    }
+
+    @Test
+    func reflowCascadesAndAddsPagesAtTheEnd() {
+        let folder = LaunchpadItem.folder(Self.folder(Self.folderID, "Tools", [Self.appC, Self.appD]))
+        let pages: [[LaunchpadItem]] = [
+            [.app(Self.appA), .app(Self.appB), folder],
+            [.app(Self.app(5, "E"))]
+        ]
+
+        #expect(LaunchpadLayout.reflow(pages, capacity: 1) == [
+            [.app(Self.appA)],
+            [.app(Self.appB)],
+            [folder],
+            [.app(Self.app(5, "E"))]
+        ])
+    }
+
     private static func id(_ value: Int) -> UUID {
         UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", value))!
     }
