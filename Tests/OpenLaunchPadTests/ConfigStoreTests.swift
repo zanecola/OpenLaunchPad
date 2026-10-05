@@ -321,6 +321,34 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func pageControlIsBareDotsByDefaultAndPersists() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        #expect(config.pageControlStyle == .dots)
+
+        config.pageControlStyle = .dotsAndArrows
+
+        #expect(defaults.string(forKey: "pageControlStyle") == "Dots + Arrows")
+        #expect(ConfigStore(defaults: defaults).pageControlStyle == .dotsAndArrows)
+    }
+
+    @Test
+    func unknownStoredPageControlFallsBackToDots() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Thumbnails", forKey: "pageControlStyle")
+
+        #expect(ConfigStore(defaults: defaults).pageControlStyle == .dots)
+    }
+
+    @Test
+    func pageArrowsShowOnlyWithDotsAndArrowsWhileHovered() {
+        #expect(!PageControlStyle.dots.showsArrows(whileHovered: false))
+        #expect(!PageControlStyle.dots.showsArrows(whileHovered: true))
+        #expect(!PageControlStyle.dotsAndArrows.showsArrows(whileHovered: false))
+        #expect(PageControlStyle.dotsAndArrows.showsArrows(whileHovered: true))
+    }
+
+    @Test
     func fullScreenKeepsTheDockAndMenuBarByDefault() {
         let defaults = InMemoryKeyValueStore()
         let config = ConfigStore(defaults: defaults)

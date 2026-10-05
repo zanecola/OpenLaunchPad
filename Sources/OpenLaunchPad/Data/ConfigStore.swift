@@ -55,6 +55,9 @@ final class ConfigStore {
     var pageCapacity: Int {
         gridColumns * gridRows
     }
+    var pageControlStyle: PageControlStyle = .dots {
+        didSet { defaults.set(pageControlStyle.rawValue, forKey: Keys.pageControlStyle) }
+    }
     /// While full screen is open; off keeps the Dock and menu bar, as Launchpad did.
     var autoHidesDockAndMenuBar: Bool = false {
         didSet { save(autoHidesDockAndMenuBar, forKey: Keys.autoHidesDockAndMenuBar) }
@@ -136,6 +139,7 @@ final class ConfigStore {
         static let iconLabelVisible = "iconLabelVisible"
         static let gridColumns = "gridColumns"
         static let gridRows = "gridRows"
+        static let pageControlStyle = "pageControlStyle"
         static let autoHidesDockAndMenuBar = "autoHidesDockAndMenuBar"
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
@@ -182,6 +186,10 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.gridRows) != nil {
             let storedRows = defaults.integer(forKey: Keys.gridRows)
             gridRows = min(max(storedRows, Self.gridRowRange.lowerBound), Self.gridRowRange.upperBound)
+        }
+        if let raw = defaults.string(forKey: Keys.pageControlStyle),
+           let style = PageControlStyle(rawValue: raw) {
+            pageControlStyle = style
         }
         if defaults.object(forKey: Keys.autoHidesDockAndMenuBar) != nil {
             autoHidesDockAndMenuBar = defaults.bool(forKey: Keys.autoHidesDockAndMenuBar)

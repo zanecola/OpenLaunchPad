@@ -169,7 +169,7 @@ struct LaunchpadView: View {
 
                     // Page indicator (hidden during search)
                     if searchResults == nil && vm.pages.count > 1 {
-                        PageIndicatorView(pageCount: vm.pages.count, currentPage: $vm.currentPage)
+                        PageIndicatorView()
                             .frame(height: FullScreenPageLayout.pageIndicatorHeight)
                     }
                 }

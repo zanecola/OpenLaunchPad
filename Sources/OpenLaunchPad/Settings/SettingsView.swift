@@ -160,6 +160,17 @@ private struct AppearanceSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                Picker("Page control", selection: $config.pageControlStyle) {
+                    ForEach(PageControlStyle.allCases, id: \.self) { style in
+                        Text(style.rawValue).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text("Dots + Arrows adds previous and next arrows that appear when you point at the dots.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 Picker("While open", selection: $config.autoHidesDockAndMenuBar) {
                     Text("Keep Dock and menu bar").tag(false)
                     Text("Auto-hide both").tag(true)

@@ -1,47 +1,105 @@
 import SwiftUI
 
+/// Full screen's page control: bare white dots on the dark backdrop, as Launchpad drew them. With
+/// Dots + Arrows, pointing at it fades in a capsule with previous and next arrows. VoiceOver reads
+/// it as one adjustable element, "Page, N of M".
 struct PageIndicatorView: View {
-    let pageCount: Int
-    @Binding var currentPage: Int
+    static let dotDiameter: CGFloat = 7
+    /// Side by side, the dots' hit boxes leave 9 pt between dots.
+    static let dotBoxSize = CGSize(width: 16, height: 20)
+    private static let arrowBoxSize = CGSize(width: 20, height: 28)
+
+    @Environment(LaunchpadViewModel.self) private var vm
+    @Environment(ConfigStore.self) private var config
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Namespace private var dotNamespace
+    @State private var hover = LauncherHover()
 
     var body: some View {
-        HStack(spacing: 6) {
-            pageButton(systemName: "chevron.left", page: currentPage - 1)
-                .disabled(currentPage == 0)
+        let style = config.pageControlStyle
+        let showsArrows = style.showsArrows(whileHovered: hover.isActive(in: vm.presentationID))
+        let pageCount = vm.pages.count
+        let currentPage = min(max(vm.currentPage, 0), max(pageCount - 1, 0))
+
+        HStack(spacing: 0) {
+            // Laid out even while hidden, so the dots stay put when the arrows appear.
+            if style == .dotsAndArrows {
+                arrow("chevron.backward", isEnabled: currentPage > 0, action: vm.showPreviousPage)
+                    .opacity(showsArrows ? 1 : 0)
+            }
 
             ForEach(0..<pageCount, id: \.self) { index in
                 Button {
-                    currentPage = index
+                    vm.currentPage = index
                 } label: {
-                    Circle()
-                        .fill(index == currentPage ? Color.primary : Color.primary.opacity(0.38))
-                        .frame(width: index == currentPage ? 8 : 6, height: index == currentPage ? 8 : 6)
-                        .frame(width: 22, height: 28)
-                        .contentShape(Rectangle())
+                    ZStack {
+                        dot.opacity(0.35)
+                        if index == currentPage {
+                            dot.matchedGeometryEffect(id: "current", in: dotNamespace)
+                        }
+                    }
+                    .frame(width: Self.dotBoxSize.width, height: Self.dotBoxSize.height)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Page \(index + 1)")
-                .accessibilityAddTraits(index == currentPage ? .isSelected : [])
             }
 
-            pageButton(systemName: "chevron.right", page: currentPage + 1)
-                .disabled(currentPage >= pageCount - 1)
+            if style == .dotsAndArrows {
+                arrow("chevron.forward", isEnabled: currentPage < pageCount - 1, action: vm.showNextPage)
+                    .opacity(showsArrows ? 1 : 0)
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(.ultraThinMaterial, in: Capsule())
-        .animation(.spring(duration: 0.2), value: currentPage)
+        .padding(.horizontal, style == .dotsAndArrows ? 4 : 0)
+        .background { arrowsBackground(isVisible: showsArrows) }
+        .animation(dotSlide, value: currentPage)
+        .animation(.easeOut(duration: 0.15), value: showsArrows)
+        .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Page")
+        .accessibilityValue("\(currentPage + 1) of \(pageCount)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: vm.showNextPage()
+            case .decrement: vm.showPreviousPage()
+            @unknown default: break
+            }
+        }
     }
 
-    private func pageButton(systemName: String, page: Int) -> some View {
-        Button {
-            currentPage = min(max(page, 0), pageCount - 1)
-        } label: {
+    private var dot: some View {
+        Circle()
+            .fill(.white)
+            .frame(width: Self.dotDiameter, height: Self.dotDiameter)
+    }
+
+    /// The current dot slides along with the page turn; Reduce Motion moves it at once.
+    private var dotSlide: Animation? {
+        guard !reduceMotion else { return nil }
+        return config.animationDuration(0.3).map { .spring(response: $0, dampingFraction: 0.8) }
+    }
+
+    private func arrow(_ systemName: String, isEnabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 12, weight: .semibold))
-                .frame(width: 28, height: 28)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.3))
+                .frame(width: Self.arrowBoxSize.width, height: Self.arrowBoxSize.height)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+
+    @ViewBuilder
+    private func arrowsBackground(isVisible: Bool) -> some View {
+        if reduceTransparency {
+            // Opaque, a step above the solid backdrop, like the Frequently Used shelf.
+            Capsule()
+                .fill(Color(red: 44 / 255, green: 44 / 255, blue: 46 / 255))
+                .opacity(isVisible ? 1 : 0)
+        } else {
+            Color.clear.glassEffect(isVisible ? .regular : .identity, in: .capsule)
+        }
     }
 }

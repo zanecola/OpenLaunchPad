@@ -27,6 +27,18 @@ enum FrequentlyUsedPlacement: String, CaseIterable, Sendable {
     var showsInFullScreen: Bool { self == .popupAndFullScreen }
 }
 
+/// What full screen's page control shows.
+enum PageControlStyle: String, CaseIterable, Sendable {
+    /// Only the dots, as Launchpad drew them.
+    case dots = "Dots"
+    /// The dots, with previous and next arrows while the pointer is over them.
+    case dotsAndArrows = "Dots + Arrows"
+
+    func showsArrows(whileHovered isHovered: Bool) -> Bool {
+        self == .dotsAndArrows && isHovered
+    }
+}
+
 /// What full screen draws behind its content.
 enum BackdropStyle: String, CaseIterable, Sendable {
     /// The desktop picture, blurred.
