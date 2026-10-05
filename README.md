@@ -228,6 +228,8 @@ Issues and pull requests are welcome. Before opening a pull request:
 3. Add focused tests for deterministic behavior.
 4. Run `swift test` and `./script/build_and_run.sh --verify`.
 
+CI runs `swift build` and `swift test` on every push and pull request, and a release is built only after the tests pass.
+
 Please use [GitHub Issues](https://github.com/zanecola/OpenLaunchPad/issues) for bugs and feature proposals.
 
 ## License
