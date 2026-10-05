@@ -26,11 +26,11 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, where Frequently Used appears, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animation speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -149,7 +149,9 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | While open | Keep Dock and menu bar | Or auto-hide both while full screen is open. Either way, the grid is laid out between the menu bar and the Dock |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
 | Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
-| Dim | 25% | 0–60% black over the blurred full-screen background. With Reduce Transparency on, the background is solid dark and Dim is unavailable |
+| Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup keeps its own background |
+| Blur radius | 48 pt | 0–80 pt, for Wallpaper |
+| Dim | 25% | 0–60% black over the wallpaper or glass; Solid is not dimmed |
 | Animation speed | 1.0× | 0.2–2.0×; higher is faster |
 | Global shortcut | None | Must use Command or Control, or be a function key (F1–F12), so it can't capture ordinary typing. A Shift- or Option-only shortcut saved by an older version is cleared |
 
@@ -166,6 +168,8 @@ Your custom pages, folders, and ordering are stored separately:
 ```
 
 Reset Layout in Settings asks first and saves the current layout to the `Backups` folder next to `layout.json`. The 10 most recent backups are kept. A `layout.json` that OpenLaunchPad cannot read, for example one written by a newer version, is also moved there instead of being overwritten.
+
+To draw the wallpaper background, OpenLaunchPad reads your desktop picture and, for an Aerial, the wallpaper settings in `~/Library/Application Support/com.apple.wallpaper` and the downloaded Aerial in `/Library/Application Support/com.apple.idleassetsd`. It only reads them, and keeps the blurred image in memory.
 
 Settings and frequently used app history are stored locally in the `com.openlaunchpad` UserDefaults suite. Usage history contains only bundle IDs, launch counts, and last-launch timestamps for apps opened through OpenLaunchPad. There are no network services, accounts, analytics, or telemetry.
 
@@ -233,7 +237,7 @@ Applications folders, scanned and watched
 - AppKit handles windows, the status item, system services, and the Carbon global hotkey.
 - JSON persistence is versioned and migrates earlier layout formats.
 
-The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, popup placement, paging input, drag state, app actions, and full-screen and folder layout fitting.
+The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, popup placement, paging input, drag state, app actions, full-screen and folder layout fitting, and how the wallpaper background is found and cached.
 
 ## Known Limitations
 
@@ -243,6 +247,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 - Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
+- The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open.
 
 ## Contributing
 
