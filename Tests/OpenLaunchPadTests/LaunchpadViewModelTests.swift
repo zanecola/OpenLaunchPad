@@ -558,6 +558,100 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func appDraggedOutOfSourceFolderStaysOutAfterReload() async {
+        let mail = Self.app("Mail")
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let monitor = Self.app("Activity Monitor")
+        let utilities = FolderItem(id: UUID(), title: "Utilities", apps: [terminal, console, monitor])
+        let viewModel = Self.viewModel(pages: [[.app(mail), .folder(utilities)]], store: StubLayoutStore())
+        await viewModel.load()
+
+        #expect(viewModel.removeApp(terminal.id, fromFolder: utilities.id))
+        let edited = viewModel.pages
+        await viewModel.load()
+
+        #expect(viewModel.pages == edited)
+    }
+
+    @Test
+    func dissolvedSourceFolderStaysDissolvedAfterReload() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let mail = Self.app("Mail")
+        let notes = Self.app("Notes")
+        let utilities = FolderItem(id: UUID(), title: "Utilities", apps: [terminal, console])
+        let viewModel = Self.viewModel(
+            pages: [[.folder(utilities), .app(mail)], [.app(notes)]],
+            store: StubLayoutStore()
+        )
+        await viewModel.load()
+
+        #expect(viewModel.removeApp(terminal.id, fromFolder: utilities.id))
+        let edited = viewModel.pages
+        await viewModel.load()
+
+        #expect(viewModel.pages == edited)
+    }
+
+    @Test
+    func sourceFolderAppMovedIntoLaterUserFolderStaysThereAfterReload() async {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let monitor = Self.app("Activity Monitor")
+        let mail = Self.app("Mail")
+        let calendar = Self.app("Calendar")
+        let utilities = FolderItem(id: UUID(), title: "Utilities", apps: [terminal, console, monitor])
+        let viewModel = Self.viewModel(
+            pages: [[.folder(utilities), .app(mail), .app(calendar)]],
+            store: StubLayoutStore()
+        )
+        await viewModel.load()
+
+        #expect(viewModel.combineApps(draggedID: calendar.id, targetID: mail.id))
+        let userFolderID = viewModel.pages[0][1].id
+        #expect(viewModel.removeApp(terminal.id, fromFolder: utilities.id))
+        #expect(viewModel.addApp(terminal.id, toFolder: userFolderID))
+        let edited = viewModel.pages
+        await viewModel.load()
+
+        #expect(viewModel.pages == edited)
+    }
+
+    @Test
+    func newAppInSourceFolderJoinsItWithoutPullingBackMovedApps() async {
+        let mail = Self.app("Mail")
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let monitor = Self.app("Activity Monitor")
+        let installed = Self.app("Disk Utility")
+        let folderID = UUID()
+        let source = StubDataSource(pages: [[
+            .app(mail),
+            .folder(FolderItem(id: folderID, title: "Utilities", apps: [terminal, console, monitor]))
+        ]])
+        let viewModel = LaunchpadViewModel(
+            dataSource: source,
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider()
+        )
+        await viewModel.load()
+        #expect(viewModel.removeApp(terminal.id, fromFolder: folderID))
+
+        source.pages = [[
+            .app(mail),
+            .folder(FolderItem(id: folderID, title: "Utilities", apps: [terminal, console, monitor, installed]))
+        ]]
+        await viewModel.load()
+
+        #expect(viewModel.pages == [[
+            .app(mail),
+            .folder(FolderItem(id: folderID, title: "Utilities", apps: [console, monitor, installed])),
+            .app(terminal)
+        ]])
+    }
+
+    @Test
     func successfulMutationsPersistExactlyOnceAndUseInjectedFolderID() {
         let mail = Self.app("Mail")
         let calendar = Self.app("Calendar")

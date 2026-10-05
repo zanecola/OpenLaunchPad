@@ -160,6 +160,12 @@ final class LaunchpadViewModel {
             storedLayout.folders.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
+        // Apps the stored layout places itself; source folders must not pull them back in.
+        let topLevelIDs = Set(storedLayout.pageIDs.joined())
+        var storedAppIDs = topLevelIDs
+        for folder in storedLayout.folders where topLevelIDs.contains(folder.id) {
+            storedAppIDs.formUnion(folder.appIDs)
+        }
         var placedItemIDs = Set<UUID>()
         var placedAppIDs = Set<UUID>()
 
@@ -172,7 +178,11 @@ final class LaunchpadViewModel {
         }
 
         func sourceItem(for id: UUID) -> LaunchpadItem? {
-            guard let item = sourceItemsByID[id] else { return nil }
+            guard let item = sourceItemsByID[id] else {
+                // A stored top-level app may live inside a folder in the source.
+                guard let app = appsByID[id], !placedAppIDs.contains(id) else { return nil }
+                return .app(app)
+            }
             switch item {
             case .app(let app):
                 return placedAppIDs.contains(app.id) ? nil : item
@@ -200,7 +210,8 @@ final class LaunchpadViewModel {
             }
 
             if !storedFolder.appIDs.isEmpty, let sourceFolder = sourceFoldersByID[id] {
-                for app in sourceFolder.apps where !placedAppIDs.contains(app.id) && seenAppIDs.insert(app.id).inserted {
+                for app in sourceFolder.apps
+                where !storedAppIDs.contains(app.id) && !placedAppIDs.contains(app.id) && seenAppIDs.insert(app.id).inserted {
                     folderApps.append(app)
                 }
             }
