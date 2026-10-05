@@ -166,7 +166,7 @@ Build a local `.app` bundle and launch it:
 ./script/build_and_run.sh --verify
 ```
 
-Create an ad-hoc-signed DMG:
+Create an ad-hoc-signed DMG from a universal (Apple silicon and Intel) release build:
 
 ```bash
 ./script/build_dmg.sh 0.1.0

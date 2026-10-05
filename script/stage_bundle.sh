@@ -3,6 +3,8 @@
 # dist/OpenLaunchPad.app. Shared by build_and_run.sh (local dev) and
 # build_dmg.sh (release packaging) so both ship the identical bundle layout.
 # APP_VERSION sets the bundle version (default 0.0.0 for local builds).
+# CONFIG=release (set by build_dmg.sh) builds an optimized universal binary;
+# the default, debug, builds for this Mac only.
 set -euo pipefail
 
 APP_NAME="OpenLaunchPad"
@@ -30,12 +32,22 @@ APP_ICON_SOURCE="$ROOT_DIR/Sources/OpenLaunchPad/Resources/AppIcon.icns"
 # Stop any running instance so the staged binary can be replaced cleanly.
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
-env HOME="$ROOT_DIR/.build" \
-    CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/ModuleCache" \
-    swift build
-BUILD_DIR="$(env HOME="$ROOT_DIR/.build" \
-    CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/ModuleCache" \
-    swift build --show-bin-path)"
+CONFIG="${CONFIG:-debug}"
+BUILD_ARGS=(-c "$CONFIG")
+if [[ "$CONFIG" == "release" ]]; then
+    # macOS 26 still runs on some Intel Macs.
+    BUILD_ARGS+=(--arch arm64 --arch x86_64)
+fi
+
+swift_build() {
+    env HOME="$ROOT_DIR/.build" \
+        CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/ModuleCache" \
+        swift build "${BUILD_ARGS[@]}" "$@"
+}
+
+swift_build
+# Universal builds land in .build/apple/Products/Release, so ask with the same flags.
+BUILD_DIR="$(swift_build --show-bin-path)"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS"
