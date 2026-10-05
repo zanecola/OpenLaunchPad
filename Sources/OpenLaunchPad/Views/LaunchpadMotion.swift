@@ -64,6 +64,11 @@ struct LaunchpadMotion: Equatable, Sendable {
             : animation(0.25) { .spring(response: $0) }
     }
 
+    /// A popup tile's highlight fading in or out, or its lift, which Reduce Motion drops (`TileFeedback`).
+    var tileHover: Animation? {
+        animation(0.12) { .easeOut(duration: $0) }
+    }
+
     // MARK: - Launcher windows
 
     /// Full screen fades in while its content settles from 1.06x, as Launchpad zoomed its icons into place.

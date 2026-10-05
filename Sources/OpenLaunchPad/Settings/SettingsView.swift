@@ -186,6 +186,17 @@ private struct AppearanceSettingsTab: View {
                     }
                 }
 
+                Picker("Hover effect", selection: $config.popupHoverEffect) {
+                    ForEach(TileHoverEffect.allCases, id: \.self) { effect in
+                        Text(effect.rawValue).tag(effect)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(hoverEffectDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 HStack {
                     Text("Width")
                     Slider(value: $config.paneWidth, in: 400...1400, step: 20)
@@ -290,6 +301,18 @@ private struct AppearanceSettingsTab: View {
         return reduceMotion
             ? "Opening and closing the launcher and folders, launching an app and turning pages. Reduce Motion is on, so the launcher and folders fade without zooming, pages turn at once, and a pressed app darkens without shrinking."
             : "Opening and closing the launcher and folders, launching an app and turning pages."
+    }
+
+    private var hoverEffectDescription: String {
+        let effect = switch config.popupHoverEffect {
+        case .off: "Apps don't change under the pointer."
+        case .highlight: "A rounded plate appears behind the app under the pointer."
+        case .lift:
+            reduceMotion
+                ? "Reduce Motion is on, so the app under the pointer doesn't grow."
+                : "The app under the pointer grows slightly."
+        }
+        return effect + " Full screen has no hover effect, as in Launchpad."
     }
 
     private var popupColumnCount: Int {

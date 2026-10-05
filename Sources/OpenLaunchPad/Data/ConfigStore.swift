@@ -72,6 +72,9 @@ final class ConfigStore {
     var popupAppearance: PopupAppearance = .system {
         didSet { defaults.set(popupAppearance.rawValue, forKey: Keys.popupAppearance) }
     }
+    var popupHoverEffect: TileHoverEffect = .highlight {
+        didSet { defaults.set(popupHoverEffect.rawValue, forKey: Keys.popupHoverEffect) }
+    }
     var backgroundStyle: BackdropStyle = .wallpaper {
         didSet {
             defaults.set(backgroundStyle.rawValue, forKey: Keys.backgroundStyle)
@@ -140,6 +143,7 @@ final class ConfigStore {
         static let paneWidth = "paneWidth"
         static let paneHeight = "paneHeight"
         static let popupAppearance = "popupAppearance"
+        static let popupHoverEffect = "popupHoverEffect"
         static let backgroundStyle = "backgroundStyle"
         static let backgroundBlurRadius = "backgroundBlurRadius"
         static let backgroundDim = "backgroundDim"
@@ -199,6 +203,10 @@ final class ConfigStore {
         if let raw = defaults.string(forKey: Keys.popupAppearance),
            let appearance = PopupAppearance(rawValue: raw) {
             popupAppearance = appearance
+        }
+        if let raw = defaults.string(forKey: Keys.popupHoverEffect),
+           let effect = TileHoverEffect(rawValue: raw) {
+            popupHoverEffect = effect
         }
         if let raw = defaults.string(forKey: Keys.backgroundStyle),
            let style = BackdropStyle(rawValue: raw) {

@@ -27,7 +27,7 @@ struct AppIconView: View {
                 onDragChanged: onDragChanged,
                 onDragEnded: onDragEnded
             )
-            .launchpadTile(action: onTap)
+            .launchpadTile(showsHover: !isEditMode, action: onTap)
             .contextMenu { appContextMenu }
             .confirmationDialog(
                 "Uninstall \(app.title)?",

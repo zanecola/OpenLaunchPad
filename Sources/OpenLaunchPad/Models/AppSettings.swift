@@ -39,6 +39,15 @@ enum PageControlStyle: String, CaseIterable, Sendable {
     }
 }
 
+/// What a popup tile shows while the pointer is over it. Full screen shows nothing, as Launchpad did.
+enum TileHoverEffect: String, CaseIterable, Sendable {
+    case off = "None"
+    /// A rounded plate behind the tile.
+    case highlight = "Highlight"
+    /// The tile grows slightly.
+    case lift = "Lift"
+}
+
 /// What full screen draws behind its content.
 enum BackdropStyle: String, CaseIterable, Sendable {
     /// The desktop picture, blurred.

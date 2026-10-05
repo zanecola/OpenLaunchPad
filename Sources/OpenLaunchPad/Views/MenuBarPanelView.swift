@@ -61,6 +61,7 @@ struct MenuBarPanelView: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
         .environment(dragState)
+        .environment(\.launchpadTileHoverEffect, config.popupHoverEffect)
         .onKeyPress(.escape) {
             // Escape cancels an input method's composition rather than stepping back.
             guard !TextComposition.isActive else { return .ignored }

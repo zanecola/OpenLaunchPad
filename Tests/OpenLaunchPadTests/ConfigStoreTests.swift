@@ -309,6 +309,30 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func popupHighlightsTheHoveredTileByDefaultAndTheEffectPersists() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        #expect(config.popupHoverEffect == .highlight)
+
+        config.popupHoverEffect = .lift
+
+        #expect(defaults.string(forKey: "popupHoverEffect") == "Lift")
+        #expect(ConfigStore(defaults: defaults).popupHoverEffect == .lift)
+
+        config.popupHoverEffect = .off
+
+        #expect(ConfigStore(defaults: defaults).popupHoverEffect == .off)
+    }
+
+    @Test
+    func unknownStoredHoverEffectFallsBackToHighlight() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Glow", forKey: "popupHoverEffect")
+
+        #expect(ConfigStore(defaults: defaults).popupHoverEffect == .highlight)
+    }
+
+    @Test
     func storedIconSizeIsClampedIntoTheSliderRange() {
         let defaults = InMemoryKeyValueStore()
         defaults.set(1e9, forKey: "iconSize")

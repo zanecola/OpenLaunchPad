@@ -456,7 +456,11 @@ struct FolderExpandedView: View {
         ScrollView(.vertical) {
             appGrid(folder.apps)
         }
-        .frame(height: layout.gridHeight)
+        // Reaches into the panel's padding, so the hover highlight of the first and last rows
+        // isn't clipped.
+        .contentMargins(.vertical, TileFeedback.highlightOutset, for: .scrollContent)
+        .frame(height: layout.gridHeight + TileFeedback.highlightOutset * 2)
+        .padding(.vertical, -TileFeedback.highlightOutset)
         .scrollIndicators(.hidden)
         .launchpadScrollAppearance()
     }

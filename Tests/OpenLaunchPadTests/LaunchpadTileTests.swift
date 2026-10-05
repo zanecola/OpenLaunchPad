@@ -57,19 +57,48 @@ struct TilePressTests {
 }
 
 struct TileFeedbackTests {
-    @Test
-    func aTileAtRestIsDrawnAsItIs() {
-        #expect(TileFeedback(isPressed: false, reduceMotion: false) == TileFeedback(scale: 1, brightness: 0))
+    @Test(arguments: TileHoverEffect.allCases)
+    func aTileAtRestIsDrawnAsItIs(effect: TileHoverEffect) {
+        let feedback = TileFeedback(isPressed: false, isHovered: false, hoverEffect: effect, reduceMotion: false)
+
+        #expect(feedback == TileFeedback(scale: 1, brightness: 0, showsHighlight: false))
     }
 
-    @Test
-    func aPressedTileShrinksAndDarkens() {
-        #expect(TileFeedback(isPressed: true, reduceMotion: false) == TileFeedback(scale: 0.92, brightness: -0.15))
+    @Test(arguments: TileHoverEffect.allCases)
+    func aPressedTileShrinksAndDarkens(effect: TileHoverEffect) {
+        let feedback = TileFeedback(isPressed: true, isHovered: true, hoverEffect: effect, reduceMotion: false)
+
+        #expect(feedback.scale == 0.92)
+        #expect(feedback.brightness == -0.15)
     }
 
     @Test
     func reduceMotionKeepsAPressedTileAtItsSize() {
-        #expect(TileFeedback(isPressed: true, reduceMotion: true) == TileFeedback(scale: 1, brightness: -0.15))
+        let feedback = TileFeedback(isPressed: true, isHovered: true, hoverEffect: .lift, reduceMotion: true)
+
+        #expect(feedback.scale == 1)
+        #expect(feedback.brightness == -0.15)
+    }
+
+    @Test
+    func highlightDrawsAPlateWhileHoveredAndPressed() {
+        #expect(TileFeedback(isPressed: false, isHovered: true, hoverEffect: .highlight, reduceMotion: false)
+            == TileFeedback(scale: 1, brightness: 0, showsHighlight: true))
+        #expect(TileFeedback(isPressed: true, isHovered: true, hoverEffect: .highlight, reduceMotion: true).showsHighlight)
+    }
+
+    @Test
+    func liftGrowsTheHoveredTileExceptUnderReduceMotion() {
+        #expect(TileFeedback(isPressed: false, isHovered: true, hoverEffect: .lift, reduceMotion: false)
+            == TileFeedback(scale: 1.04, brightness: 0, showsHighlight: false))
+        #expect(TileFeedback(isPressed: false, isHovered: true, hoverEffect: .lift, reduceMotion: true)
+            == TileFeedback(scale: 1, brightness: 0, showsHighlight: false))
+    }
+
+    @Test
+    func noHoverEffectLeavesTheHoveredTileAlone() {
+        #expect(TileFeedback(isPressed: false, isHovered: true, hoverEffect: .off, reduceMotion: false)
+            == TileFeedback(scale: 1, brightness: 0, showsHighlight: false))
     }
 }
 
@@ -80,19 +109,23 @@ struct TileMotionTests {
 
         #expect(motion.tilePress(isPressed: true) == .easeOut(duration: 0.08))
         #expect(motion.tilePress(isPressed: false) == .spring(response: 0.25))
+        #expect(motion.tileHover == .easeOut(duration: 0.12))
     }
 
     @Test
-    func aPressFollowsTheSpeedAndReduceMotionButNotWithTransitionsOff() {
+    func tileFeedbackFollowsTheSpeedAndReduceMotionButNotWithTransitionsOff() {
         let fast = LaunchpadMotion(speed: 2)
         #expect(fast.tilePress(isPressed: true) == .easeOut(duration: 0.04))
         #expect(fast.tilePress(isPressed: false) == .spring(response: 0.125))
+        #expect(fast.tileHover == .easeOut(duration: 0.06))
 
         let reduced = LaunchpadMotion(reduceMotion: true)
         #expect(reduced.tilePress(isPressed: true) == .easeOut(duration: 0.08))
+        #expect(reduced.tileHover == .easeOut(duration: 0.12))
 
         let off = LaunchpadMotion(animatesTransitions: false)
         #expect(off.tilePress(isPressed: true) == nil)
         #expect(off.tilePress(isPressed: false) == nil)
+        #expect(off.tileHover == nil)
     }
 }
