@@ -11,7 +11,13 @@ final class LaunchpadViewModel {
     // MARK: - Published state
 
     var pages: [[LaunchpadItem]] = []
-    var searchQuery: String = ""
+    /// Typing closes an open folder: the results replace the grid behind it, and Return would
+    /// otherwise launch one of them rather than anything in the folder.
+    var searchQuery: String = "" {
+        didSet {
+            if searchQuery != oldValue && !searchQuery.isEmpty { closeFolder() }
+        }
+    }
     var expandedFolderID: UUID? = nil
     var isEditMode: Bool = false
     var currentPage: Int = 0

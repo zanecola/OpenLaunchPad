@@ -997,6 +997,25 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func typingASearchClosesTheOpenFolderButAFolderOpenedFromResultsStays() {
+        let folder = FolderItem(id: UUID(), title: "Utilities", apps: [Self.app("Terminal"), Self.app("Console")])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(folder), .app(Self.app("Mail"))]]
+
+        viewModel.toggleFolder(folder.id)
+        viewModel.searchQuery = "ma"
+        #expect(viewModel.expandedFolderID == nil)
+
+        viewModel.searchQuery = "util"
+        viewModel.toggleFolder(folder.id)
+        viewModel.searchQuery = "util"
+        #expect(viewModel.expandedFolderID == folder.id)
+
+        viewModel.searchQuery = ""
+        #expect(viewModel.expandedFolderID == folder.id)
+    }
+
+    @Test
     func iconCacheMissDoesNotInvalidateViewsShowingOtherIcons() {
         let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
 
