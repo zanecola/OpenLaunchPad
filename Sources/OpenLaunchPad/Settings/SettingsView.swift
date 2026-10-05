@@ -171,10 +171,11 @@ private struct AppearanceSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Picker("While open", selection: $config.autoHidesDockAndMenuBar) {
-                    Text("Keep Dock and menu bar").tag(false)
-                    Text("Auto-hide both").tag(true)
-                }
+                Toggle("Hide menu bar and Dock while open", isOn: $config.autoHidesDockAndMenuBar)
+
+                Text("The grid then uses the whole screen; move the pointer to its edge to show them. macOS can only hide the menu bar together with the Dock.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Popup Window") {

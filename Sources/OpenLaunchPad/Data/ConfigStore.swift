@@ -58,7 +58,8 @@ final class ConfigStore {
     var pageControlStyle: PageControlStyle = .dots {
         didSet { defaults.set(pageControlStyle.rawValue, forKey: Keys.pageControlStyle) }
     }
-    /// While full screen is open; off keeps the Dock and menu bar, as Launchpad did.
+    /// While full screen is open. Off keeps the Dock, as Launchpad did, and so the menu bar too:
+    /// an app can auto-hide the menu bar only together with the Dock.
     var autoHidesDockAndMenuBar: Bool = false {
         didSet { save(autoHidesDockAndMenuBar, forKey: Keys.autoHidesDockAndMenuBar) }
     }
