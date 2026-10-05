@@ -176,6 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let controller = NSHostingController(rootView: root)
         panel.onCancel = { [weak self] in self?.stepBackOrHide() }
+        panel.onResignKey = { [weak self] in self?.popupDidResignKey() }
         panel.show(
             anchorPoint: anchorPoint,
             hostingView: controller,
@@ -230,6 +231,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { [weak self] in
                 self?.showPopup(anchorPoint: anchorPoint)
             }
+        }
+    }
+
+    /// Closes the popup when focus moves to another window or app. The outside-click monitor
+    /// stays as a fallback.
+    private func popupDidResignKey() {
+        // A click on the status item toggles the popup itself.
+        if let statusWindow = statusItem?.button?.window, NSApp.currentEvent?.window === statusWindow {
+            return
+        }
+        // Wait a turn: a sheet, such as the uninstall confirmation, takes key from the panel
+        // while it attaches, and the popup must stay open under it.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.visibleSurface == .popup, let panel = self.popupPanel,
+                  !panel.isKeyWindow, panel.attachedSheet == nil else { return }
+            self.hideLaunchpad()
         }
     }
 

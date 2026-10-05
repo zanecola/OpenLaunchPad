@@ -93,7 +93,7 @@ Launching an app automatically closes OpenLaunchPad so it stays out of your way.
 
 ### Navigate
 
-- Type in Search to find apps, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
+- Start typing as soon as the launcher opens: Search already has focus, in the popup too. It finds apps, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
 - A labeled **Frequently Used** row shows up to seven apps and updates after each launch. Turn the row on or off, or clear its local history, under **Settings > General > Suggestions**.
 - Use Left/Right, Command-Left/Command-Right, the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode.
 - Scroll vertically in popup mode and inside large folders.

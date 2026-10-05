@@ -73,7 +73,7 @@ final class PopupPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
-        becomesKeyOnlyIfNeeded = true
+        becomesKeyOnlyIfNeeded = false
         hasShadow = true
     }
 
@@ -81,9 +81,15 @@ final class PopupPanel: NSPanel {
 
     /// Escape that no view handled, for example when nothing in the window has focus.
     var onCancel: () -> Void = {}
+    var onResignKey: () -> Void = {}
 
     override func cancelOperation(_ sender: Any?) {
         onCancel()
+    }
+
+    override func resignKey() {
+        super.resignKey()
+        onResignKey()
     }
 
     func show(
@@ -114,6 +120,9 @@ final class PopupPanel: NSPanel {
         }
 
         orderFrontRegardless()
+        // A non-activating panel can be key without activating the app, so typing reaches
+        // the search field instead of the app the user was in.
+        makeKey()
     }
 
     func hide() {

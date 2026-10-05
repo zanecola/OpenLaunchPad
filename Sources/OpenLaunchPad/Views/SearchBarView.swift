@@ -5,6 +5,7 @@ struct SearchBarView: View {
     var onClear: () -> Void = {}
     var onSubmit: () -> Void = {}
     var onOpenSettings: (() -> Void)? = nil
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 10) {
@@ -34,7 +35,10 @@ struct SearchBarView: View {
             TextField("Search", text: $text)
                 .textFieldStyle(.plain)
                 .font(.title3)
+                .focused($isFocused)
                 .onSubmit(onSubmit)
+                // Hosts are rebuilt on every show, so this focuses search each time the launcher opens.
+                .onAppear { isFocused = true }
 
             if !text.isEmpty {
                 Button(action: { text = ""; onClear() }) {

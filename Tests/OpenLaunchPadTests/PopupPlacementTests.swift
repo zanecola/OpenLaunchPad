@@ -14,7 +14,9 @@ struct PopupPlacementTests {
         #expect(panel.styleMask.contains(.nonactivatingPanel))
         #expect(panel.level == .popUpMenu)
         #expect(!panel.hidesOnDeactivate)
-        #expect(panel.becomesKeyOnlyIfNeeded)
+        // Key on show, so typing after the hotkey reaches search rather than the previous app.
+        #expect(!panel.becomesKeyOnlyIfNeeded)
+        #expect(panel.canBecomeKey)
     }
 
     @Test
