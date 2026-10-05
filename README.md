@@ -170,6 +170,8 @@ Create an ad-hoc-signed DMG:
 ./script/build_dmg.sh 0.1.0
 ```
 
+The version becomes the app's bundle version, shown in About. Local builds without a release version report 0.0.0.
+
 Generated artifacts are written to `dist/`.
 
 If SwiftPM cache permissions are restricted, use workspace-local paths:

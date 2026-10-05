@@ -2,11 +2,20 @@
 # Builds the OpenLaunchPad executable and stages it into a .app bundle at
 # dist/OpenLaunchPad.app. Shared by build_and_run.sh (local dev) and
 # build_dmg.sh (release packaging) so both ship the identical bundle layout.
+# APP_VERSION sets the bundle version (default 0.0.0 for local builds).
 set -euo pipefail
 
 APP_NAME="OpenLaunchPad"
 BUNDLE_ID="com.openlaunchpad"
 MIN_SYSTEM_VERSION="26.0"
+
+# Bundle versions must be numeric (1.2.3). Labels of unreleased builds, such as
+# git describe's "v0.1.0-3-gabc1234" or CI's "0.0.0-abc1234", become 0.0.0.
+BUNDLE_VERSION="${APP_VERSION:-0.0.0}"
+BUNDLE_VERSION="${BUNDLE_VERSION#v}"
+if [[ ! "$BUNDLE_VERSION" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
+    BUNDLE_VERSION="0.0.0"
+fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
@@ -46,6 +55,19 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$BUNDLE_ID</string>
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$BUNDLE_VERSION</string>
+  <key>CFBundleVersion</key>
+  <string>$BUNDLE_VERSION</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleAllowMixedLocalizations</key>
+  <true/>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>zh-Hans</string>
+  </array>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
   <key>CFBundlePackageType</key>
