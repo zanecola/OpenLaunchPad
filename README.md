@@ -26,11 +26,11 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animation speed, where Frequently Used appears, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size and appearance (System, Light or Dark), the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animation speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, and the Dim, popup appearance, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -102,12 +102,12 @@ Both launchers are built once when OpenLaunchPad starts and kept ready, so openi
 
 - Start typing as soon as the launcher opens: Search already has focus, in the popup too. It ignores case and accents, and finds apps by the name Finder shows, their bundle name, or their file name, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
 - **Frequently Used** shows the apps you open most often. In the popup it is a row lined up with the grid's columns, under a small "Frequently Used" header, and it scrolls away with the grid. In full screen it is a compact shelf of up to nine smaller icons below Search, without labels (hover an icon to see its name); full screen leaves it out when your apps would not fit beside it. The order is set each time the launcher opens, so icons don't move while you use it. Show it in both places, the popup only, or nowhere, and clear its local history, under **Settings > General > Suggestions**.
-- Use Left/Right (while Search is empty), Command-[ / Command-], the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode. One trackpad flick turns one page.
+- Use Left/Right (while Search is empty), Command-[ / Command-], a click on a page dot, or a horizontal wheel/trackpad gesture in full-screen mode. One trackpad flick turns one page. The page dots are bare, as in Launchpad; choose **Dots + Arrows** in Settings to get previous and next arrows when you point at them.
 - Scroll vertically in popup mode and inside large folders.
 - Press Return to open the top search result.
 - Press Escape to step back one level: close an open folder, then clear the search, then close the launcher.
 - Click empty space, including the space between icons, to close an open folder or the full-screen launcher.
-- With VoiceOver, every app and folder is a button named after it, and folders also say how many apps they hold.
+- With VoiceOver, every app and folder is a button named after it, and folders also say how many apps they hold. The page dots are one control that says which page you are on ("Page, 2 of 3"); increase or decrease it to turn pages.
 
 ### Organize apps
 
@@ -146,7 +146,8 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Icon size | Automatic | Automatic sizes full-screen icons to fill the grid, up to 144 pt, and keeps the popup at 80 pt. Custom is 48–160 pt for both; full screen draws it smaller, down to 48 pt, only where the grid has no room for it. A size set in an earlier version becomes Custom |
 | Show app labels | On | |
 | Columns × rows | 7 × 5 | Full screen; 4–12 columns and 4–7 rows. Each page holds columns × rows apps, and the rows spread evenly between Search and the page dots. Fewer slots move the apps that no longer fit onto the next pages; more slots leave existing pages as they are. Automatic columns from an earlier version become 7 |
-| While open | Keep Dock and menu bar | Or auto-hide both while full screen is open. Either way, the grid is laid out between the menu bar and the Dock |
+| Page control | Dots | Bare dots, as in Launchpad, or **Dots + Arrows**, which adds previous and next arrows while you point at the dots |
+| Hide menu bar and Dock while open | Off | Full screen. Off, the grid is laid out between the menu bar and the Dock. On, both hide while full screen is open and the grid uses the whole screen; move the pointer to the screen edge to show them. macOS lets an app hide the menu bar only together with the Dock, so there is no menu-bar-only choice. An earlier "Auto-hide both" choice is kept |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
 | Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
 | Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup keeps its own background |
