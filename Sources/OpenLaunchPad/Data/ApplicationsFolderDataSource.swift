@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 import CryptoKit
 
-/// Fallback data source: scans /Applications alphabetically.
+/// Fallback data source: scans the Applications folders, sorted by displayed name.
 /// Used when the Launchpad DB is absent or unreadable (ADR-2 fallback).
 final class ApplicationsFolderDataSource: AppDataSource {
     private let searchPaths: [String]
@@ -29,6 +29,7 @@ final class ApplicationsFolderDataSource: AppDataSource {
         var items: [LaunchpadItem] = []
         var seenBundleIDs = Set<String>()
 
+        // Scan order only decides which copy of a duplicate bundle ID wins.
         for path in searchPaths {
             guard let entries = try? fm.contentsOfDirectory(atPath: path) else { continue }
             for entry in entries.sorted() {
@@ -40,6 +41,7 @@ final class ApplicationsFolderDataSource: AppDataSource {
                 }
             }
         }
+        items.sort { Self.isOrderedBefore($0.title, $1.title) }
 
         // Chunk into pages
         return stride(from: 0, to: items.count, by: itemsPerPage).map { start in
@@ -69,7 +71,7 @@ final class ApplicationsFolderDataSource: AppDataSource {
             id: stableUUID(for: "folder:\(path)"),
             // displayName drops ".localized" and localizes system folders such as Utilities.
             title: FileManager.default.displayName(atPath: path),
-            apps: apps
+            apps: apps.sorted { Self.isOrderedBefore($0.title, $1.title) }
         )
     }
 
@@ -98,6 +100,10 @@ final class ApplicationsFolderDataSource: AppDataSource {
             title: title,
             aliases: aliases
         )
+    }
+
+    private static func isOrderedBefore(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.localizedStandardCompare(rhs) == .orderedAscending
     }
 
     private func stableUUID(for value: String) -> UUID {

@@ -78,6 +78,31 @@ struct ApplicationsFolderDataSourceTests {
     }
 
     @Test
+    func itemsFromAllSearchPathsAreSortedByDisplayedName() throws {
+        let fixture = try ApplicationsFixture()
+        defer { fixture.remove() }
+        for (name, id) in [("Xcode", "xcode"), ("iMovie", "imovie"), ("zoom.us", "zoom"), ("App 10", "app10")] {
+            try fixture.addApp(name: name, bundleID: "com.example.\(id)", under: fixture.firstRoot)
+        }
+        let tools = fixture.firstRoot.appendingPathComponent("Tools", isDirectory: true)
+        try fixture.addApp(name: "Terminal", bundleID: "com.example.terminal", under: tools)
+        try fixture.addApp(name: "console", bundleID: "com.example.console", under: tools)
+        try fixture.addApp(name: "Calendar", bundleID: "com.example.calendar", under: fixture.secondRoot)
+        try fixture.addApp(name: "App 2", bundleID: "com.example.app2", under: fixture.secondRoot)
+
+        let items = try ApplicationsFolderDataSource(
+            searchPaths: [fixture.firstRoot.path, fixture.secondRoot.path]
+        ).loadPages().flatMap { $0 }
+
+        #expect(items.map(\.title) == ["App 2", "App 10", "Calendar", "iMovie", "Tools", "Xcode", "zoom.us"])
+        guard case .folder(let folder) = items[4] else {
+            Issue.record("Expected the Tools folder")
+            return
+        }
+        #expect(folder.apps.map(\.title) == ["console", "Terminal"])
+    }
+
+    @Test
     func appScannedMidInstallAppearsOnceItsInfoPlistIsWritten() throws {
         let fixture = try ApplicationsFixture()
         defer { fixture.remove() }
