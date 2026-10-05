@@ -11,6 +11,7 @@ struct LaunchpadView: View {
 
     var body: some View {
         @Bindable var vm = vm
+        let searchResults = vm.searchResults
 
         ZStack {
             // Backdrop — clicks outside folder overlay close the folder or dismiss
@@ -36,7 +37,7 @@ struct LaunchpadView: View {
                     .padding(.top, 40)
                     .padding(.bottom, 12)
 
-                if vm.searchResults == nil {
+                if searchResults == nil {
                     FrequentlyUsedAppsView(
                         presentation: .fullScreen,
                         onLaunch: launch
@@ -44,7 +45,7 @@ struct LaunchpadView: View {
                 }
 
                 // Content: search results or paginated grid
-                if let results = vm.searchResults {
+                if let results = searchResults {
                     searchResultsView(results)
                 } else {
                     AppGridView(
@@ -55,7 +56,7 @@ struct LaunchpadView: View {
                 }
 
                 // Page indicator (hidden during search)
-                if vm.searchResults == nil && vm.pages.count > 1 {
+                if searchResults == nil && vm.pages.count > 1 {
                     PageIndicatorView(pageCount: vm.pages.count, currentPage: $vm.currentPage)
                         .padding(.bottom, 20)
                 }
@@ -137,37 +138,45 @@ struct LaunchpadView: View {
 
     // MARK: - Search results
 
+    @ViewBuilder
     private func searchResultsView(_ results: [LaunchpadItem]) -> some View {
-        let cols = Array(repeating: GridItem(.fixed(config.iconSize + 24), spacing: 12), count: 7)
-        return ScrollView {
-            LazyVGrid(columns: cols, spacing: 16) {
-                ForEach(results) { item in
-                    switch item {
-                    case .app(let app):
-                        AppIconView(
-                            app: app,
-                            icon: vm.icon(for: app.bundleID),
-                            iconSize: config.iconSize,
-                            showLabel: config.iconLabelVisible,
-                            isEditMode: false,
-                            onTap: { launch(app) }
-                        )
-                    case .folder(let folder):
-                        FolderView(
-                            folder: folder,
-                            iconSize: config.iconSize,
-                            showLabel: config.iconLabelVisible,
-                            isEditMode: false,
-                            iconProvider: { vm.icon(for: $0) },
-                            onOpen: { vm.toggleFolder(folder.id) }
-                        )
+        if results.isEmpty {
+            // The full-screen backdrop is dark in either appearance.
+            ContentUnavailableView.search(text: vm.searchQuery)
+                .environment(\.colorScheme, .dark)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            let cols = Array(repeating: GridItem(.fixed(config.iconSize + 24), spacing: 12), count: 7)
+            ScrollView {
+                LazyVGrid(columns: cols, spacing: 16) {
+                    ForEach(results) { item in
+                        switch item {
+                        case .app(let app):
+                            AppIconView(
+                                app: app,
+                                icon: vm.icon(for: app.bundleID),
+                                iconSize: config.iconSize,
+                                showLabel: config.iconLabelVisible,
+                                isEditMode: false,
+                                onTap: { launch(app) }
+                            )
+                        case .folder(let folder):
+                            FolderView(
+                                folder: folder,
+                                iconSize: config.iconSize,
+                                showLabel: config.iconLabelVisible,
+                                isEditMode: false,
+                                iconProvider: { vm.icon(for: $0) },
+                                onOpen: { vm.toggleFolder(folder.id) }
+                            )
+                        }
                     }
                 }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
+            .scrollIndicators(.hidden)
+            .launchpadScrollAppearance()
         }
-        .scrollIndicators(.hidden)
-        .launchpadScrollAppearance()
     }
 
     // MARK: - Backdrop

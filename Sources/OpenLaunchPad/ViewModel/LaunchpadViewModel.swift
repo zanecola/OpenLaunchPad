@@ -21,21 +21,49 @@ final class LaunchpadViewModel {
 
     // MARK: - Derived state
 
-    /// Flat search results when query is active; nil means show paginated grid.
+    /// Results for the trimmed query; nil means show the paginated grid.
+    /// Matching apps come first, including apps inside folders, ranked by how well they match,
+    /// then by usage, then by name. Folders whose own title matches follow them.
     var searchResults: [LaunchpadItem]? {
-        guard !searchQuery.isEmpty else { return nil }
-        let q = searchQuery.lowercased()
-        func matches(_ app: AppItem) -> Bool {
-            ([app.title] + app.aliases).contains { $0.lowercased().contains(q) }
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return nil }
+
+        var apps: [(app: AppItem, match: SearchMatch)] = []
+        var folders: [(folder: FolderItem, match: SearchMatch)] = []
+        var seenBundleIDs = Set<String>()
+        func consider(_ app: AppItem) {
+            guard let match = ([app.title] + app.aliases).compactMap({ SearchMatch($0, query: query) }).min(),
+                  seenBundleIDs.insert(app.bundleID).inserted else { return }
+            apps.append((app, match))
         }
-        return pages.flatMap { $0 }.filter { item in
+        for item in pages.joined() {
             switch item {
-            case .app(let a): return matches(a)
-            case .folder(let f):
-                return f.title.lowercased().contains(q)
-                    || f.apps.contains(where: matches)
+            case .app(let app):
+                consider(app)
+            case .folder(let folder):
+                folder.apps.forEach(consider)
+                if let match = SearchMatch(folder.title, query: query) {
+                    folders.append((folder, match))
+                }
             }
         }
+
+        let usageRanks = Dictionary(uniqueKeysWithValues: appUsageHistory
+            .rankedBundleIDs(limit: appUsageHistory.records.count)
+            .enumerated()
+            .map { ($0.element, $0.offset) })
+        apps.sort { lhs, rhs in
+            if lhs.match != rhs.match { return lhs.match < rhs.match }
+            let lhsUsage = usageRanks[lhs.app.bundleID] ?? .max
+            let rhsUsage = usageRanks[rhs.app.bundleID] ?? .max
+            if lhsUsage != rhsUsage { return lhsUsage < rhsUsage }
+            return lhs.app.title.localizedStandardCompare(rhs.app.title) == .orderedAscending
+        }
+        folders.sort { lhs, rhs in
+            if lhs.match != rhs.match { return lhs.match < rhs.match }
+            return lhs.folder.title.localizedStandardCompare(rhs.folder.title) == .orderedAscending
+        }
+        return apps.map { .app($0.app) } + folders.map { .folder($0.folder) }
     }
 
     var expandedFolder: FolderItem? {

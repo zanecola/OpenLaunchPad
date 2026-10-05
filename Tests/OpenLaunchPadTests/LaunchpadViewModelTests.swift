@@ -844,7 +844,99 @@ struct LaunchpadViewModelTests {
         #expect(viewModel.searchResults?.map(\.id) == [calendar.id])
 
         viewModel.searchQuery = "CODE"
-        #expect(viewModel.searchResults?.map(\.id) == [folder.id])
+        #expect(viewModel.searchResults?.map(\.id) == [code.id])
+    }
+
+    @Test
+    func searchFindsAppsInsideFoldersOnceEach() {
+        let terminal = Self.app("Terminal")
+        let terminalCopy = AppItem(id: UUID(), bundleID: terminal.bundleID, title: "Terminal")
+        let console = Self.app("Console")
+        let utilities = FolderItem(id: UUID(), title: "Utilities", apps: [terminal, console])
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(utilities)], [.app(terminalCopy)]]
+
+        viewModel.searchQuery = "term"
+
+        #expect(viewModel.searchResults == [.app(terminal)])
+    }
+
+    @Test
+    func searchRanksExactThenPrefixThenWordPrefixThenSubstring() {
+        let gmail = Self.app("Gmail")
+        let sparkMail = Self.app("Spark Mail")
+        let mailspring = Self.app("Mailspring")
+        let mail = Self.app("Mail")
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.app(gmail), .app(sparkMail)], [.app(mailspring), .app(mail)]]
+
+        viewModel.searchQuery = "mail"
+
+        #expect(viewModel.searchResults?.map(\.id) == [mail.id, mailspring.id, sparkMail.id, gmail.id])
+    }
+
+    @Test
+    func searchIgnoresCaseDiacriticsWidthAndSurroundingWhitespace() {
+        let settings = Self.app("Réglages Système")
+        let mail = Self.app("Mail")
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.app(settings), .app(mail)]]
+
+        viewModel.searchQuery = "  REGLAGES "
+        #expect(viewModel.searchResults?.map(\.id) == [settings.id])
+
+        viewModel.searchQuery = "ｍａｉｌ"
+        #expect(viewModel.searchResults?.map(\.id) == [mail.id])
+
+        viewModel.searchQuery = "   "
+        #expect(viewModel.searchResults == nil)
+    }
+
+    @Test
+    func searchBreaksTiesByUsageThenName() {
+        let notes = Self.app("Notes")
+        let notepad = Self.app("Notepad")
+        let notebook10 = Self.app("Notebook 10")
+        let notebook9 = Self.app("Notebook 9")
+        let usageStore = StubAppUsageStore(history: AppUsageHistory(records: [
+            AppUsageRecord(bundleID: notes.bundleID, launchCount: 1, lastLaunchedAt: Date(timeIntervalSince1970: 100)),
+            AppUsageRecord(bundleID: notepad.bundleID, launchCount: 3, lastLaunchedAt: Date(timeIntervalSince1970: 50))
+        ]))
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: usageStore
+        )
+        viewModel.pages = [[.app(notebook10), .app(notes), .app(notebook9), .app(notepad)]]
+
+        viewModel.searchQuery = "note"
+
+        #expect(viewModel.searchResults?.map(\.id) == [notepad.id, notes.id, notebook9.id, notebook10.id])
+    }
+
+    @Test
+    func searchListsMatchingFoldersAfterApps() {
+        let terminal = Self.app("Terminal")
+        let console = Self.app("Console")
+        let utilities = FolderItem(id: UUID(), title: "Utilities", apps: [terminal, console])
+        let utilityBelt = Self.app("Utility Belt")
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.folder(utilities), .app(utilityBelt)]]
+
+        viewModel.searchQuery = "util"
+
+        #expect(viewModel.searchResults == [.app(utilityBelt), .folder(utilities)])
+    }
+
+    @Test
+    func searchWithoutMatchesIsEmptyRatherThanNil() {
+        let viewModel = Self.viewModel(pages: [], store: StubLayoutStore())
+        viewModel.pages = [[.app(Self.app("Mail"))]]
+
+        viewModel.searchQuery = "xyz"
+
+        #expect(viewModel.searchResults == [])
     }
 
     private static func viewModel(

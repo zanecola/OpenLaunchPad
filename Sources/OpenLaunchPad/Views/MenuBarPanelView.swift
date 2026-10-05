@@ -13,6 +13,7 @@ struct MenuBarPanelView: View {
 
     var body: some View {
         @Bindable var vm = vm
+        let searchResults = vm.searchResults
 
         ZStack {
             VStack(spacing: 0) {
@@ -26,14 +27,14 @@ struct MenuBarPanelView: View {
 
                 Divider()
 
-                if vm.searchResults == nil {
+                if searchResults == nil {
                     FrequentlyUsedAppsView(
                         presentation: .popup,
                         onLaunch: launchAndDismiss
                     )
                 }
 
-                if let results = vm.searchResults {
+                if let results = searchResults {
                     compactGrid(results)
                 } else {
                     AppGridView(
@@ -82,27 +83,43 @@ struct MenuBarPanelView: View {
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
     }
 
+    @ViewBuilder
     private func compactGrid(_ results: [LaunchpadItem]) -> some View {
-        let cols = [GridItem(.adaptive(minimum: config.iconSize + 16), spacing: 8, alignment: .top)]
-        return ScrollView {
-            LazyVGrid(columns: cols, spacing: 12) {
-                ForEach(results) { item in
-                    if case .app(let app) = item {
-                        AppIconView(
-                            app: app,
-                            icon: vm.icon(for: app.bundleID),
-                            iconSize: config.iconSize * 0.75,
-                            showLabel: config.iconLabelVisible,
-                            isEditMode: false,
-                            onTap: { launchAndDismiss(app) }
-                        )
+        if results.isEmpty {
+            ContentUnavailableView.search(text: vm.searchQuery)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            let cols = [GridItem(.adaptive(minimum: config.iconSize + 16), spacing: 8, alignment: .top)]
+            ScrollView {
+                LazyVGrid(columns: cols, spacing: 12) {
+                    ForEach(results) { item in
+                        switch item {
+                        case .app(let app):
+                            AppIconView(
+                                app: app,
+                                icon: vm.icon(for: app.bundleID),
+                                iconSize: config.iconSize * 0.75,
+                                showLabel: config.iconLabelVisible,
+                                isEditMode: false,
+                                onTap: { launchAndDismiss(app) }
+                            )
+                        case .folder(let folder):
+                            FolderView(
+                                folder: folder,
+                                iconSize: config.iconSize * 0.75,
+                                showLabel: config.iconLabelVisible,
+                                isEditMode: false,
+                                iconProvider: { vm.icon(for: $0) },
+                                onOpen: { vm.toggleFolder(folder.id) }
+                            )
+                        }
                     }
                 }
+                .padding(12)
             }
-            .padding(12)
+            .scrollIndicators(.hidden)
+            .launchpadScrollAppearance()
         }
-        .scrollIndicators(.hidden)
-        .launchpadScrollAppearance()
     }
 
     private func launchAndDismiss(_ app: AppItem) {
