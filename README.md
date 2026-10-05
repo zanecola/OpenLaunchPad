@@ -88,7 +88,7 @@ Building from source additionally requires Xcode with the macOS 26 SDK and Swift
 
 | Action | Result |
 |---|---|
-| Click the Dock icon | Opens full-screen or popup mode, depending on Settings |
+| Click the Dock icon | Opens full-screen or popup mode, depending on Settings; click again to close it |
 | Left-click the menu-bar icon | Toggles the compact popup below the icon |
 | Right-click the menu-bar icon | Shows Settings, About, and Quit |
 | Press your configured global shortcut | Toggles the launcher from any app |

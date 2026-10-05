@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var presentationOptionsBeforeFullScreen: NSApplication.PresentationOptions?
 
     private var visibleSurface = VisibleSurface.none
+    private var launcherToggle = LauncherToggle()
 
     private var isLaunchpadVisible: Bool {
         visibleSurface != .none
@@ -98,13 +99,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidResignActive(_ notification: Notification) {
         if visibleSurface == .fullScreen {
+            launcherToggle.recordImplicitDismissal()
             hideLaunchpad()
         }
     }
 
     // Dock icon click: reopen → show Launchpad (ADR, dock-click behavior)
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if isLaunchpadVisible {
+        // When this click's mouse-down already closed the launcher, the click still closes it, and
+        // dismissing hands back the activation the Dock gave the app.
+        if launcherToggle.clickCloses(launcherIsVisible: isLaunchpadVisible) {
             dismissLaunchpad()
         } else {
             showLaunchpad(popupAnchor: NSEvent.mouseLocation)
@@ -262,7 +266,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        if isLaunchpadVisible {
+        if launcherToggle.clickCloses(launcherIsVisible: isLaunchpadVisible) {
             dismissLaunchpad()
         } else {
             let anchorPoint = statusItemAnchor(for: sender)
@@ -284,6 +288,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.visibleSurface == .popup, let panel = self.popupPanel,
                   !panel.isKeyWindow, panel.attachedSheet == nil else { return }
+            self.launcherToggle.recordImplicitDismissal()
             self.dismissLaunchpad()
         }
     }
@@ -294,8 +299,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard self?.visibleSurface == .popup else { return }
-                self?.dismissLaunchpad()
+                guard let self, self.visibleSurface == .popup else { return }
+                self.launcherToggle.recordImplicitDismissal()
+                self.dismissLaunchpad()
             }
         }
     }
