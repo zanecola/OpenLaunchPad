@@ -80,16 +80,6 @@ struct FullScreenPageLayoutTests {
         )
     }
 
-    private func frequentlyUsedRowHeight(_ page: FullScreenPageLayout) -> CGFloat {
-        page.showsFrequentlyUsed
-            ? FrequentlyUsedAppsLayout.rowHeight(
-                configuredIconSize: page.grid.iconSize,
-                showsLabels: true,
-                presentation: .fullScreen
-            )
-            : 0
-    }
-
     @Test(arguments: displays, [false, true])
     func slotsFillTheSpaceBetweenTheSearchBarAndTheDots(display: (CGSize, EdgeInsets), wantsFrequentlyUsed: Bool) {
         let (size, insets) = display
@@ -98,9 +88,11 @@ struct FullScreenPageLayoutTests {
 
         let stackHeight = insets.top + FullScreenPageLayout.searchTopPadding
             + FullScreenPageLayout.searchBarHeight + FullScreenPageLayout.searchBottomPadding
-            + frequentlyUsedRowHeight(page) + page.gridHeight
+            + (page.shelf?.reservedHeight ?? 0) + page.gridHeight
             + FullScreenPageLayout.pageIndicatorHeight + FullScreenPageLayout.bottomPadding + insets.bottom
         #expect(abs(stackHeight - size.height) < 0.001)
+        // The shelf is sized to the icons the grid ended up with.
+        #expect(page.shelf.map(\.iconSize) == (wantsFrequentlyUsed ? (grid.iconSize * 0.6).rounded() : nil))
         // Five rows of slots take exactly the grid's height, whatever the page holds.
         #expect(abs(5 * grid.cellHeight - page.gridHeight) < 0.001)
         #expect(abs(grid.contentHeight(itemCount: 35) - page.gridHeight) < 0.001)
@@ -134,7 +126,7 @@ struct FullScreenPageLayoutTests {
         #expect(layout(large, customIconSize: 56, columns: 11).grid.iconSize == 56)
 
         let withRow = layout(large, customIconSize: 56, columns: 11, wantsFrequentlyUsed: true)
-        #expect(withRow.showsFrequentlyUsed)
+        #expect(withRow.shelf != nil)
         #expect(withRow.grid.iconSize == 56)
     }
 
@@ -156,7 +148,7 @@ struct FullScreenPageLayoutTests {
         let page = layout(Self.displays[0], columns: 12, rows: 7, wantsFrequentlyUsed: true)
         let grid = page.grid
 
-        #expect(!page.showsFrequentlyUsed)
+        #expect(page.shelf == nil)
         #expect(grid.iconSize == FullScreenPageLayout.minimumIconSize)
         #expect(abs(7 * grid.cellHeight - page.gridHeight) < 0.001)
         #expect(LaunchpadIconMetrics.contentHeight(for: grid.iconSize, showsLabel: true) <= grid.cellHeight)
@@ -164,30 +156,32 @@ struct FullScreenPageLayoutTests {
     }
 
     @Test
-    func thirteenInchAirKeepsFrequentlyUsedWithSmallerIcons() {
+    func thirteenInchAirKeepsTheShelfWithSlightlySmallerIcons() throws {
         let air = Self.displays[1]
         let page = layout(air, wantsFrequentlyUsed: true)
+        let shelf = try #require(page.shelf)
 
-        #expect(page.showsFrequentlyUsed)
+        #expect(shelf.reservedHeight <= 80)
         #expect(page.grid.iconSize < layout(air).grid.iconSize)
-        #expect(page.grid.iconSize > 52)
+        #expect((72...80).contains(page.grid.iconSize))
     }
 
     @Test
-    func shortDisplayLeavesOutFrequentlyUsedRatherThanShrinkingIconsPastTheMinimum() {
+    func shortDisplayKeepsTheShelfWhileTheGridStaysAboveTheMinimum() {
         let short = Self.displays[0]
         let page = layout(short, wantsFrequentlyUsed: true)
 
-        #expect(!page.showsFrequentlyUsed)
-        #expect(page.grid.iconSize == layout(short).grid.iconSize)
+        #expect(page.shelf != nil)
+        #expect(page.grid.iconSize < layout(short).grid.iconSize)
+        #expect(page.grid.iconSize >= 56)
     }
 
     @Test
-    func largeDisplayKeepsTheRowAndLargeIcons() {
+    func largeDisplayKeepsTheShelfAndLargeIcons() {
         let page = layout(Self.displays[3], wantsFrequentlyUsed: true)
 
-        #expect(page.showsFrequentlyUsed)
-        #expect(page.grid.iconSize >= 100)
+        #expect(page.shelf != nil)
+        #expect(page.grid.iconSize >= 128)
     }
 
     @Test

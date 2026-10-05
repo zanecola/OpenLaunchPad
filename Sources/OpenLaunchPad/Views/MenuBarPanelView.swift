@@ -29,13 +29,6 @@ struct MenuBarPanelView: View {
                 }
                 .padding(12)
 
-                if searchResults == nil {
-                    FrequentlyUsedAppsView(
-                        presentation: .popup,
-                        onLaunch: launchAndDismiss
-                    )
-                }
-
                 if let results = searchResults {
                     compactGrid(results)
                 } else {

@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Fits the full-screen page between the search bar and the page dots, inside insets that keep it
-/// clear of the menu bar and the Dock. The page is a grid of columns × rows slots that fills that
-/// space, so a partly filled page keeps its rows where the other pages have them. Automatic icons
-/// are sized to the slots; a custom size draws smaller, down to 48 pt, only when it does not fit.
+/// Fits the full-screen page between the search bar, or the Frequently Used shelf below it, and
+/// the page dots, inside insets that keep it clear of the menu bar and the Dock. The page is a grid
+/// of columns × rows slots that fills that space, so a partly filled page keeps its rows where the
+/// other pages have them. Automatic icons are sized to the slots; a custom size draws smaller,
+/// down to 48 pt, only when it does not fit.
 struct FullScreenPageLayout {
     static let minimumIconSize: CGFloat = 48
     static let maximumAutomaticIconSize: CGFloat = 144
@@ -15,10 +16,10 @@ struct FullScreenPageLayout {
     static let settingsButtonInset: CGFloat = 24
 
     let grid: AppGridLayout
-    /// Height left for the grid below the search bar and, when shown, the Frequently Used row.
+    /// Height left for the grid below the search bar and, when shown, the Frequently Used shelf.
     let gridHeight: CGFloat
-    /// False when the grid's icons would be under 48 pt beside the row.
-    let showsFrequentlyUsed: Bool
+    /// nil when not wanted, or when the grid's icons would be under 48 pt beside it.
+    let shelf: FrequentlyUsedShelfLayout?
 
     /// `customIconSize` is nil for Automatic.
     init(
@@ -35,29 +36,29 @@ struct FullScreenPageLayout {
         let chromeHeight = insets.top + Self.searchTopPadding + Self.searchBarHeight + Self.searchBottomPadding
             + (showsPageIndicator ? Self.pageIndicatorHeight : 0) + Self.bottomPadding + insets.bottom
         let available = CGSize(width: width, height: max(size.height - chromeHeight, 0))
-        let fit = { (showsFrequentlyUsed: Bool) in
+        let fit = { (showsShelf: Bool) in
             Self.fitting(
                 in: available,
                 customIconSize: customIconSize,
                 columns: columns,
                 rows: rows,
                 showsLabels: showsLabels,
-                showsFrequentlyUsed: showsFrequentlyUsed
+                showsShelf: showsShelf
             )
         }
 
-        // The row stays if the grid fits beside it; otherwise the grid gets its space.
+        // The shelf stays if the grid fits beside it; otherwise the grid gets its space.
         self = (wantsFrequentlyUsed ? fit(true) : nil) ?? fit(false) ?? FullScreenPageLayout(
             grid: AppGridLayout(slotsIn: available, columns: columns, rows: rows, iconSize: Self.minimumIconSize),
             gridHeight: available.height,
-            showsFrequentlyUsed: false
+            shelf: nil
         )
     }
 
-    private init(grid: AppGridLayout, gridHeight: CGFloat, showsFrequentlyUsed: Bool) {
+    private init(grid: AppGridLayout, gridHeight: CGFloat, shelf: FrequentlyUsedShelfLayout?) {
         self.grid = grid
         self.gridHeight = gridHeight
-        self.showsFrequentlyUsed = showsFrequentlyUsed
+        self.shelf = shelf
     }
 
     /// About a quarter of the content width, within 320-480 pt.
@@ -66,25 +67,19 @@ struct FullScreenPageLayout {
     }
 
     /// The layout with the largest icons, from the custom or largest automatic size down to the
-    /// minimum, that fit their slots below the Frequently Used row, which shrinks with the grid.
+    /// minimum, that fit their slots below the Frequently Used shelf, which shrinks with the grid.
     private static func fitting(
         in available: CGSize,
         customIconSize: CGFloat?,
         columns: Int,
         rows: Int,
         showsLabels: Bool,
-        showsFrequentlyUsed: Bool
+        showsShelf: Bool
     ) -> FullScreenPageLayout? {
         var candidate = customIconSize ?? maximumAutomaticIconSize
         while candidate >= minimumIconSize {
-            let rowHeight = showsFrequentlyUsed
-                ? FrequentlyUsedAppsLayout.rowHeight(
-                    configuredIconSize: candidate,
-                    showsLabels: showsLabels,
-                    presentation: .fullScreen
-                )
-                : 0
-            let gridHeight = max(available.height - rowHeight, 0)
+            let shelf = showsShelf ? FrequentlyUsedShelfLayout(gridIconSize: candidate, width: available.width) : nil
+            let gridHeight = max(available.height - (shelf?.reservedHeight ?? 0), 0)
             let grid = AppGridLayout(
                 slotsIn: CGSize(width: available.width, height: gridHeight),
                 columns: columns,
@@ -92,7 +87,7 @@ struct FullScreenPageLayout {
                 iconSize: candidate
             )
             if fits(grid, automatic: customIconSize == nil, showsLabels: showsLabels) {
-                return FullScreenPageLayout(grid: grid, gridHeight: gridHeight, showsFrequentlyUsed: showsFrequentlyUsed)
+                return FullScreenPageLayout(grid: grid, gridHeight: gridHeight, shelf: shelf)
             }
             candidate = candidate.rounded(.up) - 1
         }
@@ -155,12 +150,9 @@ struct LaunchpadView: View {
                         }
                         .padding(.bottom, FullScreenPageLayout.searchBottomPadding)
 
-                    if searchResults == nil && pageLayout.showsFrequentlyUsed {
-                        FrequentlyUsedAppsView(
-                            presentation: .fullScreen,
-                            iconSize: pageLayout.grid.iconSize,
-                            onLaunch: launch
-                        )
+                    if searchResults == nil, let shelf = pageLayout.shelf {
+                        FrequentlyUsedShelf(layout: shelf, onLaunch: launch)
+                            .padding(.bottom, FrequentlyUsedShelfLayout.bottomPadding)
                     }
 
                     // Content: search results or paginated grid

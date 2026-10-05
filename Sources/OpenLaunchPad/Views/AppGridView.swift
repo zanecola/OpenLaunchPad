@@ -154,9 +154,12 @@ struct AppGridView: View {
 
     private func scrollingGrid(layout: AppGridLayout) -> some View {
         ScrollView(.vertical) {
-            itemGrid(items: vm.pages.flatMap { $0 }, layout: layout)
-                .padding(.top, 24)
-                .padding(.bottom, 34)
+            VStack(spacing: 0) {
+                FrequentlyUsedSection(layout: layout, onLaunch: launch)
+                itemGrid(items: vm.pages.flatMap { $0 }, layout: layout)
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 34)
         }
         .modifier(ScrollsToTopOnShow())
         .scrollIndicators(.hidden)
@@ -218,11 +221,7 @@ struct AppGridView: View {
                 onDragEnded: handleDragEnded,
                 onTap: {
                     if vm.isEditMode { return }
-                    if let onLaunch {
-                        onLaunch(app)
-                    } else {
-                        vm.launch(app)
-                    }
+                    launch(app)
                 }
             )
 
@@ -238,6 +237,14 @@ struct AppGridView: View {
                 onDragEnded: handleDragEnded,
                 onOpen: { vm.toggleFolder(folder.id) }
             )
+        }
+    }
+
+    private func launch(_ app: AppItem) {
+        if let onLaunch {
+            onLaunch(app)
+        } else {
+            vm.launch(app)
         }
     }
 

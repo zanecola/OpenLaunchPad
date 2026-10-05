@@ -1,150 +1,120 @@
 import SwiftUI
 
-enum FrequentlyUsedAppsPresentation {
-    case fullScreen
-    case popup
+/// Full screen's Frequently Used shelf: one row of unlabeled icons at 0.6 × the grid's icon size
+/// on a bar centered between the search field and the grid.
+struct FrequentlyUsedShelfLayout {
+    static let maximumCount = 9
+    static let spacing: CGFloat = 14
+    static let horizontalPadding: CGFloat = 16
+    static let verticalPadding: CGFloat = 10
+    static let cornerRadius: CGFloat = 26
+    /// Between the shelf and the grid.
+    static let bottomPadding: CGFloat = 12
 
-    var maximumIconSize: CGFloat {
-        switch self {
-        case .fullScreen: 80
-        case .popup: 72
-        }
-    }
-
-    var horizontalPadding: CGFloat {
-        switch self {
-        case .fullScreen: 40
-        case .popup: 24
-        }
-    }
-}
-
-struct FrequentlyUsedAppsLayout {
-    static let headerHeight: CGFloat = 26
-
-    let visibleCount: Int
     let iconSize: CGFloat
-    let cellWidth: CGFloat
-    let spacing: CGFloat
-    let rowHeight: CGFloat
+    /// Nine, or fewer when nine would not fit `width`.
+    let capacity: Int
 
-    init(
-        width: CGFloat,
-        configuredIconSize: CGFloat,
-        showsLabels: Bool,
-        presentation: FrequentlyUsedAppsPresentation,
-        maximumCount: Int = 7
-    ) {
-        let iconSize = min(configuredIconSize, presentation.maximumIconSize)
-        let cellWidth = iconSize + 32
-        let availableWidth = max(width - presentation.horizontalPadding * 2, cellWidth)
-        let minimumSpacing: CGFloat = 12
-        let fittingCount = max(
-            1,
-            Int((availableWidth + minimumSpacing) / (cellWidth + minimumSpacing))
-        )
-        let visibleCount = min(max(maximumCount, 0), fittingCount)
-        let naturalSpacing = visibleCount > 1
-            ? (availableWidth - CGFloat(visibleCount) * cellWidth) / CGFloat(visibleCount - 1)
-            : 0
-
-        self.visibleCount = visibleCount
+    init(gridIconSize: CGFloat, width: CGFloat) {
+        let iconSize = (gridIconSize * 0.6).rounded()
+        let fittingCount = Int((width - Self.horizontalPadding * 2 + Self.spacing) / (iconSize + Self.spacing))
         self.iconSize = iconSize
-        self.cellWidth = cellWidth
-        spacing = visibleCount > 1 ? min(max(naturalSpacing, minimumSpacing), 80) : 0
-        rowHeight = Self.rowHeight(
-            configuredIconSize: configuredIconSize,
-            showsLabels: showsLabels,
-            presentation: presentation
-        )
+        capacity = min(max(fittingCount, 1), Self.maximumCount)
     }
 
-    static func rowHeight(
-        configuredIconSize: CGFloat,
-        showsLabels: Bool,
-        presentation: FrequentlyUsedAppsPresentation
-    ) -> CGFloat {
-        LaunchpadIconMetrics.cellHeight(
-            for: min(configuredIconSize, presentation.maximumIconSize),
-            showsLabel: showsLabels
-        ) + 24 + headerHeight
+    var height: CGFloat {
+        iconSize + Self.verticalPadding * 2
+    }
+
+    /// What the shelf takes from the grid's height, the gap below it included.
+    var reservedHeight: CGFloat {
+        height + Self.bottomPadding
     }
 }
 
-struct FrequentlyUsedAppsView: View {
+/// Full screen's Frequently Used apps. Icons have no labels; each names its app in a tooltip.
+struct FrequentlyUsedShelf: View {
     @Environment(LaunchpadViewModel.self) private var vm
-    @Environment(ConfigStore.self) private var config
-
-    let presentation: FrequentlyUsedAppsPresentation
-    /// The full-screen grid's fitted icon size, so the row shrinks with the grid; nil uses the popup's.
-    var iconSize: CGFloat?
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    let layout: FrequentlyUsedShelfLayout
     let onLaunch: (AppItem) -> Void
 
     var body: some View {
-        if config.showFrequentlyUsedApps,
-           !vm.frequentlyUsedApps.isEmpty {
-            GeometryReader { proxy in
-                let layout = FrequentlyUsedAppsLayout(
-                    width: proxy.size.width,
-                    configuredIconSize: iconSize ?? config.popupIconSize,
-                    showsLabels: config.iconLabelVisible,
-                    presentation: presentation
+        let shape = RoundedRectangle(cornerRadius: FrequentlyUsedShelfLayout.cornerRadius, style: .continuous)
+        HStack(spacing: FrequentlyUsedShelfLayout.spacing) {
+            ForEach(vm.frequentlyUsedApps.prefix(layout.capacity)) { app in
+                AppIconView(
+                    app: app,
+                    icon: vm.icon(for: app.bundleID),
+                    iconSize: layout.iconSize,
+                    showLabel: false,
+                    isEditMode: false,
+                    onTap: { onLaunch(app) }
                 )
-                let apps = vm.frequentlyUsedApps.prefix(layout.visibleCount)
-
-                VStack(spacing: 0) {
-                    HStack {
-                        Label("Frequently Used", systemImage: "clock.arrow.circlepath")
-                            .font(.caption.weight(.semibold))
-                            .help(
-                                "Apps launched through OpenLaunchPad are ranked by how often "
-                                    + "and how recently you use them. You can turn this off in Settings."
-                            )
-
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, presentation.horizontalPadding)
-                    .frame(height: FrequentlyUsedAppsLayout.headerHeight)
-                    .accessibilityElement(children: .combine)
-
-                    HStack(spacing: layout.spacing) {
-                        ForEach(apps) { app in
-                            AppIconView(
-                                app: app,
-                                icon: vm.icon(for: app.bundleID),
-                                iconSize: layout.iconSize,
-                                showLabel: config.iconLabelVisible,
-                                isEditMode: false,
-                                onTap: { onLaunch(app) }
-                            )
-                            .frame(
-                                width: layout.cellWidth,
-                                height: LaunchpadIconMetrics.cellHeight(
-                                    for: layout.iconSize,
-                                    showsLabel: config.iconLabelVisible
-                                ),
-                                alignment: .top
-                            )
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-
-                    Divider()
-                }
+                .help(app.title)
             }
-            .frame(height: rowHeight)
-            .transition(.move(edge: .top).combined(with: .opacity))
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Frequently used applications")
+        }
+        .padding(.horizontal, FrequentlyUsedShelfLayout.horizontalPadding)
+        .padding(.vertical, FrequentlyUsedShelfLayout.verticalPadding)
+        .background {
+            if reduceTransparency {
+                // A solid step above the solid backdrop full screen draws then.
+                shape.fill(Color(red: 44 / 255, green: 44 / 255, blue: 46 / 255))
+            } else {
+                Color.clear.glassEffect(.regular, in: shape)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Frequently used applications")
+    }
+}
+
+/// The popup's Frequently Used apps: one row in the grid's columns between a "Frequently Used"
+/// and an "All Apps" header, scrolling with the grid below it.
+struct FrequentlyUsedSection: View {
+    static let spacingBelowRow: CGFloat = 16
+
+    @Environment(LaunchpadViewModel.self) private var vm
+    @Environment(ConfigStore.self) private var config
+    let layout: AppGridLayout
+    let onLaunch: (AppItem) -> Void
+
+    var body: some View {
+        if config.showFrequentlyUsedApps, !vm.frequentlyUsedApps.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                header("Frequently Used")
+                    .help("Apps you open from OpenLaunchPad, ranked by how often and how recently you use them. Choose where they appear in Settings.")
+
+                HStack(spacing: layout.columnSpacing) {
+                    ForEach(vm.frequentlyUsedApps.prefix(layout.columnCount)) { app in
+                        AppIconView(
+                            app: app,
+                            icon: vm.icon(for: app.bundleID),
+                            iconSize: layout.iconSize,
+                            showLabel: config.iconLabelVisible,
+                            isEditMode: false,
+                            onTap: { onLaunch(app) }
+                        )
+                        .frame(width: layout.cellWidth, height: layout.cellHeight, alignment: layout.tileAlignment)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Frequently used applications")
+
+                header("All Apps")
+                    .padding(.top, Self.spacingBelowRow)
+            }
+            .frame(width: layout.contentWidth, alignment: .leading)
         }
     }
 
-    private var rowHeight: CGFloat {
-        FrequentlyUsedAppsLayout.rowHeight(
-            configuredIconSize: iconSize ?? config.popupIconSize,
-            showsLabels: config.iconLabelVisible,
-            presentation: presentation
-        )
+    private func header(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
+            // Lines up with the first icon, which is centered in its cell.
+            .padding(.leading, (layout.cellWidth - layout.iconSize) / 2)
+            .padding(.bottom, 8)
+            .accessibilityAddTraits(.isHeader)
     }
 }
