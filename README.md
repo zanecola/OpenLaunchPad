@@ -26,11 +26,11 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, the Frequently Used row, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, whether full screen auto-hides the Dock and menu bar, popup size and appearance (System, Light or Dark), background dim, animation speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including the Frequently Used row, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, and the Dim and popup appearance settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -101,7 +101,7 @@ Both launchers are built once when OpenLaunchPad starts and kept ready, so openi
 ### Navigate
 
 - Start typing as soon as the launcher opens: Search already has focus, in the popup too. It ignores case and accents, and finds apps by the name Finder shows, their bundle name, or their file name, including apps inside folders. Exact and prefix matches come first, then apps you use most. Folders whose name matches are listed after the apps.
-- A labeled **Frequently Used** row shows up to seven apps and updates after each launch. Full screen leaves it out when your apps would not fit beside it. Turn the row on or off, or clear its local history, under **Settings > General > Suggestions**.
+- **Frequently Used** shows the apps you open most often. In the popup it is a row lined up with the grid's columns, under a small "Frequently Used" header, and it scrolls away with the grid. In full screen it is a compact shelf of up to nine smaller icons below Search, without labels (hover an icon to see its name); full screen leaves it out when your apps would not fit beside it. The order is set each time the launcher opens, so icons don't move while you use it. Show it in both places, the popup only, or nowhere, and clear its local history, under **Settings > General > Suggestions**.
 - Use Left/Right (while Search is empty), Command-[ / Command-], the page arrows, or a horizontal wheel/trackpad gesture in full-screen mode. One trackpad flick turns one page.
 - Scroll vertically in popup mode and inside large folders.
 - Press Return to open the top search result.
@@ -141,7 +141,7 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 |---|---|---|
 | Dock icon click action | Full Screen | Or Popup |
 | Show menu bar icon | On | |
-| Show Frequently Used row | On | **Clear Usage History** erases the launch history behind it |
+| Frequently Used | Popup and Full Screen | Or Popup Only, or Off. An earlier on/off choice is kept: on becomes Popup and Full Screen. **Clear Usage History** erases the launch history behind it |
 | Reset Layout… | | Removes all folders and custom order after you confirm; the old layout is backed up first (see [Data and Privacy](#data-and-privacy)) |
 | Icon size | Automatic | Automatic sizes full-screen icons to fill the grid, up to 144 pt, and keeps the popup at 80 pt. Custom is 48–160 pt for both; full screen draws it smaller, down to 48 pt, only where the grid has no room for it. A size set in an earlier version becomes Custom |
 | Show app labels | On | |
