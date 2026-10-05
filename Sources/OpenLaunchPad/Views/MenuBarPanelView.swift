@@ -89,6 +89,8 @@ struct MenuBarPanelView: View {
         }
         .environment(dragState)
         .onKeyPress(.escape) {
+            // Escape cancels an input method's composition rather than stepping back.
+            guard !TextComposition.isActive else { return .ignored }
             if !vm.stepBack() { onDismissRequested() }
             return .handled
         }

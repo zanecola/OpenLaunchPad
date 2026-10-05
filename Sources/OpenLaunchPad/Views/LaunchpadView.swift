@@ -230,6 +230,8 @@ struct LaunchpadView: View {
         .environment(\.launchpadLabelStyle, .onDarkBackdrop)
         .ignoresSafeArea()
         .onKeyPress(.escape) {
+            // Escape cancels an input method's composition rather than stepping back.
+            guard !TextComposition.isActive else { return .ignored }
             if !vm.stepBack() { onDismiss() }
             return .handled
         }
@@ -271,9 +273,10 @@ struct LaunchpadView: View {
     }
 
     /// These handlers see arrow keys before the focused text field does, so leave them to the
-    /// caret while there is text to edit: a search query, or an open folder's name.
+    /// caret while there is text to edit: a search query, an open folder's name, or text an
+    /// input method is still composing.
     private var arrowKeysTurnPages: Bool {
-        vm.searchQuery.isEmpty && vm.expandedFolderID == nil
+        vm.searchQuery.isEmpty && vm.expandedFolderID == nil && !TextComposition.isActive
     }
 
     /// Stays open when the app can't be found, so the user can see why nothing opened.
