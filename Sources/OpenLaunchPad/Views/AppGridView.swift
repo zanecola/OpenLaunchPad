@@ -194,14 +194,14 @@ struct AppGridView: View {
         .modifier(ScrollsToTopOnShow())
         .scrollIndicators(.hidden)
         .launchpadScrollAppearance()
-        .overlay(alignment: .bottom) {
-            LinearGradient(
-                colors: [.clear, Color(nsColor: .windowBackgroundColor).opacity(0.78)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 38)
-            .allowsHitTesting(false)
+        // Fades the apps out at the bottom edge into whatever the popup draws behind them; a band
+        // of the window color would stand out over the wallpaper.
+        .mask {
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .black.opacity(0.22)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 38)
+            }
         }
     }
 
