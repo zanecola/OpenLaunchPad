@@ -347,20 +347,23 @@ struct EmptySpaceClickTarget: View {
 
 /// Full screen's background, in a view of its own behind `LaunchpadView`, so the window's
 /// transitions scale the content without it. It reads the background settings and the wallpaper
-/// itself, so a new render redraws only the backdrop.
+/// of the screen it covers itself, so a new render redraws only the backdrop.
 struct FullScreenBackdrop: View {
     @Environment(ConfigStore.self) private var config
     @Environment(WallpaperProvider.self) private var wallpapers
+    @Environment(WallpaperPlacement.self) private var placement
     @Environment(\.launchpadMotion) private var motion
 
     var body: some View {
         LaunchpadBackdropView(
             mode: .fullScreen,
             style: config.backgroundStyle,
-            wallpaper: wallpapers.status,
+            wallpaper: wallpapers.status(for: placement.screenID),
             dim: config.backgroundDim,
             wallpaperFade: motion.animation(0.18) { .easeOut(duration: $0) }
         )
+        // Another screen's picture replaces this one at once rather than fading out of it.
+        .id(placement.screenID)
         .ignoresSafeArea()
     }
 }

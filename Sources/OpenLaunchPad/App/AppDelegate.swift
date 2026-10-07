@@ -23,6 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let wallpaperProvider = WallpaperProvider()
 
     private let fullScreenWindow = FullScreenWindow()
+    /// The screen full screen covers, whose wallpaper it draws.
+    private let fullScreenPlacement = WallpaperPlacement()
     /// The insets the full-screen content was last given, for the screen the window covers.
     private var fullScreenInsets = EdgeInsets()
     /// Type-erased so new insets can replace the root; it always wraps the same view, which keeps its state.
@@ -262,7 +264,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let backdropHost = NSHostingView(rootView: FullScreenBackdrop()
             .launchpadMotion()
             .environment(config)
-            .environment(wallpaperProvider))
+            .environment(wallpaperProvider)
+            .environment(fullScreenPlacement))
         backdropHost.sizingOptions = []
         fullScreenWindow.setContent(backdrop: backdropHost, content: fullScreenHost)
         fullScreenWindow.onCancel = { [weak self] in self?.stepBackOrDismiss() }
@@ -325,6 +328,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refitFullScreen() {
         guard let screen = NSScreen.main else { return }
         fullScreenWindow.fit(to: screen)
+        fullScreenPlacement.update(screenID: WallpaperScreen.id(of: screen))
         let insets = FullScreenWindow.contentInsets(
             for: screen,
             autoHidesDockAndMenuBar: config.autoHidesDockAndMenuBar

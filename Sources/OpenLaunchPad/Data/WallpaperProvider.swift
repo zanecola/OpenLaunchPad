@@ -27,13 +27,19 @@ struct WallpaperScreen {
 extension WallpaperScreen {
     @MainActor
     init(_ screen: NSScreen) {
-        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-        let uuid = number.flatMap { CGDisplayCreateUUIDFromDisplayID($0.uint32Value)?.takeRetainedValue() }
         self.init(
-            id: uuid.flatMap { CFUUIDCreateString(nil, $0) as String? } ?? screen.localizedName,
+            id: Self.id(of: screen),
             size: screen.frame.size,
             desktopImageURL: NSWorkspace.shared.desktopImageURL(for: screen)
         )
+    }
+
+    /// The display's UUID, or its name when it has none.
+    @MainActor
+    static func id(of screen: NSScreen) -> String {
+        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        let uuid = number.flatMap { CGDisplayCreateUUIDFromDisplayID($0.uint32Value)?.takeRetainedValue() }
+        return uuid.flatMap { CFUUIDCreateString(nil, $0) as String? } ?? screen.localizedName
     }
 }
 
@@ -123,30 +129,32 @@ enum WallpaperRenderer {
     }
 }
 
-/// Renders and caches the blurred wallpaper of the screen full screen opens on.
+/// Renders and caches the blurred wallpaper of each screen a launcher opens on. Each display keeps
+/// its own status, so full screen on one display and the popup on another never show each
+/// other's picture.
 @MainActor
 @Observable
 final class WallpaperProvider {
     enum Status: Equatable {
-        /// Not rendered yet; full screen draws its solid base until it is.
+        /// Not rendered yet; the launcher draws its base until it is.
         case pending
         case ready(BackdropWallpaper)
-        /// Nothing found or nothing decoded; full screen falls back to Glass, or Solid.
+        /// Nothing found or nothing decoded; the launcher falls back to Glass, or Solid.
         case unavailable
     }
 
-    private(set) var status = Status.pending
+    /// The latest render of each display, by display UUID.
+    private(set) var statuses: [String: Status] = [:]
 
-    private struct Target: Equatable {
-        let screenID: String
-        let request: WallpaperRequest
+    /// A display not rendered yet, or no display, is pending.
+    func status(for screenID: String?) -> Status {
+        screenID.flatMap { statuses[$0] } ?? .pending
     }
 
     @ObservationIgnored private let resolver: WallpaperSourceResolver
-    /// The latest render for each display, so showing on it again needs none.
-    @ObservationIgnored private var rendered: [String: (request: WallpaperRequest, status: Status)] = [:]
-    @ObservationIgnored private var current: Target?
-    @ObservationIgnored private var inFlight: (target: Target, task: Task<Void, Never>)?
+    /// What each display's status was rendered from, so showing on it again needs no render.
+    @ObservationIgnored private var renderedRequests: [String: WallpaperRequest] = [:]
+    @ObservationIgnored private var inFlight: [String: (request: WallpaperRequest, task: Task<Void, Never>)] = [:]
     @ObservationIgnored private var renderCount = 0
 
     init(resolver: WallpaperSourceResolver = WallpaperSourceResolver()) {
@@ -159,30 +167,24 @@ final class WallpaperProvider {
     /// as a dragged slider, render once. Returns the render it started or is waiting for.
     @discardableResult
     func refresh(for screen: WallpaperScreen, blurRadius: Double, delay: Duration = .zero) -> Task<Void, Never>? {
-        let target = Target(
-            screenID: screen.id,
-            request: WallpaperRequest(
-                sources: resolver.sources(desktopImageURL: screen.desktopImageURL, displayUUID: screen.id),
-                screenSize: screen.size,
-                blurRadius: blurRadius
-            )
+        let screenID = screen.id
+        let request = WallpaperRequest(
+            sources: resolver.sources(desktopImageURL: screen.desktopImageURL, displayUUID: screenID),
+            screenSize: screen.size,
+            blurRadius: blurRadius
         )
-        current = target
-        if let inFlight {
-            if inFlight.target == target { return inFlight.task }
-            inFlight.task.cancel()
-            self.inFlight = nil
+        if let running = inFlight[screenID] {
+            if running.request == request { return running.task }
+            running.task.cancel()
+            inFlight[screenID] = nil
         }
 
-        let previous = rendered[target.screenID]
-        status = previous?.status ?? .pending
-        if previous?.request == target.request { return nil }
-        if target.request.sources.isEmpty {
-            finish(target, with: nil)
+        if renderedRequests[screenID] == request { return nil }
+        if request.sources.isEmpty {
+            finish(screenID, request, with: nil)
             return nil
         }
 
-        let request = target.request
         let task = Task { [weak self] in
             if delay > .zero {
                 try? await Task.sleep(for: delay)
@@ -192,13 +194,13 @@ final class WallpaperProvider {
                 await WallpaperRenderer.render(request)
             }.value
             guard !Task.isCancelled else { return }
-            self?.finish(target, with: image)
+            self?.finish(screenID, request, with: image)
         }
-        inFlight = (target, task)
+        inFlight[screenID] = (request, task)
         return task
     }
 
-    private func finish(_ target: Target, with image: CGImage?) {
+    private func finish(_ screenID: String, _ request: WallpaperRequest, with image: CGImage?) {
         let result: Status
         if let image {
             renderCount += 1
@@ -206,12 +208,10 @@ final class WallpaperProvider {
         } else {
             result = .unavailable
         }
-        rendered[target.screenID] = (target.request, result)
-        if inFlight?.target == target {
-            inFlight = nil
-        }
-        if current == target {
-            status = result
+        renderedRequests[screenID] = request
+        statuses[screenID] = result
+        if inFlight[screenID]?.request == request {
+            inFlight[screenID] = nil
         }
     }
 }
