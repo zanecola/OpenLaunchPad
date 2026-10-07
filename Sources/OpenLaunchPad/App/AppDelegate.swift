@@ -223,11 +223,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// at once, while the launcher fades out above it.
     func dismissLaunchpad() {
         hideLaunchpad()
-        let showsOtherWindow = NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) }
-        if NSApp.isActive && !showsOtherWindow {
+        if NSApp.isActive && !Self.showsOtherWindow(in: NSApp.windows) {
             fullScreenWindow.staysInFrontWhileHiding()
             NSApp.hide(nil)
         }
+    }
+
+    /// Whether a titled window such as Settings or About is up, which keeps the app active. A
+    /// sheet goes with its window: the dialogs on a launcher stay up while it fades out, and the
+    /// app would be left active with no window once they order out with it.
+    static func showsOtherWindow(in windows: [NSWindow]) -> Bool {
+        windows.contains { $0.isVisible && $0.styleMask.contains(.titled) && $0.sheetParent == nil }
     }
 
     /// The animation settings and Reduce Motion, for the launcher windows' own transitions.
