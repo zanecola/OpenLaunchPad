@@ -21,12 +21,12 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 
 ## Highlights
 
-- **Two ways to launch.** Use a paginated full-screen grid or a non-activating popup from the menu bar or Dock.
+- **Two ways to launch.** Use a paginated full-screen grid or a non-activating Liquid Glass popup from the menu bar or Dock.
 - **Recent favorites up front.** Apps launched most often through OpenLaunchPad appear in a responsive first row, with recent use breaking frequency ties.
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size, appearance (System, Light or Dark), background and hover effect, the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animations and their speed, where Frequently Used appears, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size, appearance (System, Light or Dark), background (Liquid Glass, your blurred wallpaper, or solid) and hover effect, the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animations and their speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 ## Gallery
@@ -46,7 +46,7 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
   </tr>
 </table>
 
-Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, open folders, and blurred background.
+Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, open folders, blurred background, and the popup's Liquid Glass.
 
 ## Install
 
@@ -148,7 +148,7 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Page control | Dots | Bare dots, as in Launchpad, or **Dots + Arrows**, which adds previous and next arrows while you point at the dots |
 | Hide menu bar and Dock while open | Off | Full screen. Off, the grid is laid out between the menu bar and the Dock. On, both hide while full screen is open and the grid uses the whole screen; move the pointer to the screen edge to show them. macOS lets an app hide the menu bar only together with the Dock, so there is no menu-bar-only choice. An earlier "Auto-hide both" choice is kept |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
-| Popup background | Wallpaper | The part of your blurred desktop picture that lies under the popup, as if it were frosted glass over the desktop, lightened in Light and darkened in Dark so its text stays readable; it stays with Reduce Transparency on, and it uses the Blur radius below. Windows behind the popup don't show through it. Or **Glass**, the popup's earlier look, or **Solid**. When the picture can't be read, Wallpaper uses Glass |
+| Popup background | Glass | The system's Liquid Glass, which blurs the windows and desktop behind the popup; with Reduce Transparency on, macOS draws it opaque. Or **Wallpaper**, the part of your blurred desktop picture that lies under the popup, as if it were frosted glass over the desktop, lightened in Light and darkened in Dark so its text stays readable; it stays frosted with Reduce Transparency on and uses the Blur radius below, but windows behind the popup don't show through it. Or **Solid**. When the picture can't be read, Wallpaper uses Glass. If you never changed this setting, v0.2.0's Wallpaper default becomes Glass; a choice you made is kept |
 | Popup hover effect | Highlight | A soft rounded highlight behind the app under the pointer, or **None**, or **Lift**, which makes it grow slightly (not with Reduce Motion on). Full screen has no hover effect, as in Launchpad |
 | Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
 | Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup has its own Popup background setting |
@@ -252,6 +252,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
 - The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open. The popup's wallpaper shows the desktop picture alone, not the windows behind the popup, and while the popup grows in, its picture grows with it, settling into line with the desktop as it finishes.
+- With Reduce Transparency on, macOS draws the popup's Glass as a flat, opaque color. Choose **Wallpaper** under **Settings > Appearance > Popup Window** to keep a frosted look.
 
 ## Contributing
 
