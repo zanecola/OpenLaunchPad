@@ -330,6 +330,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showFullScreen() {
+        let signpost = LauncherShowSignpost("Full screen")
+        defer { signpost.end() }
         visibleSurface = .fullScreen
         if config.autoHidesDockAndMenuBar {
             presentationOptionsBeforeFullScreen = NSApp.presentationOptions
@@ -347,6 +349,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Popup mode
 
     func showPopup(anchorPoint: NSPoint?) {
+        let signpost = LauncherShowSignpost("Popup")
+        defer { signpost.end() }
         popupPanel.appearance = config.popupAppearance.nsAppearance
         popupPanel.fit(to: popupSize)
         unhideIfNeeded()
@@ -497,6 +501,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             { _, _, userData -> OSStatus in
                 guard let ptr = userData else { return OSStatus(eventNotHandledErr) }
                 let delegate = Unmanaged<AppDelegate>.fromOpaque(ptr).takeUnretainedValue()
+                LauncherShowSignpost.hotkeyPressed()
                 Task { @MainActor in delegate.toggleLaunchpad() }
                 return noErr
             },
