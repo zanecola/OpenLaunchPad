@@ -51,6 +51,12 @@ final class ConfigStore {
         }
     }
     static let gridRowRange: ClosedRange<Int> = 4...7
+    /// Rows for a column count saved before rows existed, when every page held 35 apps: the fewest
+    /// that hold 35, within the supported range, so pages saved then still fill the grid.
+    static func gridRows(forLegacyColumns columns: Int) -> Int {
+        let rows = (35 + columns - 1) / columns
+        return min(max(rows, gridRowRange.lowerBound), gridRowRange.upperBound)
+    }
     /// How many items a page holds.
     var pageCapacity: Int {
         gridColumns * gridRows
@@ -186,6 +192,11 @@ final class ConfigStore {
         if defaults.object(forKey: Keys.gridRows) != nil {
             let storedRows = defaults.integer(forKey: Keys.gridRows)
             gridRows = min(max(storedRows, Self.gridRowRange.lowerBound), Self.gridRowRange.upperBound)
+        } else if defaults.object(forKey: Keys.gridColumns) != nil {
+            gridRows = Self.gridRows(forLegacyColumns: gridColumns)
+        } else {
+            // Saved now, so columns chosen later aren't taken for columns saved before rows existed.
+            save(gridRows, forKey: Keys.gridRows)
         }
         if let raw = defaults.string(forKey: Keys.pageControlStyle),
            let style = PageControlStyle(rawValue: raw) {

@@ -38,9 +38,31 @@ struct ConfigStoreTests {
         #expect(config.customIconSize == 56)
         #expect(config.popupIconSize == 56)
         #expect(config.gridColumns == 11)
-        #expect(config.gridRows == 5)
-        #expect(config.pageCapacity == 55)
+        // Pages held 35 apps then, which fill four rows of 11.
+        #expect(config.gridRows == 4)
+        #expect(config.pageCapacity == 44)
         #expect(defaults.string(forKey: "iconSizeMode") == "Custom")
+        #expect(defaults.integer(forKey: "gridRows") == 4)
+    }
+
+    @Test(arguments: [(4, 7), (5, 7), (6, 6), (7, 5), (8, 5), (9, 4), (10, 4), (11, 4), (12, 4)])
+    func columnsSavedBeforeRowsExistedGetRowsForThe35AppPagesOfThen(columns: Int, rows: Int) {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set(columns, forKey: "gridColumns")
+
+        #expect(ConfigStore(defaults: defaults).gridRows == rows)
+        #expect(ConfigStore(defaults: defaults).gridRows == rows)
+    }
+
+    @Test
+    func columnsChosenAfterAFreshStartKeepTheDefaultRows() {
+        let defaults = InMemoryKeyValueStore()
+        ConfigStore(defaults: defaults).gridColumns = 11
+
+        let reloaded = ConfigStore(defaults: defaults)
+
+        #expect(reloaded.gridColumns == 11)
+        #expect(reloaded.gridRows == 5)
     }
 
     @Test
@@ -48,7 +70,10 @@ struct ConfigStoreTests {
         let defaults = InMemoryKeyValueStore()
         defaults.set(0, forKey: "gridColumns")
 
-        #expect(ConfigStore(defaults: defaults).gridColumns == 7)
+        let config = ConfigStore(defaults: defaults)
+
+        #expect(config.gridColumns == 7)
+        #expect(config.gridRows == 5)
         #expect(defaults.integer(forKey: "gridColumns") == 7)
     }
 
