@@ -1,6 +1,10 @@
 import SwiftUI
 
 enum LaunchpadIconMetrics {
+    /// How much of an icon's image the visible body of a macOS app icon fills; the template
+    /// leaves the rest as a transparent margin.
+    static let bodyScale: CGFloat = 0.805
+
     static func labelFontSize(for iconSize: CGFloat) -> CGFloat {
         max(10, iconSize * 0.145)
     }

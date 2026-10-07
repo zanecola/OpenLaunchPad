@@ -49,11 +49,11 @@ struct FolderView: View {
         .accessibilityAction(.default) { onOpen(tileFrame.rect) }
     }
 
-    /// A 3×3 preview in an iconSize slot. The tile is 0.805 of the slot, the visible body of a macOS
-    /// app icon, so it matches the apps beside it and its label sits on their baseline.
+    /// A 3×3 preview in an iconSize slot. The tile is the visible body of a macOS app icon in that
+    /// slot, so it matches the apps beside it and its label sits on their baseline.
     private var folderIcon: some View {
         let slot = CGFloat(iconSize)
-        let tile = slot * 0.805
+        let tile = slot * LaunchpadIconMetrics.bodyScale
         let cellSize = tile * 0.29
         let shape = RoundedRectangle(cornerRadius: tile * 0.225, style: .continuous)
         let columns = Array(repeating: GridItem(.fixed(cellSize), spacing: 0), count: 3)

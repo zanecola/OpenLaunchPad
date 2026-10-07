@@ -111,8 +111,9 @@ struct FrequentlyUsedSection: View {
         Text(title)
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.secondary)
-            // Lines up with the first icon, which is centered in its cell.
-            .padding(.leading, (layout.cellWidth - layout.iconSize) / 2)
+            // Lines up with the first icon's visible edge: the icon is centered in its cell, and
+            // its artwork sits inside a transparent margin.
+            .padding(.leading, (layout.cellWidth - layout.iconSize * LaunchpadIconMetrics.bodyScale) / 2)
             .padding(.bottom, 8)
             .accessibilityAddTraits(.isHeader)
     }
