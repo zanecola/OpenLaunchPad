@@ -132,6 +132,7 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 40)
                 }
+                .dimsTextWhenDisabled()
                 .disabled(config.iconSizeMode == .automatic)
 
                 Text(
@@ -238,6 +239,7 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 40)
                 }
+                .dimsTextWhenDisabled()
                 .disabled(config.backgroundStyle != .wallpaper)
 
                 HStack {
@@ -247,6 +249,7 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 36)
                 }
+                .dimsTextWhenDisabled()
                 .disabled(drawnBackground == .solid)
 
                 Text(backgroundDescription)
@@ -264,6 +267,7 @@ private struct AppearanceSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 36)
                 }
+                .dimsTextWhenDisabled()
                 .disabled(!config.animatesTransitions)
 
                 Text(animationDescription)
@@ -355,5 +359,21 @@ private struct ShortcutSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private extension View {
+    /// macOS dims a disabled row's controls but not its text, so a slider's label and value would
+    /// still read as active.
+    func dimsTextWhenDisabled() -> some View {
+        modifier(DimsTextWhenDisabled())
+    }
+}
+
+private struct DimsTextWhenDisabled: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func body(content: Content) -> some View {
+        content.foregroundStyle(isEnabled ? .primary : .tertiary)
     }
 }
