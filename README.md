@@ -26,11 +26,11 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Organize naturally.** Drag to reorder, drop apps together to create folders, rename folders, reorder inside them, and drag apps back out.
 - **Fast navigation.** Type to search the moment it opens and press Return to launch the top hit, or page with gestures, page controls, or the keyboard.
 - **Native macOS behavior.** System app icons, materials, context menus, Finder integration, Get Info, and Move to Trash all feel at home.
-- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size, appearance (System, Light or Dark) and hover effect, the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animations and their speed, where Frequently Used appears, Dock behavior, and a global shortcut.
+- **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size, appearance (System, Light or Dark), background and hover effect, the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animations and their speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
 > [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, the open and close animations, pages that follow your fingers and turn with the mouse wheel, folders that open out of their icon with their name above them and pages of their own, apps that show they are pressed and name themselves in a tooltip, the popup's hover highlight, and the Dim, popup appearance, popup hover effect, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
+> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, the open and close animations, pages that follow your fingers and turn with the mouse wheel, folders that open out of their icon with their name above them and pages of their own, apps that show they are pressed and name themselves in a tooltip, the popup's hover highlight, the popup's wallpaper background, and the Dim, popup appearance, popup background, popup hover effect, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
 
 ## Gallery
 
@@ -151,10 +151,11 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Page control | Dots | Bare dots, as in Launchpad, or **Dots + Arrows**, which adds previous and next arrows while you point at the dots |
 | Hide menu bar and Dock while open | Off | Full screen. Off, the grid is laid out between the menu bar and the Dock. On, both hide while full screen is open and the grid uses the whole screen; move the pointer to the screen edge to show them. macOS lets an app hide the menu bar only together with the Dock, so there is no menu-bar-only choice. An earlier "Auto-hide both" choice is kept |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
+| Popup background | Wallpaper | The part of your blurred desktop picture that lies under the popup, as if it were frosted glass over the desktop, lightened in Light and darkened in Dark so its text stays readable; it stays with Reduce Transparency on, and it uses the Blur radius below. Windows behind the popup don't show through it. Or **Glass**, the popup's earlier look, or **Solid**. When the picture can't be read, Wallpaper uses Glass |
 | Popup hover effect | Highlight | A soft rounded highlight behind the app under the pointer, or **None**, or **Lift**, which makes it grow slightly (not with Reduce Motion on). Full screen has no hover effect, as in Launchpad |
 | Popup width and height | 860 × 620 pt | Popup columns adapt automatically |
-| Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup keeps its own background |
-| Blur radius | 48 pt | 0–80 pt, for Wallpaper |
+| Full-screen background | Wallpaper | Your desktop picture, blurred and dimmed, as Launchpad drew it; it stays with Reduce Transparency on. Or **Glass**, which blurs the windows behind full screen and becomes solid dark with Reduce Transparency, or **Solid**. When the picture can't be read, Wallpaper uses Glass, or solid dark with Reduce Transparency. An Aerial shows a still frame of its video. The popup has its own Popup background setting |
+| Blur radius | 48 pt | 0–80 pt, for Wallpaper, in full screen and the popup |
 | Dim | 25% | 0–60% black over the wallpaper or glass; Solid is not dimmed |
 | Animate transitions | On | Full screen fades in as its icons settle from slightly larger, as in Launchpad, and fades out as they grow; the popup grows from the menu-bar icon or the Dock. Folders grow out of their icon and shrink back into it. Launching an app only fades the launcher, and pages slide when the keyboard, a dot or the wheel turns them. Off makes all of these instant. With Reduce Motion on, the launcher and folders fade without zooming, those page turns are instant, and a pressed app only darkens. Swiped pages always follow your fingers |
 | Animation speed | 1.0× | 0.5–2.0×; higher is faster |
@@ -242,7 +243,7 @@ Applications folders, scanned and watched
 - AppKit handles windows, the status item, system services, and the Carbon global hotkey.
 - JSON persistence is versioned and migrates earlier layout formats.
 
-The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, the animation rules and how a show cancels a closing launcher, popup placement, paging input, drag state, app actions, full-screen and folder layout fitting, how a folder zooms out of its tile and is renamed, how a click on a tile is told apart from a drag and how pressed and hovered tiles are drawn, and how the wallpaper background is found and cached.
+The test suite covers layout invariants, persistence migrations and backups, data sources and the folder watcher, view-model orchestration, search ranking, settings and shortcut validation, the animation rules and how a show cancels a closing launcher, popup placement, paging input, drag state, app actions, full-screen and folder layout fitting, how a folder zooms out of its tile and is renamed, how a click on a tile is told apart from a drag and how pressed and hovered tiles are drawn, and how the wallpaper background is found, cached for each display, and lined up under the popup.
 
 ## Known Limitations
 
@@ -253,7 +254,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 - Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
-- The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open.
+- The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open. The popup's wallpaper shows the desktop picture alone, not the windows behind the popup.
 
 ## Contributing
 
