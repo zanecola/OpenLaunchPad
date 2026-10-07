@@ -29,9 +29,6 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 - **Make it yours.** Configure icon size (automatic or custom), labels, the full-screen grid of columns and rows, the page control, whether full screen hides the menu bar and Dock, popup size, appearance (System, Light or Dark), background and hover effect, the full-screen background (your blurred wallpaper, glass, or solid) with its blur and dim, animations and their speed, where Frequently Used appears, Dock behavior, and a global shortcut.
 - **Private by design.** No account, analytics, telemetry, or cloud service. Layout data stays on your Mac.
 
-> [!NOTE]
-> v0.1.0, the latest release, predates much of this README, including Frequently Used, apps that appear and disappear as you install and remove them, Return and Escape in search, the columns × rows grid with automatic icon sizes, the blurred wallpaper background, the bare page dots, the open and close animations, pages that follow your fingers and turn with the mouse wheel, folders that open out of their icon with their name above them and pages of their own, apps that show they are pressed and name themselves in a tooltip, the popup's hover highlight, the popup's wallpaper background, and the Dim, popup appearance, popup background, popup hover effect, and page control settings. They arrive in the next release; until then, [build from source](#build-from-source) to get them. v0.1.0 also runs on Apple silicon only.
-
 ## Gallery
 
 <table>
@@ -203,7 +200,7 @@ Build a local `.app` bundle and launch it:
 Create an ad-hoc-signed DMG from a universal (Apple silicon and Intel) release build:
 
 ```bash
-./script/build_dmg.sh 0.1.0
+./script/build_dmg.sh 0.2.0
 ```
 
 The version becomes the app's bundle version, shown in About. Local builds without a release version report 0.0.0.
