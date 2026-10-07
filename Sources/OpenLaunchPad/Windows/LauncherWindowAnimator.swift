@@ -117,6 +117,9 @@ final class LauncherWindowAnimator {
     /// if a show cancels the hide first.
     func hide(_ transition: WindowTransition?, content: NSView?, pivot: CGPoint, completion: @escaping () -> Void) {
         guard tracker.isHiding || window.isVisible else {
+            // Hiding the app takes the window off screen but keeps it in the set an unhide brings
+            // back. Ordering it out drops it from that set.
+            window.orderOut(nil)
             completion()
             return
         }

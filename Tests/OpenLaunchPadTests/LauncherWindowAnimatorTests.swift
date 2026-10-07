@@ -133,7 +133,7 @@ struct LauncherWindowAnimatorTests {
 
     @Test
     func hidingAWindowThatIsNotShownFinishesAtOnce() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.borderless], backing: .buffered, defer: true)
+        let window = OrderOutRecordingWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.borderless], backing: .buffered, defer: true)
         let animator = LauncherWindowAnimator(window: window)
         var finished = false
 
@@ -143,5 +143,18 @@ struct LauncherWindowAnimatorTests {
         #expect(!animator.isHiding)
         #expect(window.alphaValue == 1)
         #expect(!window.ignoresMouseEvents)
+        // A window that hiding the app took off screen reads as not visible, and only ordering it
+        // out keeps the next unhide from bringing it back.
+        #expect(window.orderOutCount == 1)
+    }
+}
+
+/// Counts `orderOut` calls, so a test needn't put a window on screen.
+private final class OrderOutRecordingWindow: NSWindow {
+    private(set) var orderOutCount = 0
+
+    override func orderOut(_ sender: Any?) {
+        orderOutCount += 1
+        super.orderOut(sender)
     }
 }
