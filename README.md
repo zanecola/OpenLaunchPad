@@ -254,7 +254,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 - Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.
-- The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open. The popup's wallpaper shows the desktop picture alone, not the windows behind the popup.
+- The wallpaper background approximates some wallpapers: an Aerial shows the first frame of its video, not necessarily the frame on your desktop (or the Aerial a shuffle picked); a built-in dynamic wallpaper shows a small thumbnail; and the picture always fills the screen, whatever its fit setting. A wallpaper changed while the launcher is closed fades in just after the next open. The popup's wallpaper shows the desktop picture alone, not the windows behind the popup, and while the popup grows in, its picture grows with it, settling into line with the desktop as it finishes.
 
 ## Contributing
 
