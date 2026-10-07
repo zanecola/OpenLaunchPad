@@ -611,7 +611,9 @@ final class LaunchpadViewModel {
 
     private func mutateLayout(_ mutation: (inout LaunchpadLayout) -> Bool) -> Bool {
         var layout = LaunchpadLayout(pages: pages)
+        let shownItemID = pages.indices.contains(currentPage) ? pages[currentPage].first?.id : nil
         guard mutation(&layout) else { return false }
+        let removedAPage = layout.pages.count < pages.count
 
         // An app dropped onto a full page, or dragged out of a folder on one, pushes the page's
         // last item onto the next page.
@@ -620,6 +622,12 @@ final class LaunchpadViewModel {
             closeFolder()
         }
         persistLayout()
+        // A drop on a page reached during the drag can empty the page it came from, and removing
+        // an earlier page moves the one showing down. Its first item, which a drop never pushes
+        // onto the next page, finds it again.
+        if removedAPage, let shownItemID, let page = LaunchpadLayout.pageIndex(of: shownItemID, in: pages) {
+            currentPage = page
+        }
         clampCurrentPage()
         return true
     }

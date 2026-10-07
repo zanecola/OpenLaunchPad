@@ -1055,6 +1055,53 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func aDropThatEmptiesAnEarlierPageKeepsTheTargetPageShowing() {
+        let dragged = Self.app("Mail")
+        let target = Self.app("Notes")
+        let folderID = UUID()
+        let viewModel = LaunchpadViewModel(
+            dataSource: StubDataSource(pages: []),
+            layoutStore: StubLayoutStore(),
+            iconProvider: StubIconProvider(),
+            appUsageStore: StubAppUsageStore(),
+            pageCapacity: 2,
+            makeUUID: { folderID }
+        )
+        viewModel.pages = [
+            [.app(Self.app("Maps")), .app(Self.app("Music"))],
+            [.app(dragged)],
+            [.app(target), .app(Self.app("Photos"))],
+            [.app(Self.app("Books"))]
+        ]
+        viewModel.currentPage = 2
+
+        #expect(viewModel.combineApps(draggedID: dragged.id, targetID: target.id))
+
+        #expect(viewModel.pages.count == 3)
+        #expect(viewModel.pages[1].first?.id == folderID)
+        #expect(viewModel.currentPage == 1)
+    }
+
+    @Test
+    func aDropThatEmptiesAnEarlierPageFollowsTheTargetPageThroughAnOverflow() {
+        let dragged = Self.app("Mail")
+        let target = Self.app("Notes")
+        let viewModel = Self.viewModel(source: StubDataSource(pages: []), store: StubLayoutStore(), pageCapacity: 2)
+        viewModel.pages = [
+            [.app(Self.app("Maps")), .app(Self.app("Music"))],
+            [.app(dragged)],
+            [.app(target), .app(Self.app("Photos"))],
+            [.app(Self.app("Books"))]
+        ]
+        viewModel.currentPage = 2
+
+        #expect(viewModel.reorderTopLevel(itemID: dragged.id, relativeTo: target.id, placement: .after))
+
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["Maps", "Music"], ["Notes", "Mail"], ["Photos", "Books"]])
+        #expect(viewModel.currentPage == 1)
+    }
+
+    @Test
     func removingAppThatDissolvesExpandedFolderClosesIt() {
         let mail = Self.app("Mail")
         let calendar = Self.app("Calendar")

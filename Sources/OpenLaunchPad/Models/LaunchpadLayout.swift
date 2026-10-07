@@ -188,10 +188,17 @@ struct LaunchpadLayout: Equatable, Sendable {
     }
 
     private static func contains(id: UUID, in pages: [[LaunchpadItem]]) -> Bool {
-        pages.joined().contains { item in
-            if item.id == id { return true }
-            guard case .folder(let folder) = item else { return false }
-            return folder.apps.contains(where: { $0.id == id })
+        pageIndex(of: id, in: pages) != nil
+    }
+
+    /// The page holding `id`, at top level or in a folder.
+    static func pageIndex(of id: UUID, in pages: [[LaunchpadItem]]) -> Int? {
+        pages.firstIndex { page in
+            page.contains { item in
+                if item.id == id { return true }
+                guard case .folder(let folder) = item else { return false }
+                return folder.apps.contains(where: { $0.id == id })
+            }
         }
     }
 
