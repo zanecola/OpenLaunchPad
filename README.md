@@ -15,7 +15,7 @@ Search, launch, group, and rearrange your apps from a full-screen grid or a comp
 
 </div>
 
-![OpenLaunchPad full-screen launcher](assets/screenshots/full-screen.png)
+![OpenLaunchPad in full screen: a search field, a Frequently Used shelf and a seven-by-five grid of macOS apps over the blurred desktop picture](assets/screenshots/full-screen.png)
 
 Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brings back the parts that made it useful while adding a compact popup, configurable layouts, persistent folders, and familiar macOS controls.
 
@@ -34,19 +34,19 @@ Apple removed the classic Launchpad experience from macOS 26. OpenLaunchPad brin
 <table>
   <tr>
     <td width="50%">
-      <img src="assets/screenshots/popup.png" alt="OpenLaunchPad compact popup">
+      <img src="assets/screenshots/popup.png" alt="The OpenLaunchPad popup under the menu bar in Dark appearance, with Frequently Used above All Apps, over a frosted crop of the desktop picture">
     </td>
     <td width="50%">
-      <img src="assets/screenshots/folders.png" alt="OpenLaunchPad expanded folder">
+      <img src="assets/screenshots/folders.png" alt="The Productivity folder open in full screen, its name above the panel, over the blurred and dimmed grid">
     </td>
   </tr>
   <tr>
-    <td align="center"><strong>Compact popup</strong><br>Open without leaving the app you are using.</td>
-    <td align="center"><strong>Folders</strong><br>Group, rename, reorder, and drag apps back out.</td>
+    <td align="center"><strong>Compact popup</strong><br>Search and launch from the menu bar without leaving the app you are using.</td>
+    <td align="center"><strong>Folders</strong><br>Open a folder over the blurred grid; rename, reorder, and drag apps back out.</td>
   </tr>
 </table>
 
-Screenshots were rendered from the SwiftUI views with curated macOS system apps shortly after v0.1.0, so they predate the current search bar, folder tiles, open folders, blurred background, and the popup's Liquid Glass.
+Screenshots are rendered offscreen from the app's own views, with macOS system apps and the Sonoma desktop picture, on a 1440 × 900 pt display at the default settings, except that the popup is shown in Dark appearance with its **Wallpaper** background. The popup's default background is Liquid Glass, which shows whatever is behind it.
 
 ## Install
 
