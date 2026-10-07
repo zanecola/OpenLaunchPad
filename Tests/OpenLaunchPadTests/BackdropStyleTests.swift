@@ -22,4 +22,19 @@ struct BackdropStyleTests {
             #expect(BackdropStyle.solid.resolved(reduceTransparency: reduceTransparency, wallpaperAvailable: true) == .solid)
         }
     }
+
+    @Test
+    func thePopupKeepsItsChoiceUnderReduceTransparency() {
+        // Its glass is a material that turns opaque by itself, and the wallpaper is opaque.
+        for style in BackdropStyle.allCases {
+            #expect(style.resolvedForPopup(wallpaperAvailable: true) == style)
+        }
+    }
+
+    @Test
+    func thePopupWithoutAPictureFallsBackToGlass() {
+        #expect(BackdropStyle.wallpaper.resolvedForPopup(wallpaperAvailable: false) == .glass)
+        #expect(BackdropStyle.glass.resolvedForPopup(wallpaperAvailable: false) == .glass)
+        #expect(BackdropStyle.solid.resolvedForPopup(wallpaperAvailable: false) == .solid)
+    }
 }

@@ -48,11 +48,11 @@ enum TileHoverEffect: String, CaseIterable, Sendable {
     case lift = "Lift"
 }
 
-/// What full screen draws behind its content.
+/// What a launcher draws behind its content; full screen and the popup each have a setting.
 enum BackdropStyle: String, CaseIterable, Sendable {
     /// The desktop picture, blurred.
     case wallpaper = "Wallpaper"
-    /// The material that blurs the windows and desktop behind full screen.
+    /// The material that blurs the windows and desktop behind the launcher.
     case glass = "Glass"
     case solid = "Solid"
 
@@ -65,6 +65,12 @@ enum BackdropStyle: String, CaseIterable, Sendable {
         case .wallpaper, .glass: reduceTransparency ? .solid : .glass
         case .solid: .solid
         }
+    }
+
+    /// What the popup draws for this choice. Its Glass is the popover material, which turns
+    /// opaque by itself under Reduce Transparency, so only a missing wallpaper changes the choice.
+    func resolvedForPopup(wallpaperAvailable: Bool) -> BackdropStyle {
+        self == .wallpaper && !wallpaperAvailable ? .glass : self
     }
 }
 

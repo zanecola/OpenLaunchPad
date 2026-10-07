@@ -81,13 +81,20 @@ final class ConfigStore {
     var popupHoverEffect: TileHoverEffect = .highlight {
         didSet { defaults.set(popupHoverEffect.rawValue, forKey: Keys.popupHoverEffect) }
     }
+    /// The popup's own background; Wallpaper shows the part of the blurred desktop picture under it.
+    var popupBackgroundStyle: BackdropStyle = .wallpaper {
+        didSet {
+            defaults.set(popupBackgroundStyle.rawValue, forKey: Keys.popupBackgroundStyle)
+            onWallpaperSettingsChange?()
+        }
+    }
     var backgroundStyle: BackdropStyle = .wallpaper {
         didSet {
             defaults.set(backgroundStyle.rawValue, forKey: Keys.backgroundStyle)
             onWallpaperSettingsChange?()
         }
     }
-    /// How far Wallpaper blurs the desktop picture, in points.
+    /// How far Wallpaper blurs the desktop picture, in points, for full screen and the popup.
     var backgroundBlurRadius: Double = 48 {
         didSet {
             save(backgroundBlurRadius, forKey: Keys.backgroundBlurRadius)
@@ -150,6 +157,7 @@ final class ConfigStore {
         static let paneHeight = "paneHeight"
         static let popupAppearance = "popupAppearance"
         static let popupHoverEffect = "popupHoverEffect"
+        static let popupBackgroundStyle = "popupBackgroundStyle"
         static let backgroundStyle = "backgroundStyle"
         static let backgroundBlurRadius = "backgroundBlurRadius"
         static let backgroundDim = "backgroundDim"
@@ -218,6 +226,11 @@ final class ConfigStore {
         if let raw = defaults.string(forKey: Keys.popupHoverEffect),
            let effect = TileHoverEffect(rawValue: raw) {
             popupHoverEffect = effect
+        }
+        // Earlier versions always drew Glass and stored no choice, so existing users start on Wallpaper.
+        if let raw = defaults.string(forKey: Keys.popupBackgroundStyle),
+           let style = BackdropStyle(rawValue: raw) {
+            popupBackgroundStyle = style
         }
         if let raw = defaults.string(forKey: Keys.backgroundStyle),
            let style = BackdropStyle(rawValue: raw) {

@@ -52,7 +52,7 @@ struct MenuBarPanelView: View {
         }
         .frame(width: config.paneWidth, height: config.paneHeight)
         .background {
-            LaunchpadBackdropView(mode: .popup)
+            PopupBackdrop()
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
@@ -133,5 +133,27 @@ struct MenuBarPanelView: View {
         case .folder(let folder): vm.openFolder(folder.id)
         case nil: break
         }
+    }
+}
+
+/// The popup's background. It reads the setting, the wallpaper and the panel's place itself, so a
+/// new render or a move redraws only the background.
+struct PopupBackdrop: View {
+    @Environment(ConfigStore.self) private var config
+    @Environment(WallpaperProvider.self) private var wallpapers
+    @Environment(WallpaperPlacement.self) private var placement
+    @Environment(\.launchpadMotion) private var motion
+
+    var body: some View {
+        LaunchpadBackdropView(
+            mode: .popup,
+            style: config.popupBackgroundStyle,
+            wallpaper: wallpapers.status(for: placement.screenID),
+            screenSize: placement.screenSize,
+            frameInScreen: placement.frameInScreen,
+            wallpaperFade: motion.animation(0.18) { .easeOut(duration: $0) }
+        )
+        // Another screen's picture replaces this one at once rather than fading out of it.
+        .id(placement.screenID)
     }
 }

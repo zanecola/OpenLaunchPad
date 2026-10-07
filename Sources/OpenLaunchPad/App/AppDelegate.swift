@@ -91,12 +91,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         config.onWallpaperSettingsChange = { [weak self] in
             // A dragged slider changes in steps; render once it settles.
-            self?.refreshWallpaper(delay: .milliseconds(300))
+            self?.refreshWallpapers(delay: .milliseconds(300))
         }
         registerHotkey()
         updateStatusItemVisibility()
         installLauncherSurfaces()
-        refreshWallpaper()
+        refreshWallpapers()
         screenParametersObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -104,7 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refitFullScreen()
-                self?.refreshWallpaper()
+                self?.refreshWallpapers()
             }
         }
         // Each Space can have its own wallpaper.
@@ -114,7 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.refreshWallpaper()
+                self?.refreshWallpapers()
             }
         }
         databaseWatcher.start()
@@ -280,7 +280,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
             .launchpadMotion()
             .environment(viewModel)
-            .environment(config))
+            .environment(config)
+            .environment(wallpaperProvider)
+            .environment(popupPanel.wallpaperPlacement))
         popupHost.sizingOptions = []
         popupPanel.setContent(popupHost)
         popupPanel.onCancel = { [weak self] in self?.stepBackOrDismiss() }
@@ -316,11 +318,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(config)
     }
 
-    /// Renders the wallpaper of the screen full screen opens on, when it changed, so a show finds
-    /// it ready. Each show calls this too, and keeps the previous render up until a new one arrives.
-    private func refreshWallpaper(delay: Duration = .zero) {
-        guard config.backgroundStyle == .wallpaper, let screen = NSScreen.main else { return }
+    /// Renders the wallpaper of each screen a launcher opens on with the Wallpaper background,
+    /// when it changed, so a show finds it ready: full screen's, and the screen the popup last
+    /// opened on (the main screen before it has opened).
+    private func refreshWallpapers(delay: Duration = .zero) {
+        var screens: [String: NSScreen] = [:]
+        if config.backgroundStyle == .wallpaper, let screen = NSScreen.main {
+            screens[WallpaperScreen.id(of: screen)] = screen
+        }
+        if config.popupBackgroundStyle == .wallpaper, let screen = popupScreen {
+            screens[WallpaperScreen.id(of: screen)] = screen
+        }
+        for screen in screens.values {
+            refreshWallpaper(for: screen, delay: delay)
+        }
+    }
+
+    /// Each show calls this for its screen too, and the screen's previous render stays up until a
+    /// new one arrives.
+    private func refreshWallpaper(for screen: NSScreen, delay: Duration = .zero) {
         wallpaperProvider.refresh(for: WallpaperScreen(screen), blurRadius: config.backgroundBlurRadius, delay: delay)
+    }
+
+    private var popupScreen: NSScreen? {
+        let id = popupPanel.wallpaperPlacement.screenID
+        return NSScreen.screens.first { WallpaperScreen.id(of: $0) == id } ?? NSScreen.main
     }
 
     /// Fits the window and its content insets to the screen full screen opens on, reapplying each
@@ -328,7 +350,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refitFullScreen() {
         guard let screen = NSScreen.main else { return }
         fullScreenWindow.fit(to: screen)
-        fullScreenPlacement.update(screenID: WallpaperScreen.id(of: screen))
+        fullScreenPlacement.update(for: fullScreenWindow, on: screen)
         let insets = FullScreenWindow.contentInsets(
             for: screen,
             autoHidesDockAndMenuBar: config.autoHidesDockAndMenuBar
@@ -351,7 +373,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         unhideIfNeeded()
         refitFullScreen()
-        refreshWallpaper()
+        if config.backgroundStyle == .wallpaper, let screen = NSScreen.main {
+            refreshWallpaper(for: screen)
+        }
         viewModel.beginPresentation()
         fullScreenWindow.show(launcherMotion.fullScreenShow)
     }
@@ -364,6 +388,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popupPanel.appearance = config.popupAppearance.nsAppearance
         popupPanel.fit(to: popupSize)
         unhideIfNeeded()
+        // The screen the panel is about to open on, which the panel publishes as it places itself.
+        if config.popupBackgroundStyle == .wallpaper, let screen = PopupPanel.screen(for: anchorPoint) {
+            refreshWallpaper(for: screen)
+        }
         viewModel.beginPresentation()
         popupPanel.show(anchorPoint: anchorPoint, transition: launcherMotion.popupShow)
         visibleSurface = .popup

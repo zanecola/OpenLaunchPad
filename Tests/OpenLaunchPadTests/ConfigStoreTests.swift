@@ -350,6 +350,48 @@ struct ConfigStoreTests {
     }
 
     @Test
+    func thePopupStartsOnTheWallpaperForNewAndExistingUsers() {
+        #expect(ConfigStore(defaults: InMemoryKeyValueStore()).popupBackgroundStyle == .wallpaper)
+
+        // Saved before the setting existed, when the popup always drew Glass. Full screen's own
+        // choice does not carry over.
+        let existing = InMemoryKeyValueStore()
+        existing.set("Dark", forKey: "popupAppearance")
+        existing.set("Glass", forKey: "backgroundStyle")
+        existing.set(0.4, forKey: "backgroundDim")
+
+        let config = ConfigStore(defaults: existing)
+
+        #expect(config.popupBackgroundStyle == .wallpaper)
+        #expect(config.backgroundStyle == .glass)
+        #expect(existing.object(forKey: "popupBackgroundStyle") == nil)
+    }
+
+    @Test
+    func popupBackgroundPersistsApartFromFullScreensAndReportsItsChange() {
+        let defaults = InMemoryKeyValueStore()
+        let config = ConfigStore(defaults: defaults)
+        var changes = 0
+        config.onWallpaperSettingsChange = { changes += 1 }
+
+        config.popupBackgroundStyle = .solid
+
+        #expect(changes == 1)
+        #expect(defaults.string(forKey: "popupBackgroundStyle") == "Solid")
+        let reloaded = ConfigStore(defaults: defaults)
+        #expect(reloaded.popupBackgroundStyle == .solid)
+        #expect(reloaded.backgroundStyle == .wallpaper)
+    }
+
+    @Test
+    func unknownStoredPopupBackgroundFallsBackToWallpaper() {
+        let defaults = InMemoryKeyValueStore()
+        defaults.set("Aurora", forKey: "popupBackgroundStyle")
+
+        #expect(ConfigStore(defaults: defaults).popupBackgroundStyle == .wallpaper)
+    }
+
+    @Test
     func unknownStoredHoverEffectFallsBackToHighlight() {
         let defaults = InMemoryKeyValueStore()
         defaults.set("Glow", forKey: "popupHoverEffect")

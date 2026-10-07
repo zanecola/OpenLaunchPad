@@ -187,6 +187,17 @@ private struct AppearanceSettingsTab: View {
                     }
                 }
 
+                Picker("Background", selection: $config.popupBackgroundStyle) {
+                    ForEach(BackdropStyle.allCases, id: \.self) { style in
+                        Text(style.rawValue).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(popupBackgroundDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
                 Picker("Hover effect", selection: $config.popupHoverEffect) {
                     ForEach(TileHoverEffect.allCases, id: \.self) { effect in
                         Text(effect.rawValue).tag(effect)
@@ -240,7 +251,7 @@ private struct AppearanceSettingsTab: View {
                         .frame(width: 40)
                 }
                 .dimsTextWhenDisabled()
-                .disabled(config.backgroundStyle != .wallpaper)
+                .disabled(config.backgroundStyle != .wallpaper && config.popupBackgroundStyle != .wallpaper)
 
                 HStack {
                     Text("Dim")
@@ -295,6 +306,19 @@ private struct AppearanceSettingsTab: View {
             config.backgroundStyle == .solid
                 ? "A solid dark background."
                 : "Reduce Transparency is on, so Glass is replaced by a solid dark background."
+        }
+    }
+
+    private var popupBackgroundDescription: String {
+        switch config.popupBackgroundStyle {
+        case .wallpaper:
+            "The part of your desktop picture under the popup, blurred by the Blur radius under Full-Screen Background, and lightened or darkened so its text stays readable. When the picture can't be read, Glass is used instead."
+        case .glass:
+            reduceTransparency
+                ? "Reduce Transparency is on, so Glass is drawn opaque."
+                : "Blurs the windows and desktop behind the popup."
+        case .solid:
+            "A solid background in the popup's appearance."
         }
     }
 

@@ -4,7 +4,7 @@ import CoreImage
 import ImageIO
 import Observation
 
-/// The blurred desktop picture full screen draws in Wallpaper mode.
+/// The blurred desktop picture the launchers draw in Wallpaper mode.
 struct BackdropWallpaper: Equatable {
     /// New for every render, so the view can fade a new image in.
     let id: Int

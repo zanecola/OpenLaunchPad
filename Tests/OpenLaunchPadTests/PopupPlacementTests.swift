@@ -34,6 +34,28 @@ struct PopupPlacementTests {
         #expect(panel.frame.size == NSSize(width: 900, height: 640))
     }
 
+    @Test @MainActor
+    func aPopupWithoutAnAnchorOnAScreenOpensOnTheMainScreen() {
+        #expect(PopupPanel.screen(for: nil) == NSScreen.main)
+        #expect(PopupPanel.screen(for: NSPoint(x: -1_000_000, y: -1_000_000)) == NSScreen.main)
+        if let main = NSScreen.main {
+            #expect(PopupPanel.screen(for: NSPoint(x: main.frame.midX, y: main.frame.midY)) == main)
+        }
+    }
+
+    @Test @MainActor
+    func theWallpaperPlacementFollowsThePanelWhenItMoves() {
+        // The panel is never shown; a move still posts its notification.
+        guard let screen = NSScreen.main else { return }
+        let panel = PopupPanel(width: 800, height: 600)
+
+        panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX + 8, y: screen.visibleFrame.minY + 8))
+
+        #expect(panel.wallpaperPlacement.screenID == WallpaperScreen.id(of: screen))
+        #expect(panel.wallpaperPlacement.screenSize == screen.frame.size)
+        #expect(panel.wallpaperPlacement.frameInScreen == WallpaperCrop.frameInScreen(windowFrame: panel.frame, screenFrame: screen.frame))
+    }
+
     @Test
     func popupAppearanceMapsToThePanelAppearance() {
         #expect(PopupAppearance.system.nsAppearance == nil)
