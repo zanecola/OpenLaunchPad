@@ -5,7 +5,6 @@ import SwiftUI
 struct MenuBarPanelView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
-    @Environment(\.dismiss) private var dismiss
     /// Closes without launching anything.
     var onDismissRequested: () -> Void = {}
     var onAppLaunched: () -> Void = {}
@@ -126,7 +125,6 @@ struct MenuBarPanelView: View {
         }
         // Hiding clears the search and closes the folder once the panel has faded out.
         onAppLaunched()
-        dismiss()
     }
 
     private func openTopSearchResult() {
