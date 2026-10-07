@@ -36,11 +36,12 @@ struct LaunchpadBackdropView: View {
     }
 
     /// Black under the popup's open folder. The folder's name and close button sit on it in label
-    /// colors, so over the light appearance's washed wallpaper it stays light: at 15% the background
-    /// keeps above 50% gray, where the name is 4.8:1 or more whatever the picture. It follows the
-    /// setting, so a picture that can't be read leaves the lighter dim over Glass.
+    /// colors, so in the light appearance it stays light over the translucent backgrounds: at 15%
+    /// the washed wallpaper keeps above 50% gray, where the name is 4.8:1 or more whatever the
+    /// picture, and Glass over black keeps the name at about 4.2:1, where 35% left it at 2.9:1.
+    /// Solid is opaque and keeps 35%.
     static func popupFolderDim(style: BackdropStyle, colorScheme: ColorScheme) -> Double {
-        style == .wallpaper && colorScheme == .light ? 0.15 : 0.35
+        colorScheme == .light && style != .solid ? 0.15 : 0.35
     }
 
     /// The popup's open folder panel. Over Glass it is a plain fill, since a material on the glass

@@ -43,15 +43,16 @@ struct LaunchpadBackdropViewTests {
     }
 
     @Test
-    func thePopupsFolderDimStaysLightUnderDarkTextOverTheWallpaper() {
+    func thePopupsFolderDimStaysLightUnderDarkTextOverTheTranslucentBackgrounds() {
         // The light wash keeps the picture at or above 60% gray; a 15% dim leaves the folder's
-        // name, in 85% black, at 4.8:1 or more there.
-        #expect(LaunchpadBackdropView.popupFolderDim(style: .wallpaper, colorScheme: .light) == 0.15)
-        #expect(LaunchpadBackdropView.popupFolderDim(style: .wallpaper, colorScheme: .dark) == 0.35)
-        for style in [BackdropStyle.glass, .solid] {
-            for colorScheme in [ColorScheme.light, .dark] {
-                #expect(LaunchpadBackdropView.popupFolderDim(style: style, colorScheme: colorScheme) == 0.35)
-            }
+        // name, in 85% black, at 4.8:1 or more there. The light glass lets a dark desktop through,
+        // where 35% left the name at about 2.9:1 and 15% keeps it at about 4.2:1.
+        for style in [BackdropStyle.wallpaper, .glass] {
+            #expect(LaunchpadBackdropView.popupFolderDim(style: style, colorScheme: .light) == 0.15)
+            #expect(LaunchpadBackdropView.popupFolderDim(style: style, colorScheme: .dark) == 0.35)
+        }
+        for colorScheme in [ColorScheme.light, .dark] {
+            #expect(LaunchpadBackdropView.popupFolderDim(style: .solid, colorScheme: colorScheme) == 0.35)
         }
     }
 
