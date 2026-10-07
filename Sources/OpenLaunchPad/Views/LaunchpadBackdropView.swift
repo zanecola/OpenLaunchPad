@@ -55,12 +55,16 @@ struct LaunchpadBackdropView: View {
                     Self.solidColor
                 }
             case .popup:
-                switch style.resolvedForPopup(wallpaperAvailable: wallpaper != .unavailable) {
-                case .wallpaper:
-                    // Glass shows until the render arrives, and between two renders as one fades
-                    // into the next. The picture is opaque, so it stays under Reduce Transparency.
+                let resolved = style.resolvedForPopup(wallpaperAvailable: wallpaper != .unavailable)
+                if resolved == .solid {
+                    Color(nsColor: .windowBackgroundColor)
+                } else {
+                    // One Glass is Wallpaper's base and its fallback, so a picture that becomes
+                    // unavailable fades out over it rather than one Glass cross-fading into another.
+                    // It shows until the render arrives, and between two renders as one fades into
+                    // the next. The picture is opaque, so it stays under Reduce Transparency.
                     popupGlass
-                    if case .ready(let rendered) = wallpaper {
+                    if resolved == .wallpaper, case .ready(let rendered) = wallpaper {
                         ZStack {
                             WallpaperCropImage(image: rendered.image, screenSize: screenSize, frameInScreen: frameInScreen)
                             Self.popupWash(for: colorScheme)
@@ -68,10 +72,6 @@ struct LaunchpadBackdropView: View {
                         .id(rendered.id)
                         .transition(.opacity)
                     }
-                case .glass:
-                    popupGlass
-                case .solid:
-                    Color(nsColor: .windowBackgroundColor)
                 }
             }
         }

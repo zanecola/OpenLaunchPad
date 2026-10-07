@@ -1,0 +1,46 @@
+import AppKit
+import SwiftUI
+import Testing
+@testable import OpenLaunchPad
+
+@MainActor
+struct LaunchpadBackdropViewTests {
+    @Test
+    func thePopupsGlassStaysThroughEveryWallpaperStatus() throws {
+        // A replaced material would cross-fade with its replacement, which shows the windows
+        // behind the popup through both.
+        let picture = try #require(CGContext(
+            data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        )?.makeImage())
+        func backdrop(_ status: WallpaperProvider.Status) -> LaunchpadBackdropView {
+            LaunchpadBackdropView(mode: .popup, style: .wallpaper, wallpaper: status)
+        }
+        let host = NSHostingView(rootView: backdrop(.pending))
+        host.frame = CGRect(x: 0, y: 0, width: 200, height: 100)
+        // Never shown; borderless, so it can't become key.
+        let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: true)
+        window.contentView = host
+        host.layoutSubtreeIfNeeded()
+        let glass = effectViews(in: host)
+
+        var seen: [[NSVisualEffectView]] = []
+        for status: WallpaperProvider.Status in [.ready(BackdropWallpaper(id: 1, image: picture)), .unavailable, .pending] {
+            host.rootView = backdrop(status)
+            host.layoutSubtreeIfNeeded()
+            seen.append(effectViews(in: host))
+        }
+        window.contentView = nil
+
+        #expect(glass.count == 1)
+        for views in seen {
+            #expect(views.map(ObjectIdentifier.init) == glass.map(ObjectIdentifier.init))
+        }
+    }
+
+    private func effectViews(in view: NSView) -> [NSVisualEffectView] {
+        view.subviews.flatMap { subview in
+            (subview as? NSVisualEffectView).map { [$0] } ?? effectViews(in: subview)
+        }
+    }
+}
