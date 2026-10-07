@@ -13,6 +13,7 @@ struct PageIndicatorView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.launchpadMotion) private var motion
     @State private var hover = LauncherHover()
 
     var body: some View {
@@ -52,7 +53,7 @@ struct PageIndicatorView: View {
         }
         .padding(.horizontal, style == .dotsAndArrows ? 4 : 0)
         .background { arrowsBackground(isVisible: showsArrows) }
-        .animation(.easeOut(duration: 0.15), value: showsArrows)
+        .animation(motion.controlHover, value: hover)
         .onHover { hover.update(isHovering: $0, presentationID: vm.presentationID) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Page")

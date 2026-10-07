@@ -69,6 +69,11 @@ struct LaunchpadMotion: Equatable, Sendable {
         animation(0.12) { .easeOut(duration: $0) }
     }
 
+    /// The gear and the page arrows fading in and out under the pointer.
+    var controlHover: Animation? {
+        animation(0.15) { .easeOut(duration: $0) }
+    }
+
     // MARK: - Launcher windows
 
     /// Full screen fades in while its content settles from 1.06x, as Launchpad zoomed its icons into place.

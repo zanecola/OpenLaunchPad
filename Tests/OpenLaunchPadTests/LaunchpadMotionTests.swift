@@ -81,6 +81,14 @@ struct LaunchpadMotionTests {
     }
 
     @Test
+    func controlHoverFadesFollowTheSettingsAndStayUnderReduceMotion() {
+        #expect(LaunchpadMotion().controlHover == .easeOut(duration: 0.15))
+        #expect(LaunchpadMotion(speed: 2).controlHover == .easeOut(duration: 0.075))
+        #expect(LaunchpadMotion(reduceMotion: true).controlHover == .easeOut(duration: 0.15))
+        #expect(LaunchpadMotion(animatesTransitions: false).controlHover == nil)
+    }
+
+    @Test
     func readsTheAnimationSettings() {
         let config = ConfigStore(defaults: InMemoryKeyValueStore())
         config.animatesTransitions = false
