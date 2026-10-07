@@ -25,11 +25,11 @@ struct LaunchpadBackdropView: View {
     private static let solidColor = Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255)
 
     /// Over the popup's wallpaper, so its text reads in either appearance: black under the dark
-    /// appearance's light text, white under the light one's dark text. Measured offscreen over
-    /// blurred desktop pictures, these keep labels at 4.5:1 or more and secondary text at 3:1 over
-    /// the popup's median background; dark needs more because the search field's fill lightens it.
+    /// appearance's light text, white under the light one's dark text. At 60% the picture stays at
+    /// or above 60% gray under dark text, or at or below 40% under light text, where secondary text
+    /// is about 3:1 whatever the picture; measured offscreen, labels stay above 6:1.
     private static func popupWash(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? .black.opacity(0.55) : .white.opacity(0.5)
+        (colorScheme == .dark ? Color.black : .white).opacity(0.6)
     }
 
     var body: some View {
