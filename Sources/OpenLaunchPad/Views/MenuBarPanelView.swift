@@ -55,9 +55,9 @@ struct MenuBarPanelView: View {
         .background {
             PopupBackdrop()
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(LaunchpadBackdropView.popupShape)
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            LaunchpadBackdropView.popupShape
                 .stroke(Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
         }
         .environment(dragState)

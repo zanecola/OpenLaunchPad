@@ -11,8 +11,8 @@ struct LaunchpadBackdropView: View {
     /// The surface's choice, before Reduce Transparency or a missing wallpaper changes it.
     var style: BackdropStyle = .glass
     var wallpaper: WallpaperProvider.Status = .unavailable
-    /// Black over the full-screen wallpaper or glass; the popup follows its appearance and is
-    /// washed instead (`popupWash`).
+    /// Black over the full-screen wallpaper or glass; the popup's wallpaper is washed instead
+    /// (`popupWash`).
     var dim: Double = 0
     /// Where the popup is on its screen, so its wallpaper lines up with the desktop under it.
     var screenSize: CGSize = .zero
@@ -23,6 +23,9 @@ struct LaunchpadBackdropView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private static let solidColor = Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255)
+
+    /// The popup panel's outline, shared by its glass, its clip and its stroke.
+    static let popupShape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 
     /// Over the popup's wallpaper, so its text reads in either appearance: black under the dark
     /// appearance's light text, white under the light one's dark text. At 60% the picture stays at
@@ -67,11 +70,13 @@ struct LaunchpadBackdropView: View {
                 if resolved == .solid {
                     Color(nsColor: .windowBackgroundColor)
                 } else {
+                    // The system's Liquid Glass, one surface for the whole panel with no wash over
+                    // it, so it stays translucent (macOS draws it opaque under Reduce Transparency).
                     // One Glass is Wallpaper's base and its fallback, so a picture that becomes
                     // unavailable fades out over it rather than one Glass cross-fading into another.
                     // It shows until the render arrives, and between two renders as one fades into
                     // the next. The picture is opaque, so it stays under Reduce Transparency.
-                    popupGlass
+                    Color.clear.glassEffect(.regular, in: Self.popupShape)
                     if resolved == .wallpaper, case .ready(let rendered) = wallpaper {
                         ZStack {
                             WallpaperCropImage(image: rendered.image, screenSize: screenSize, frameInScreen: frameInScreen)
@@ -84,14 +89,6 @@ struct LaunchpadBackdropView: View {
             }
         }
         .animation(wallpaperFade, value: wallpaper)
-    }
-
-    @ViewBuilder
-    private var popupGlass: some View {
-        // NSVisualEffectView turns opaque by itself under Reduce Transparency.
-        VisualEffectBlur(material: .popover, blendingMode: .behindWindow)
-        Color(nsColor: .windowBackgroundColor)
-            .opacity(0.35)
     }
 }
 

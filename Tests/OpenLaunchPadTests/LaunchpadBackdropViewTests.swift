@@ -7,8 +7,8 @@ import Testing
 struct LaunchpadBackdropViewTests {
     @Test
     func thePopupsGlassStaysThroughEveryWallpaperStatus() throws {
-        // A replaced material would cross-fade with its replacement, which shows the windows
-        // behind the popup through both.
+        // A replaced glass would cross-fade with its replacement, which shows the windows behind
+        // the popup through both.
         let picture = try #require(CGContext(
             data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
@@ -22,19 +22,23 @@ struct LaunchpadBackdropViewTests {
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: true)
         window.contentView = host
         host.layoutSubtreeIfNeeded()
-        let glass = effectViews(in: host)
+        // Pending draws the glass alone. It is layers, not a view.
+        let glass = try layers(in: #require(host.layer)).filter { $0 !== host.layer }
+        let materials = effectViews(in: host)
 
-        var seen: [[NSVisualEffectView]] = []
+        var seen: [Set<ObjectIdentifier>] = []
         for status: WallpaperProvider.Status in [.ready(BackdropWallpaper(id: 1, image: picture)), .unavailable, .pending] {
             host.rootView = backdrop(status)
             host.layoutSubtreeIfNeeded()
-            seen.append(effectViews(in: host))
+            seen.append(Set(try layers(in: #require(host.layer)).map(ObjectIdentifier.init)))
         }
         window.contentView = nil
 
-        #expect(glass.count == 1)
-        for views in seen {
-            #expect(views.map(ObjectIdentifier.init) == glass.map(ObjectIdentifier.init))
+        #expect(!glass.isEmpty)
+        // A single glass surface: no material under it, as the popover material used to be.
+        #expect(materials.isEmpty)
+        for layers in seen {
+            #expect(glass.allSatisfy { layers.contains(ObjectIdentifier($0)) })
         }
     }
 
@@ -49,6 +53,10 @@ struct LaunchpadBackdropViewTests {
                 #expect(LaunchpadBackdropView.popupFolderDim(style: style, colorScheme: colorScheme) == 0.35)
             }
         }
+    }
+
+    private func layers(in layer: CALayer) -> [CALayer] {
+        [layer] + (layer.sublayers ?? []).flatMap(layers)
     }
 
     private func effectViews(in view: NSView) -> [NSVisualEffectView] {

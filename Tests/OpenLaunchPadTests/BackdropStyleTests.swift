@@ -25,7 +25,7 @@ struct BackdropStyleTests {
 
     @Test
     func thePopupKeepsItsChoiceUnderReduceTransparency() {
-        // Its glass is a material that turns opaque by itself, and the wallpaper is opaque.
+        // macOS draws its Liquid Glass opaque by itself, and the wallpaper is opaque.
         for style in BackdropStyle.allCases {
             #expect(style.resolvedForPopup(wallpaperAvailable: true) == style)
         }

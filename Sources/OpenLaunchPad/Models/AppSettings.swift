@@ -67,8 +67,8 @@ enum BackdropStyle: String, CaseIterable, Sendable {
         }
     }
 
-    /// What the popup draws for this choice. Its Glass is the popover material, which turns
-    /// opaque by itself under Reduce Transparency, so only a missing wallpaper changes the choice.
+    /// What the popup draws for this choice. Its Glass is the system's Liquid Glass, which macOS
+    /// draws opaque by itself under Reduce Transparency, so only a missing wallpaper changes the choice.
     func resolvedForPopup(wallpaperAvailable: Bool) -> BackdropStyle {
         self == .wallpaper && !wallpaperAvailable ? .glass : self
     }
