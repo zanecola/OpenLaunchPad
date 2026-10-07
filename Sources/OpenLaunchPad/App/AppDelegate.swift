@@ -340,6 +340,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wallpaperProvider.refresh(for: WallpaperScreen(screen), blurRadius: config.backgroundBlurRadius, delay: delay)
     }
 
+    /// The screen the popup last opened on, else the main screen.
     private var popupScreen: NSScreen? {
         let id = popupPanel.wallpaperPlacement.screenID
         return NSScreen.screens.first { WallpaperScreen.id(of: $0) == id } ?? NSScreen.main

@@ -145,24 +145,8 @@ final class PopupPanel: NSPanel {
     /// The content stays installed between shows, so this only places the panel and orders it in.
     /// It grows from `anchorPoint`, and a show during a hide turns the hide back.
     func show(anchorPoint: NSPoint?, transition: WindowTransition?) {
-        let size = frame.size
-        if let screen = Self.screen(for: anchorPoint) {
-            if let anchorPoint {
-                setFrameOrigin(PopupPlacement.origin(
-                    anchor: anchorPoint,
-                    panelSize: size,
-                    screenFrame: screen.frame,
-                    visibleFrame: screen.visibleFrame
-                ))
-            } else {
-                setFrameOrigin(NSPoint(
-                    x: screen.visibleFrame.midX - size.width / 2,
-                    y: screen.visibleFrame.midY - size.height / 2
-                ))
-            }
-            // Before the layout below, so the first frame already shows the desktop under the panel.
-            wallpaperPlacement.update(for: self, on: screen)
-        }
+        // Before the layout below, so the first frame already shows the desktop under the panel.
+        place(anchorPoint: anchorPoint)
 
         // Applies what the show reset, such as search focus, before the panel appears rather
         // than a frame later.
@@ -180,8 +164,34 @@ final class PopupPanel: NSPanel {
         transitions.hide(transition, content: contentView, pivot: growthPoint(for: nil), completion: completion)
     }
 
+    /// False until the first show: the panel sits where it was created, at the primary screen's
+    /// origin, and installing the content resizes it there.
+    private var hasBeenPlaced = false
+
+    /// Places the panel against `anchorPoint` on the screen holding it, centered without one, and
+    /// publishes where for the wallpaper behind its content.
+    func place(anchorPoint: NSPoint?) {
+        guard let screen = Self.screen(for: anchorPoint) else { return }
+        let size = frame.size
+        if let anchorPoint {
+            setFrameOrigin(PopupPlacement.origin(
+                anchor: anchorPoint,
+                panelSize: size,
+                screenFrame: screen.frame,
+                visibleFrame: screen.visibleFrame
+            ))
+        } else {
+            setFrameOrigin(NSPoint(
+                x: screen.visibleFrame.midX - size.width / 2,
+                y: screen.visibleFrame.midY - size.height / 2
+            ))
+        }
+        hasBeenPlaced = true
+        wallpaperPlacement.update(for: self, on: screen)
+    }
+
     @objc private func frameOrScreenDidChange() {
-        guard let screen else { return }
+        guard hasBeenPlaced, let screen else { return }
         wallpaperPlacement.update(for: self, on: screen)
     }
 

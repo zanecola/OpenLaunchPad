@@ -44,10 +44,34 @@ struct PopupPlacementTests {
     }
 
     @Test @MainActor
+    func theWallpaperPlacementWaitsForThePanelToBePlaced() {
+        // Installing the content resizes the panel where it was created, not where it will open.
+        let panel = PopupPanel(width: 800, height: 600)
+
+        panel.setContent(NSHostingController(rootView: EmptyView()))
+        panel.fit(to: NSSize(width: 800, height: 600))
+
+        #expect(panel.wallpaperPlacement.screenID == nil)
+    }
+
+    @Test @MainActor
+    func placingThePanelPublishesWhereItIs() {
+        guard let screen = NSScreen.main else { return }
+        let panel = PopupPanel(width: 800, height: 600)
+
+        panel.place(anchorPoint: nil)
+
+        #expect(abs(panel.frame.midX - screen.visibleFrame.midX) <= 1)
+        #expect(panel.wallpaperPlacement.screenID == WallpaperScreen.id(of: screen))
+        #expect(panel.wallpaperPlacement.frameInScreen == WallpaperCrop.frameInScreen(windowFrame: panel.frame, screenFrame: screen.frame))
+    }
+
+    @Test @MainActor
     func theWallpaperPlacementFollowsThePanelWhenItMoves() {
         // The panel is never shown; a move still posts its notification.
         guard let screen = NSScreen.main else { return }
         let panel = PopupPanel(width: 800, height: 600)
+        panel.place(anchorPoint: nil)
 
         panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX + 8, y: screen.visibleFrame.minY + 8))
 
