@@ -71,6 +71,10 @@ struct PageIndicatorView: View {
         Circle()
             .fill(.white)
             .frame(width: dotDiameter, height: dotDiameter)
+            // The labels' shadow, which sets the dots off a light wallpaper. Flattened, so a dimmed
+            // dot dims its shadow rather than showing it through.
+            .shadow(color: .black.opacity(0.6), radius: 2)
+            .compositingGroup()
     }
 
     /// How far the current dot sits from the first one at a scroll `position` in pages. It stays
