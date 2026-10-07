@@ -69,6 +69,12 @@ struct MenuBarPanelView: View {
             return .handled
         }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
+        // Both launchers stay alive between shows, so an alert or a drag the last show left
+        // behind ends with it.
+        .onLauncherShow {
+            if missingApp != nil { missingApp = nil }
+            if dragState.isDragging { dragState.end() }
+        }
     }
 
     /// Keeps the open folder below the search header.

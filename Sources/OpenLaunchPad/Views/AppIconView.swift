@@ -13,12 +13,15 @@ struct AppIconView: View {
     var onTap: () -> Void = {}
 
     @State private var wiggleAngle: Double = 0
-    @State private var uninstallRequest: UninstallRequest?
-    @State private var actionError: String?
+    @State private var uninstallRequest = ShowScoped<UninstallRequest>()
+    @State private var actionError = ShowScoped<String>()
     @Environment(LaunchpadDragState.self) private var dragState
     @Environment(LaunchpadViewModel.self) private var vm
 
     var body: some View {
+        // A dialog still open when the launcher closed is gone when it opens again.
+        let shownUninstallRequest = uninstallRequest.value(in: vm.presentationID)
+        let shownActionError = actionError.value(in: vm.presentationID)
         content
             .opacity(dragState.active?.payload.itemID == app.id ? 0.35 : 1)
             .launchpadGestureDrag(
@@ -32,10 +35,10 @@ struct AppIconView: View {
             .confirmationDialog(
                 "Uninstall \(app.title)?",
                 isPresented: Binding(
-                    get: { uninstallRequest != nil },
-                    set: { if !$0 { uninstallRequest = nil } }
+                    get: { shownUninstallRequest != nil },
+                    set: { if !$0 { uninstallRequest.clear() } }
                 ),
-                presenting: uninstallRequest
+                presenting: shownUninstallRequest
             ) { _ in
                 Button("Move to Trash", role: .destructive, action: uninstall)
                 Button("Cancel", role: .cancel) {}
@@ -45,13 +48,13 @@ struct AppIconView: View {
             .alert(
                 "Couldn’t Complete Action",
                 isPresented: Binding(
-                    get: { actionError != nil },
-                    set: { if !$0 { actionError = nil } }
+                    get: { shownActionError != nil },
+                    set: { if !$0 { actionError.clear() } }
                 )
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(actionError ?? "Unknown error")
+                Text(shownActionError ?? "Unknown error")
             }
     }
 
@@ -74,7 +77,10 @@ struct AppIconView: View {
         let uninstallURL = vm.uninstallURL(for: app)
         Button("Uninstall…", role: .destructive) {
             // Asked only here: it is a LaunchServices query, and menus rebuild with every render.
-            uninstallRequest = uninstallURL.map { UninstallRequest(url: $0, otherCopies: vm.otherCopyURLs(of: app)) }
+            uninstallRequest.set(
+                uninstallURL.map { UninstallRequest(url: $0, otherCopies: vm.otherCopyURLs(of: app)) },
+                presentationID: vm.presentationID
+            )
         }
         .disabled(uninstallURL == nil)
     }
@@ -83,7 +89,7 @@ struct AppIconView: View {
         do {
             try action()
         } catch {
-            actionError = error.localizedDescription
+            actionError.set(error.localizedDescription, presentationID: vm.presentationID)
         }
     }
 

@@ -211,6 +211,12 @@ struct LaunchpadView: View {
             return .handled
         }
         .missingAppAlert($missingApp) { vm.removeFromLayout($0) }
+        // Both launchers stay alive between shows, so an alert or a drag the last show left
+        // behind ends with it.
+        .onLauncherShow {
+            if missingApp != nil { missingApp = nil }
+            if dragState.isDragging { dragState.end() }
+        }
     }
 
     private func fittedPageLayout(for size: CGSize) -> FullScreenPageLayout {

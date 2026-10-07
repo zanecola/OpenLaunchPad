@@ -135,6 +135,10 @@ struct AppGridView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        // A drag cut short by the launcher closing never drops, so its indicator ends with the show.
+        .onLauncherShow {
+            if activeTarget != nil { activeTarget = nil }
+        }
     }
 
     /// Pages side by side in a scroll view, which follows the fingers with momentum and rubber
