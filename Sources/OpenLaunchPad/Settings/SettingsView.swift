@@ -157,7 +157,7 @@ private struct AppearanceSettingsTab: View {
                     }
                 }
 
-                Text("Each page holds \(config.pageCapacity) apps. With fewer, apps that no longer fit move to the next page; with more, pages keep their free slots.")
+                Text("Each page holds \(config.pageCapacity) apps. Until you arrange your apps, they fill the pages in name order. After that, apps that no longer fit move to the next page, and extra slots stay free.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

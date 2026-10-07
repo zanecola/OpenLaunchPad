@@ -147,7 +147,7 @@ Open Settings from the gear, the menu-bar icon's right-click menu, or Command-co
 | Reset Layout… | | Removes all folders and custom order after you confirm; the old layout is backed up first (see [Data and Privacy](#data-and-privacy)) |
 | Icon size | Automatic | Automatic sizes full-screen icons to fill the grid, up to 144 pt, and keeps the popup at 80 pt. Custom is 48–160 pt for both; full screen draws it smaller, down to 48 pt, only where the grid has no room for it. A size set in an earlier version becomes Custom |
 | Show app labels | On | |
-| Columns × rows | 7 × 5 | Full screen; 4–12 columns and 4–7 rows. Each page holds columns × rows apps, and the rows spread evenly between Search and the page dots. Fewer slots move the apps that no longer fit onto the next pages; more slots leave existing pages as they are. Automatic columns from an earlier version become 7, and columns set in an earlier version, when every page held 35 apps, get the fewest rows that hold 35 (4 rows for 9–12 columns) |
+| Columns × rows | 7 × 5 | Full screen; 4–12 columns and 4–7 rows. Each page holds columns × rows apps, and the rows spread evenly between Search and the page dots. Until you arrange your apps they fill the pages in name order, so a change refills every page. Once you have arranged them, fewer slots move the apps that no longer fit onto the next pages, and more slots leave your pages as they are. Automatic columns from an earlier version become 7, and columns set in an earlier version, when every page held 35 apps, get the fewest rows that hold 35 (4 rows for 9–12 columns) |
 | Page control | Dots | Bare dots, as in Launchpad, or **Dots + Arrows**, which adds previous and next arrows while you point at the dots |
 | Hide menu bar and Dock while open | Off | Full screen. Off, the grid is laid out between the menu bar and the Dock. On, both hide while full screen is open and the grid uses the whole screen; move the pointer to the screen edge to show them. macOS lets an app hide the menu bar only together with the Dock, so there is no menu-bar-only choice. An earlier "Auto-hide both" choice is kept |
 | Popup appearance | System | Or Light or Dark. Full screen is always dark, like Launchpad |
@@ -249,7 +249,7 @@ The test suite covers layout invariants, persistence migrations and backups, dat
 - Releases are not yet Developer ID signed or notarized.
 - Dragging to a page edge does not automatically switch pages yet.
 - A trackpad swipe turns pages only over the apps, not over Search, the Frequently Used shelf or the page dots.
-- Giving pages more slots does not pull apps back from later pages, so pages arranged for a smaller grid keep their free slots until you rearrange them.
+- Giving pages more slots does not pull apps back onto pages you have arranged, so pages arranged for a smaller grid keep their free slots until you rearrange them.
 - Your old Launchpad layout and folders are not imported yet.
 - Uninstall moves only the app bundle to Trash; user data remains in place.
 - Per-display layouts and iCloud sync are not implemented.

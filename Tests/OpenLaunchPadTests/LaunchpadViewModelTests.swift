@@ -1023,6 +1023,22 @@ struct LaunchpadViewModelTests {
     }
 
     @Test
+    func capacityChangesRefillPagesNeverArrangedInTheSourcesOrder() async {
+        let apps = ["A", "B", "C", "D", "E"].map(Self.app)
+        let source = StubDataSource(chunking: apps.map { .app($0) })
+        let store = StubLayoutStore()
+        let viewModel = Self.viewModel(source: source, store: store, pageCapacity: 2)
+        await viewModel.load()
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A", "B"], ["C", "D"], ["E"]])
+
+        viewModel.pageCapacity = 3
+
+        // Nothing was saved, so the source's pages are chunked again and C moves back.
+        #expect(viewModel.pages.map { $0.map(\.title) } == [["A", "B", "C"], ["D", "E"]])
+        #expect(store.savedLayouts.isEmpty)
+    }
+
+    @Test
     func appDraggedOutOfAFolderOnAFullPagePushesTheLastItemOntoTheNextPage() {
         let mail = Self.app("Mail")
         let notes = Self.app("Notes")
@@ -1433,13 +1449,25 @@ private final class StubDataSource: AppDataSource {
     var pages: [[LaunchpadItem]]
     private(set) var requestedCapacities: [Int] = []
 
+    /// Set by `init(chunking:)`.
+    private var itemsToChunk: [LaunchpadItem]?
+
     init(pages: [[LaunchpadItem]]) {
         self.pages = pages
     }
 
+    /// Pages of `items` at the capacity asked for, as the folder scan makes them.
+    init(chunking items: [LaunchpadItem]) {
+        pages = []
+        itemsToChunk = items
+    }
+
     func loadPages(pageCapacity: Int) throws -> [[LaunchpadItem]] {
         requestedCapacities.append(pageCapacity)
-        return pages
+        guard let itemsToChunk else { return pages }
+        return stride(from: 0, to: itemsToChunk.count, by: pageCapacity).map {
+            Array(itemsToChunk[$0..<min($0 + pageCapacity, itemsToChunk.count)])
+        }
     }
 }
 
