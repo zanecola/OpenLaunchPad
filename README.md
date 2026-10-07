@@ -75,7 +75,7 @@ To organize:
 
 ## Privacy
 
-OpenLaunchPad makes no network requests and has no accounts or telemetry. Your layout is stored in `~/Library/Application Support/OpenLaunchPad/layout.json`, and settings and launch counts in UserDefaults (`com.openlaunchpad`).
+OpenLaunchPad makes no network requests and has no accounts or telemetry. Your layout is stored in `~/Library/Application Support/OpenLaunchPad/layout.json`, and settings and launch history (counts and last-launch times) in UserDefaults (`com.openlaunchpad`).
 
 ## Build from Source
 
