@@ -38,6 +38,19 @@ struct LaunchpadBackdropViewTests {
         }
     }
 
+    @Test
+    func thePopupsFolderDimStaysLightUnderDarkTextOverTheWallpaper() {
+        // The light wash keeps the picture at or above 60% gray; a 15% dim leaves the folder's
+        // name, in 85% black, at 4.8:1 or more there.
+        #expect(LaunchpadBackdropView.popupFolderDim(style: .wallpaper, colorScheme: .light) == 0.15)
+        #expect(LaunchpadBackdropView.popupFolderDim(style: .wallpaper, colorScheme: .dark) == 0.35)
+        for style in [BackdropStyle.glass, .solid] {
+            for colorScheme in [ColorScheme.light, .dark] {
+                #expect(LaunchpadBackdropView.popupFolderDim(style: style, colorScheme: colorScheme) == 0.35)
+            }
+        }
+    }
+
     private func effectViews(in view: NSView) -> [NSVisualEffectView] {
         view.subviews.flatMap { subview in
             (subview as? NSVisualEffectView).map { [$0] } ?? effectViews(in: subview)

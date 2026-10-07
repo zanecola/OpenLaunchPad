@@ -5,6 +5,7 @@ import SwiftUI
 struct MenuBarPanelView: View {
     @Environment(LaunchpadViewModel.self) private var vm
     @Environment(ConfigStore.self) private var config
+    @Environment(\.colorScheme) private var colorScheme
     /// Closes without launching anything.
     var onDismissRequested: () -> Void = {}
     var onAppLaunched: () -> Void = {}
@@ -44,7 +45,7 @@ struct MenuBarPanelView: View {
                 iconSize: config.popupIconSize,
                 showsLabels: config.iconLabelVisible,
                 insets: Self.folderInsets,
-                dim: 0.35,
+                dim: LaunchpadBackdropView.popupFolderDim(style: config.popupBackgroundStyle, colorScheme: colorScheme),
                 onLaunch: launchAndDismiss
             )
 
