@@ -43,6 +43,13 @@ struct LaunchpadBackdropView: View {
         style == .wallpaper && colorScheme == .light ? 0.15 : 0.35
     }
 
+    /// The popup's open folder panel. Over Glass it is a plain fill, since a material on the glass
+    /// would stack one blur on another; over the opaque picture or Solid it stays frosted. Like the
+    /// dim, it follows the setting.
+    static func popupFolderPanel(style: BackdropStyle) -> FolderPanelBackground {
+        style == .glass ? .fill : .material
+    }
+
     var body: some View {
         ZStack {
             switch mode {

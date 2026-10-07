@@ -289,6 +289,7 @@ struct FolderOverlay: View {
     /// Keeps the folder clear of the surface's edges and search bar.
     let insets: EdgeInsets
     let dim: Double
+    var panelBackground: FolderPanelBackground = .material
     var onLaunch: (AppItem) -> Void = { _ in }
 
     @Environment(LaunchpadViewModel.self) private var vm
@@ -322,6 +323,7 @@ struct FolderOverlay: View {
                         layout: layout,
                         backdrop: backdrop,
                         showLabel: showsLabels,
+                        panelBackground: panelBackground,
                         iconProvider: { vm.icon(for: $0) },
                         onLaunch: onLaunch
                     )
@@ -347,12 +349,23 @@ struct FolderOverlay: View {
     }
 }
 
+/// What an open folder's panel is drawn with.
+enum FolderPanelBackground {
+    /// Frosted, over an opaque backdrop.
+    case material
+    /// The background one level up (`.background.secondary`), edged with a separator, over the
+    /// popup's Liquid Glass, where a material would stack a second blur on the glass. It is
+    /// opaque, so the folder's apps read whatever the glass shows.
+    case fill
+}
+
 struct FolderExpandedView: View {
     let folder: FolderItem
     let layout: FolderPanelLayout
     /// Full screen pages through more than three rows; the popup scrolls them.
     let backdrop: LaunchpadBackdropMode
     let showLabel: Bool
+    var panelBackground: FolderPanelBackground = .material
     let iconProvider: (String) -> NSImage
     var onLaunch: (AppItem) -> Void = { _ in }
 
@@ -387,8 +400,12 @@ struct FolderExpandedView: View {
         .frame(width: layout.gridWidth)
         .padding(.horizontal, FolderPanelLayout.horizontalPadding)
         .padding(.vertical, FolderPanelLayout.verticalPadding)
-        .background(.regularMaterial, in: Self.panelShape)
+        .background(panelStyle, in: Self.panelShape)
         .overlay {
+            if panelBackground == .fill {
+                // Edges the panel where the dimmed glass is about as light as it is.
+                Self.panelShape.strokeBorder(.separator, lineWidth: 0.5)
+            }
             if isDraggingOutside {
                 Self.panelShape
                     .stroke(Color.primary.opacity(0.58), style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
@@ -406,6 +423,13 @@ struct FolderExpandedView: View {
         }
         .onPreferenceChange(LaunchpadItemFramePreferenceKey.self) { frames in
             appFrames = frames
+        }
+    }
+
+    private var panelStyle: AnyShapeStyle {
+        switch panelBackground {
+        case .material: AnyShapeStyle(.regularMaterial)
+        case .fill: AnyShapeStyle(.background.secondary)
         }
     }
 

@@ -46,6 +46,7 @@ struct MenuBarPanelView: View {
                 showsLabels: config.iconLabelVisible,
                 insets: Self.folderInsets,
                 dim: LaunchpadBackdropView.popupFolderDim(style: config.popupBackgroundStyle, colorScheme: colorScheme),
+                panelBackground: LaunchpadBackdropView.popupFolderPanel(style: config.popupBackgroundStyle),
                 onLaunch: launchAndDismiss
             )
 

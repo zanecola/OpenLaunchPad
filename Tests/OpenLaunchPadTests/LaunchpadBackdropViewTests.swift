@@ -55,6 +55,14 @@ struct LaunchpadBackdropViewTests {
         }
     }
 
+    @Test
+    func thePopupsFolderPanelIsAPlainFillOnlyOverGlass() {
+        // A material on the glass would stack one blur on another.
+        #expect(LaunchpadBackdropView.popupFolderPanel(style: .glass) == .fill)
+        #expect(LaunchpadBackdropView.popupFolderPanel(style: .wallpaper) == .material)
+        #expect(LaunchpadBackdropView.popupFolderPanel(style: .solid) == .material)
+    }
+
     private func layers(in layer: CALayer) -> [CALayer] {
         [layer] + (layer.sublayers ?? []).flatMap(layers)
     }
