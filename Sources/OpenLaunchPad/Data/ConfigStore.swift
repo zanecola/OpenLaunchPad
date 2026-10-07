@@ -81,8 +81,9 @@ final class ConfigStore {
     var popupHoverEffect: TileHoverEffect = .highlight {
         didSet { defaults.set(popupHoverEffect.rawValue, forKey: Keys.popupHoverEffect) }
     }
-    /// The popup's own background; Wallpaper shows the part of the blurred desktop picture under it.
-    var popupBackgroundStyle: BackdropStyle = .wallpaper {
+    /// The popup's own background: the system's Liquid Glass by default; Wallpaper shows the part
+    /// of the blurred desktop picture under it.
+    var popupBackgroundStyle: BackdropStyle = .glass {
         didSet {
             defaults.set(popupBackgroundStyle.rawValue, forKey: Keys.popupBackgroundStyle)
             onWallpaperSettingsChange?()
@@ -227,7 +228,8 @@ final class ConfigStore {
            let effect = TileHoverEffect(rawValue: raw) {
             popupHoverEffect = effect
         }
-        // Earlier versions always drew Glass and stored no choice, so existing users start on Wallpaper.
+        // Nothing stored means Glass. v0.2.0 defaulted to Wallpaper without storing it, so its users
+        // move to Glass; a choice made in Settings was stored and is kept.
         if let raw = defaults.string(forKey: Keys.popupBackgroundStyle),
            let style = BackdropStyle(rawValue: raw) {
             popupBackgroundStyle = style

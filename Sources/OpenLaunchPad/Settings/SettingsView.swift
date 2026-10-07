@@ -188,7 +188,8 @@ private struct AppearanceSettingsTab: View {
                 }
 
                 Picker("Background", selection: $config.popupBackgroundStyle) {
-                    ForEach(BackdropStyle.allCases, id: \.self) { style in
+                    // Glass, the default, first.
+                    ForEach([BackdropStyle.glass, .wallpaper, .solid], id: \.self) { style in
                         Text(style.rawValue).tag(style)
                     }
                 }
@@ -311,12 +312,12 @@ private struct AppearanceSettingsTab: View {
 
     private var popupBackgroundDescription: String {
         switch config.popupBackgroundStyle {
-        case .wallpaper:
-            "The part of your desktop picture under the popup, blurred by the Blur radius under Full-Screen Background, and lightened or darkened so its text stays readable. When the picture can't be read, Glass is used instead."
         case .glass:
             reduceTransparency
-                ? "Reduce Transparency is on, so Glass is drawn opaque."
-                : "Blurs the windows and desktop behind the popup."
+                ? "Reduce Transparency is on, so macOS draws the glass opaque. Wallpaper keeps a frosted look."
+                : "The system's Liquid Glass, which blurs the windows and desktop behind the popup. With Reduce Transparency on, macOS draws it opaque; Wallpaper keeps a frosted look."
+        case .wallpaper:
+            "The part of your desktop picture under the popup, blurred by the Blur radius under Full-Screen Background, and lightened or darkened so its text stays readable. When the picture can't be read, Glass is used instead."
         case .solid:
             "A solid background in the popup's appearance."
         }

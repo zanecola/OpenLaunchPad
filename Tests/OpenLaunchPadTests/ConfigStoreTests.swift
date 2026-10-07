@@ -350,21 +350,34 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func thePopupStartsOnTheWallpaperForNewAndExistingUsers() {
-        #expect(ConfigStore(defaults: InMemoryKeyValueStore()).popupBackgroundStyle == .wallpaper)
+    func thePopupStartsOnGlassForNewAndExistingUsers() {
+        let new = ConfigStore(defaults: InMemoryKeyValueStore())
+        #expect(new.popupBackgroundStyle == .glass)
+        // Full screen keeps the wallpaper.
+        #expect(new.backgroundStyle == .wallpaper)
 
-        // Saved before the setting existed, when the popup always drew Glass. Full screen's own
-        // choice does not carry over.
+        // Saved by v0.2.0, whose unstored default was Wallpaper, or by an earlier version without
+        // the setting. Full screen's own choice does not carry over.
         let existing = InMemoryKeyValueStore()
         existing.set("Dark", forKey: "popupAppearance")
-        existing.set("Glass", forKey: "backgroundStyle")
+        existing.set("Wallpaper", forKey: "backgroundStyle")
         existing.set(0.4, forKey: "backgroundDim")
 
         let config = ConfigStore(defaults: existing)
 
-        #expect(config.popupBackgroundStyle == .wallpaper)
-        #expect(config.backgroundStyle == .glass)
+        #expect(config.popupBackgroundStyle == .glass)
+        #expect(config.backgroundStyle == .wallpaper)
         #expect(existing.object(forKey: "popupBackgroundStyle") == nil)
+    }
+
+    @Test
+    func aStoredPopupBackgroundIsKept() {
+        for style in BackdropStyle.allCases {
+            let defaults = InMemoryKeyValueStore()
+            defaults.set(style.rawValue, forKey: "popupBackgroundStyle")
+
+            #expect(ConfigStore(defaults: defaults).popupBackgroundStyle == style)
+        }
     }
 
     @Test
@@ -384,11 +397,11 @@ struct ConfigStoreTests {
     }
 
     @Test
-    func unknownStoredPopupBackgroundFallsBackToWallpaper() {
+    func unknownStoredPopupBackgroundFallsBackToGlass() {
         let defaults = InMemoryKeyValueStore()
         defaults.set("Aurora", forKey: "popupBackgroundStyle")
 
-        #expect(ConfigStore(defaults: defaults).popupBackgroundStyle == .wallpaper)
+        #expect(ConfigStore(defaults: defaults).popupBackgroundStyle == .glass)
     }
 
     @Test

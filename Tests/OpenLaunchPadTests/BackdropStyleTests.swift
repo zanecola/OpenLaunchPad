@@ -32,6 +32,14 @@ struct BackdropStyleTests {
     }
 
     @Test
+    func thePopupsDefaultDrawsGlassWithOrWithoutAPicture() {
+        let style = ConfigStore(defaults: InMemoryKeyValueStore()).popupBackgroundStyle
+
+        #expect(style.resolvedForPopup(wallpaperAvailable: true) == .glass)
+        #expect(style.resolvedForPopup(wallpaperAvailable: false) == .glass)
+    }
+
+    @Test
     func thePopupWithoutAPictureFallsBackToGlass() {
         #expect(BackdropStyle.wallpaper.resolvedForPopup(wallpaperAvailable: false) == .glass)
         #expect(BackdropStyle.glass.resolvedForPopup(wallpaperAvailable: false) == .glass)
