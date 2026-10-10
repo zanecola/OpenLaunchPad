@@ -766,6 +766,11 @@ struct FolderRenameField: NSViewRepresentable {
         /// Focus leaving the field without Return or Escape saves the name too. After a commit or a
         /// cancel this finds nothing left to save.
         func controlTextDidEndEditing(_ notification: Notification) {
+            // An input method's unconfirmed text becomes part of the name only now, with no change
+            // notification first.
+            if let field = notification.object as? NSTextField {
+                parent.text = field.stringValue
+            }
             parent.onCommit()
         }
     }

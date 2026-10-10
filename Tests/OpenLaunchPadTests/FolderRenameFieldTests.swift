@@ -49,6 +49,24 @@ struct FolderRenameFieldTests {
         #expect(commits == 0)
     }
 
+    @Test
+    func leavingTheFieldMidCompositionKeepsTheComposedText() async throws {
+        var name = "Utilities"
+        var committedName: String?
+        let window = makeWindow(text: Binding(get: { name }, set: { name = $0 }), onCommit: { committedName = name })
+        let editor = try #require(await fieldEditor(of: window))
+
+        editor.insertText("Ab", replacementRange: editor.selectedRange())
+        editor.setMarkedText(
+            "suan",
+            selectedRange: NSRange(location: 4, length: 0),
+            replacementRange: NSRange(location: NSNotFound, length: 0)
+        )
+        window.makeFirstResponder(nil)
+
+        #expect(committedName == "Absuan")
+    }
+
     /// Never ordered front, so it can't receive the user's keystrokes.
     private func makeWindow(
         text: Binding<String>,
