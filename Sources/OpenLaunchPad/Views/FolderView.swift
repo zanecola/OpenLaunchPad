@@ -607,26 +607,23 @@ private struct FolderTitle: View {
     let height: CGFloat
 
     @Environment(LaunchpadViewModel.self) private var vm
-    @FocusState private var isEditing: Bool
 
     private static let closeButtonDiameter: CGFloat = 22
 
     var body: some View {
         Group {
             if vm.folderTitleDraft != nil {
-                TextField("Folder Name", text: Binding(
-                    get: { vm.folderTitleDraft ?? "" },
-                    // A field that is going away may write its text back; that must not reopen it.
-                    set: { if vm.folderTitleDraft != nil { vm.folderTitleDraft = $0 } }
-                ))
-                .textFieldStyle(.plain)
-                .font(titleFont)
-                .multilineTextAlignment(.center)
-                .focused($isEditing)
-                .onSubmit(vm.commitFolderRename)
-                // Focusing the field as it appears is too early in full screen, which then keeps
-                // focus on Search; a turn of the run loop later it selects the name.
-                .onAppear { DispatchQueue.main.async { isEditing = true } }
+                FolderRenameField(
+                    text: Binding(
+                        get: { vm.folderTitleDraft ?? "" },
+                        // A field that is going away may write its text back; that must not reopen it.
+                        set: { if vm.folderTitleDraft != nil { vm.folderTitleDraft = $0 } }
+                    ),
+                    font: titleNSFont,
+                    onCommit: vm.commitFolderRename,
+                    onCancel: vm.cancelFolderRename
+                )
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16)
                 .frame(width: min(width - titleInset * 2, 420), height: height)
                 .background { LaunchpadFieldBackground(backdrop: backdrop) }
@@ -646,16 +643,19 @@ private struct FolderTitle: View {
         .overlay(alignment: .trailing) {
             if backdrop == .popup { closeButton }
         }
-        // Focus leaving the field, without Return or Escape, saves the name too.
-        .onChange(of: isEditing) { wasEditing, isEditing in
-            if wasEditing && !isEditing { vm.commitFolderRename() }
-        }
     }
 
     private var titleFont: Font {
         switch backdrop {
         case .fullScreen: .system(size: 28, weight: .bold)
         case .popup: .system(size: 15, weight: .semibold)
+        }
+    }
+
+    private var titleNSFont: NSFont {
+        switch backdrop {
+        case .fullScreen: .systemFont(ofSize: 28, weight: .bold)
+        case .popup: .systemFont(ofSize: 15, weight: .semibold)
         }
     }
 
@@ -698,6 +698,87 @@ private struct FolderTitle: View {
         .buttonStyle(.plain)
         .help("Close Folder")
         .accessibilityLabel("Close Folder")
+    }
+}
+
+/// The open folder's name while it is being edited. It is an AppKit field that makes itself first
+/// responder once it is in a window, which selects the name. SwiftUI's focus request at that moment
+/// was dropped on screen, so nothing had focus and every key beeped.
+struct FolderRenameField: NSViewRepresentable {
+    @Binding var text: String
+    let font: NSFont
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+
+    func makeNSView(context: Context) -> FocusingTextField {
+        let field = FocusingTextField(string: text)
+        field.isBordered = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.alignment = .center
+        field.usesSingleLineMode = true
+        field.lineBreakMode = .byTruncatingTail
+        field.cell?.isScrollable = true
+        field.font = font
+        field.delegate = context.coordinator
+        field.setAccessibilityLabel("Folder Name")
+        return field
+    }
+
+    func updateNSView(_ field: FocusingTextField, context: Context) {
+        context.coordinator.parent = self
+        field.font = font
+        // While editing, the field owns its text; writing it back would move the insertion point.
+        if field.currentEditor() == nil, field.stringValue != text {
+            field.stringValue = text
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: FolderRenameField
+
+        init(parent: FolderRenameField) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            parent.text = field.stringValue
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            switch selector {
+            case #selector(NSResponder.insertNewline(_:)):
+                parent.onCommit()
+                return true
+            case #selector(NSResponder.cancelOperation(_:)):
+                parent.onCancel()
+                return true
+            default:
+                return false
+            }
+        }
+
+        /// Focus leaving the field without Return or Escape saves the name too. After a commit or a
+        /// cancel this finds nothing left to save.
+        func controlTextDidEndEditing(_ notification: Notification) {
+            parent.onCommit()
+        }
+    }
+}
+
+final class FocusingTextField: NSTextField {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // A turn later the field is laid out; becoming first responder selects its whole text.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window, self.currentEditor() == nil else { return }
+            window.makeFirstResponder(self)
+        }
     }
 }
 
